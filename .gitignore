@@ -1,0 +1,52 @@
+### General ###
+.idea
+.cache
+
+### Solidity ###
+build/
+artifacts/
+cache/
+tmp.sol
+data/*.json
+scTopics
+
+### Node ###
+# Logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules
+
+package-lock.json
+data/*.json
+
+### Geth ###
+# geth secrets
+docker/geth/shared/eth_datadir/geth
+docker/geth/shared/eth_datadir/geth.ipc
+docker/geth/shared/eth_datadir/password
+docker/geth/shared/eth_datadir/history
+
+### Terraform ###
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# dotenv environment variables file
+.env
+.env.test
+
+# coverage
+coverageEnv
+coverage/
+coverage.json
+.coverage_artifacts/
+.coverage_cache/
+.coverage_contracts/
+
+# Typescript staff
+types/
