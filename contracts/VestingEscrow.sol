@@ -21,11 +21,11 @@ pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
-import "../interfaces/delegation/ILocker.sol";
+import "./interfaces/delegation/ILocker.sol";
 import "./Vesting.sol";
-import "./DelegationController.sol";
-import "./Distributor.sol";
-import "./TokenState.sol";
+import "./interfaces/delegation/IDelegationController.sol";
+import "./interfaces/delegation/IDistributor.sol";
+import "./interfaces/delegation/ITokenState.sol";
 
 contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
@@ -77,7 +77,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     function retrieve() external onlyHolder {
         Vesting vesting = Vesting(contractManager.getContract("Vesting"));
-        TokenState tokenState = TokenState(contractManager.getContract("TokenState"));
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         require(vesting.isActiveVestingTerm(_holder), "Vesting term is not Active");
         uint availableAmount = vesting.calculateAvailableAmount(_holder);
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
@@ -115,27 +115,27 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
             "Not enough balance"
         );
-        DelegationController delegationController = DelegationController(
+        IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
         delegationController.delegate(validatorId, amount, delegationPeriod, info);
     }
 
     function requestUndelegation(uint delegationId) external {
-        DelegationController delegationController = DelegationController(
+        IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
         delegationController.requestUndelegation(delegationId);
     }
 
     function withdrawBounty(uint validatorId, address to) external {
-        Distributor distributor = Distributor(contractManager.getContract("Distributor"));
+        IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
 
     function cancelVesting() external allow("Vesting") {
         Vesting vesting = Vesting(contractManager.getContract("Vesting"));
-        TokenState tokenState = TokenState(contractManager.getContract("TokenState"));
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         require(
