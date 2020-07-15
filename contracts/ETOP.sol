@@ -1,5 +1,5 @@
 /*
-    Vesting.sol - SKALE Manager
+    ETOP.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -29,7 +29,7 @@ import "./VestingEscrow.sol";
 import "./Permissions.sol";
 
 
-contract Vesting is ILocker, Permissions, IERC777Recipient {
+contract ETOP is ILocker, Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
@@ -38,7 +38,6 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         uint lockupPeriod; // months
         TimeLine vestingPeriod;
         uint regularPaymentTime; // amount of days/months/years
-        bool isCancelable;
         bool isUnvestedDelegatable;
     }
 
@@ -56,8 +55,6 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
 
     // array of SAFT configs
     Plan[] private _allPlans;
-    // Plan[] private _saftRounds;
-    // Plan[] private _otherPlans;
 
     address public vestingManager;
 
@@ -164,7 +161,7 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
 
     function stopVesting(address holder) external onlyOwner {
         require(
-            !_vestingHolders[holder].active || _allPlans[_vestingHolders[holder].planId].isCancelable,
+            !_vestingHolders[holder].active,
             "You could not stop vesting for this holder"
         );
         VestingEscrow vestingEscrow = VestingEscrow(_holderToEscrow[holder]);
@@ -205,7 +202,10 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         return getLockedAmount(wallet);
     }
 
-    function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
+        if (!_allPlans[_vestingHolders[wallet].planId].isUnvestedDelegatable) {
+            return getLockedAmountForDelegation(wallet);
+        }
         // metwork_launch_timestamp
         return 0;
     }
@@ -300,6 +300,13 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
     }
 
     function getLockedAmount(address wallet) public view returns (uint) {
+        if (now < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+            return _vestingHolders[wallet].fullAmount;
+        }
+        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+    }
+
+    function getLockedAmountForDelegation(address wallet) public view returns (uint {
         return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
     }
 
@@ -309,15 +316,15 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         PlanHolder memory saftHolder = _vestingHolders[wallet];
         Plan memory saftParams = _allPlans[saftHolder.planId - 1];
         availableAmount = 0;
-        if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            availableAmount = saftHolder.afterLockupAmount;
+        // if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        //     availableAmount = saftHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
                 availableAmount = saftHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
                 availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
-        }
+        // }
     }
 
     function _getNumberOfPayments(address wallet) internal view returns (uint) {
@@ -325,15 +332,15 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         uint date = now;
         PlanHolder memory saftHolder = _vestingHolders[wallet];
         Plan memory saftParams = _allPlans[saftHolder.planId - 1];
-        if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            return 0;
-        }
+        // if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        //     return 0;
+        // }
         uint dateMonth = timeHelpers.timestampToMonth(date);
-        uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.lockupPeriod
-        ));
-        return dateMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
+        // uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
+        //     saftHolder.startVestingTime,
+        //     saftParams.lockupPeriod
+        // ));
+        return dateMonth.div(saftParams.regularPaymentTime);
     }
 
     function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
@@ -343,11 +350,11 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         uint finishMonth = timeHelpers.timestampToMonth(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)
         );
-        uint afterLockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.lockupPeriod
-        ));
-        return finishMonth.sub(afterLockupMonth).div(saftParams.regularPaymentTime);
+        // uint afterLockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
+        //     saftHolder.startVestingTime,
+        //     saftParams.lockupPeriod
+        // ));
+        return finishMonth.div(saftParams.regularPaymentTime);
     }
 
     function _getPartPayment(
@@ -359,6 +366,6 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+        return fullAmount.div(_getNumberOfAllPayments(wallet));
     }
 }
