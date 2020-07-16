@@ -53,15 +53,14 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
 
     IERC1820Registry private _erc1820;
 
-    // array of SAFT configs
+    // array of Plan configs
     Plan[] private _allPlans;
 
     address public vestingManager;
 
-    // number of SAFT Round => amount of holders connected
-    // mapping (uint => uint) private _usedSAFTRounds;
+    mapping (address => uint) private _vestedAmount;
 
-    //        holder => SAFT holder params
+    //        holder => Plan holder params
     mapping (address => PlanHolder) private _vestingHolders;
 
     //        holder => address of vesting escrow
@@ -82,18 +81,17 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
 
     }
 
-    function approveSAFTHolder() external {
+    function approveHolder() external {
         address holder = msg.sender;
-        require(_vestingHolders[holder].registered, "SAFT is not registered");
-        require(!_vestingHolders[holder].approved, "SAFT is already approved");
+        require(_vestingHolders[holder].registered, "Holder is not registered");
+        require(!_vestingHolders[holder].approved, "Holder is already approved");
         _vestingHolders[holder].approved = true;
     }
 
     function startVesting(address holder) external onlyOwner {
-        require(_vestingHolders[holder].registered, "SAFT is not registered");
-        require(_vestingHolders[holder].approved, "SAFT is not approved");
+        require(_vestingHolders[holder].registered, "Holder is not registered");
+        require(_vestingHolders[holder].approved, "Holder is not approved");
         _vestingHolders[holder].active = true;
-        // _usedSAFTRounds[_vestingHolders[holder].planId - 1]++;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
                 _holderToEscrow[holder],
@@ -101,33 +99,6 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             ),
             "Error of token sending"
         );
-    }
-
-    function addSAFTRound(
-        uint lockupPeriod, // months
-        uint fullPeriod, // months
-        uint8 vestingPeriod, // 1 - day 2 - month 3 - year
-        uint vestingTimes // months or days or years
-    )
-        external
-        onlyOwner
-    {
-        // ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        require(fullPeriod >= lockupPeriod, "Incorrect periods");
-        require(vestingPeriod >= 1 && vestingPeriod <= 3, "Incorrect vesting period");
-        require(
-            (fullPeriod - lockupPeriod) == vestingTimes ||
-            ((fullPeriod - lockupPeriod) / vestingTimes) * vestingTimes == fullPeriod - lockupPeriod,
-            "Incorrect vesting times"
-        );
-        _allPlans.push(Plan({
-            fullPeriod: fullPeriod,
-            lockupPeriod: lockupPeriod,
-            vestingPeriod: TimeLine(vestingPeriod - 1),
-            regularPaymentTime: vestingTimes,
-            isCancelable: false,
-            isUnvestedDelegatable: true
-        }));
     }
 
     function addVestingPlan(
@@ -164,6 +135,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             !_vestingHolders[holder].active,
             "You could not stop vesting for this holder"
         );
+        _vestedAmount[holder] = calculateAvailableAmount(holder);
         VestingEscrow vestingEscrow = VestingEscrow(_holderToEscrow[holder]);
         vestingEscrow.cancelVesting();
     }
@@ -178,10 +150,10 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        require(_allPlans.length >= planId, "SAFT round does not exist");
+        require(_allPlans.length >= planId, "Holder round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
-        require(!_vestingHolders[holder].registered, "SAFT holder is already added");
+        require(!_vestingHolders[holder].registered, "Holder holder is already added");
         _vestingHolders[holder] = PlanHolder({
             registered: true,
             approved: false,
@@ -216,9 +188,9 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
 
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory saftHolder = _vestingHolders[holder];
-        Plan memory saftParams = _allPlans[saftHolder.planId - 1];
-        return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod);
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod);
     }
 
     function getLockupPeriodInMonth(address holder) external view returns (uint) {
@@ -229,11 +201,11 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         return _vestingHolders[holder].active;
     }
 
-    function isApprovedSAFT(address holder) external view returns (bool) {
+    function isApprovedHolder(address holder) external view returns (bool) {
         return _vestingHolders[holder].approved;
     }
 
-    function isSAFTRegistered(address holder) external view returns (bool) {
+    function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].registered;
     }
 
@@ -245,50 +217,50 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         return _vestingHolders[holder].fullAmount;
     }
 
-    // function getLockupPeriodTimestamp(address holder) external view returns (uint) {
-    //     ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-    //     PlanHolder memory saftHolder = _vestingHolders[holder];
-    //     Plan memory saftParams = _allPlans[saftHolder.planId - 1];
-    //     return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
-    // }
+    function getLockupPeriodTimestamp(address holder) external view returns (uint) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
+    }
 
-    // function getTimeOfNextPayment(address holder) external view returns (uint) {
-    //     ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-    //     uint date = now;
-    //     PlanHolder memory saftHolder = _vestingHolders[holder];
-    //     Plan memory saftParams = _allPlans[saftHolder.planId - 1];
-    //     uint lockupDate = timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
-    //     if (date < lockupDate) {
-    //         return lockupDate;
-    //     }
-    //     uint dateMonth = timeHelpers.timestampToMonth(date);
-    //     uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-    //         saftHolder.startVestingTime,
-    //         saftParams.lockupPeriod
-    //     ));
-    //     uint finishMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-    //         saftHolder.startVestingTime,
-    //         saftParams.fullPeriod
-    //     ));
-    //     uint numberOfDonePayments = dateMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
-    //     uint numberOfAllPayments = finishMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
-    //     if (numberOfAllPayments <= numberOfDonePayments + 1) {
-    //         return timeHelpers.addMonths(
-    //             saftHolder.startVestingTime,
-    //             saftParams.fullPeriod
-    //         );
-    //     }
-    //     uint nextPayment = dateMonth.add(1).sub(lockupMonth).div(saftParams.regularPaymentTime);
-    //     return timeHelpers.addMonths(lockupDate, nextPayment);
-    // }
+    function getTimeOfNextPayment(address holder) external view returns (uint) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        uint date = now;
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        uint lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
+        if (date < lockupDate) {
+            return lockupDate;
+        }
+        uint dateMonth = timeHelpers.timestampToMonth(date);
+        uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
+            planHolder.startVestingTime,
+            planParams.lockupPeriod
+        ));
+        uint finishMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
+            planHolder.startVestingTime,
+            planParams.fullPeriod
+        ));
+        uint numberOfDonePayments = dateMonth.sub(lockupMonth).div(planParams.regularPaymentTime);
+        uint numberOfAllPayments = finishMonth.sub(lockupMonth).div(planParams.regularPaymentTime);
+        if (numberOfAllPayments <= numberOfDonePayments + 1) {
+            return timeHelpers.addMonths(
+                planHolder.startVestingTime,
+                planParams.fullPeriod
+            );
+        }
+        uint nextPayment = dateMonth.add(1).sub(lockupMonth).div(planParams.regularPaymentTime);
+        return timeHelpers.addMonths(lockupDate, nextPayment);
+    }
 
-    function getSAFTRound(uint planId) external view returns (Plan memory) {
-        require(planId < _allPlans.length, "SAFT Round does not exist");
+    function getPlan(uint planId) external view returns (Plan memory) {
+        require(planId < _allPlans.length, "Plan Round does not exist");
         return _allPlans[planId];
     }
 
-    function getSAFTHolderParams(address holder) external view returns (PlanHolder memory) {
-        require(_vestingHolders[holder].registered, "SAFT holder is not registered");
+    function getHolderParams(address holder) external view returns (PlanHolder memory) {
+        require(_vestingHolders[holder].registered, "Plan holder is not registered");
         return _vestingHolders[holder];
     }
 
@@ -300,28 +272,31 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
     }
 
     function getLockedAmount(address wallet) public view returns (uint) {
-        if (now < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        if (now < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
             return _vestingHolders[wallet].fullAmount;
         }
         return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
     }
 
-    function getLockedAmountForDelegation(address wallet) public view returns (uint {
+    function getLockedAmountForDelegation(address wallet) public view returns (uint) {
         return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
     }
 
     function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
-        PlanHolder memory saftHolder = _vestingHolders[wallet];
-        Plan memory saftParams = _allPlans[saftHolder.planId - 1];
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
         availableAmount = 0;
-        // if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-        //     availableAmount = saftHolder.afterLockupAmount;
-            if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
-                availableAmount = saftHolder.fullAmount;
+        // if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+        //     availableAmount = planHolder.afterLockupAmount;
+            if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
+                availableAmount = planHolder.fullAmount;
             } else {
-                uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
+                uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
                 availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
         // }
@@ -330,31 +305,31 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
     function _getNumberOfPayments(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
-        PlanHolder memory saftHolder = _vestingHolders[wallet];
-        Plan memory saftParams = _allPlans[saftHolder.planId - 1];
-        // if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        // if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
         //     return 0;
         // }
         uint dateMonth = timeHelpers.timestampToMonth(date);
         // uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-        //     saftHolder.startVestingTime,
-        //     saftParams.lockupPeriod
+        //     planHolder.startVestingTime,
+        //     planParams.lockupPeriod
         // ));
-        return dateMonth.div(saftParams.regularPaymentTime);
+        return dateMonth.div(planParams.regularPaymentTime);
     }
 
     function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory saftHolder = _vestingHolders[wallet];
-        Plan memory saftParams = _allPlans[saftHolder.planId - 1];
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
         uint finishMonth = timeHelpers.timestampToMonth(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)
         );
         // uint afterLockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-        //     saftHolder.startVestingTime,
-        //     saftParams.lockupPeriod
+        //     planHolder.startVestingTime,
+        //     planParams.lockupPeriod
         // ));
-        return finishMonth.div(saftParams.regularPaymentTime);
+        return finishMonth.div(planParams.regularPaymentTime);
     }
 
     function _getPartPayment(

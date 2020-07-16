@@ -1,5 +1,5 @@
 /*
-    Vesting.sol - SKALE Manager
+    SAFT.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -25,7 +25,8 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777R
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./VestingEscrow.sol";
+import "./interfaces/delegation//ITokenLaunchManager.sol";
+// import "./VestingEscrow.sol";
 
 
 contract SAFT is ILocker, Permissions, IERC777Recipient {
@@ -59,7 +60,13 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     mapping (address => SaftHolder) private _vestingHolders;
 
     //        holder => address of vesting escrow
-    mapping (address => address) private _holderToEscrow;
+    // mapping (address => address) private _holderToEscrow;
+
+    modifier onlyOwnerAndActivateSeller() {
+        ITokenLaunchManager tokenLaunchManager = ITokenLaunchManager(contractManager.getContract("TokenLaunchManager"));
+        require(_isOwner() || tokenLaunchManager.hasRole(SELLER_ROLE, _msgSender()), "Not authorized");
+        _;
+    }
 
     function tokensReceived(
         address operator,
@@ -89,7 +96,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         _vestingHolders[holder].active = true;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
-                _holderToEscrow[holder],
+                holder,
                 _vestingHolders[holder].fullAmount
             ),
             "Error of token sending"
@@ -129,7 +136,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         bool connectHolderToEscrow
     )
         external
-        onlyOwner
+        onlyOwnerAndActivateSeller
     {
         require(_saftRounds.length >= saftRoundId, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
@@ -144,11 +151,11 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        if (connectHolderToEscrow) {
-            _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
-        } else {
-            _holderToEscrow[holder] = holder;
-        }
+        // if (connectHolderToEscrow) {
+        //     _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
+        // } else {
+        //     _holderToEscrow[holder] = holder;
+        // }
     }
 
     function getAndUpdateLockedAmount(address wallet) external override returns (uint) {

@@ -1,5 +1,5 @@
 /*
-    VestingEscrow.sol - SKALE Manager
+    ETOPEscrow.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -22,18 +22,23 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
 import "./interfaces/delegation/ILocker.sol";
-import "./Vesting.sol";
+import "./ETOP.sol";
 import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
 
-contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
+contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
     IERC1820Registry private _erc1820;
 
     modifier onlyHolder() {
+        require(_msgSender() == _holder, "Message sender is not an owner");
+        _;
+    }
+
+    modifier onlyHolderAndOwner() {
         require(_msgSender() == _holder, "Message sender is not an owner");
         _;
     }
@@ -76,12 +81,12 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     function retrieve() external onlyHolder {
-        Vesting vesting = Vesting(contractManager.getContract("Vesting"));
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        require(vesting.isActiveVestingTerm(_holder), "Vesting term is not Active");
-        uint availableAmount = vesting.calculateAvailableAmount(_holder);
+        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        uint availableAmount = etop.calculateAvailableAmount(_holder);
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        uint fullAmount = vesting.getFullAmount(_holder);
+        uint fullAmount = etop.getFullAmount(_holder);
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (availableAmount > fullAmount.sub(escrowBalance)) {
             if (availableAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
@@ -99,7 +104,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
             );
         }
         // if (IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) == 0) {
-        //     selfdestruct(payable(vesting.vestingManager()));
+        //     selfdestruct(payable(etop.vestingManager()));
         // }
     }
 
@@ -110,6 +115,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         string calldata info
     )
         external
+        onlyHolder
     {
         require(
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
@@ -121,32 +127,32 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         delegationController.delegate(validatorId, amount, delegationPeriod, info);
     }
 
-    function requestUndelegation(uint delegationId) external {
+    function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
         delegationController.requestUndelegation(delegationId);
     }
 
-    function withdrawBounty(uint validatorId, address to) external {
+    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
 
-    function cancelVesting() external allow("Vesting") {
-        Vesting vesting = Vesting(contractManager.getContract("Vesting"));
+    function cancelVesting() external allow("ETOP") {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
-        require(
-            IERC20(contractManager.getContract("SkaleToken")).transfer(
-                vesting.vestingManager(),
-                escrowBalance - forbiddenToSend
-            ),
-            "Error of token send"
-        );
+        // require(
+        //     IERC20(contractManager.getContract("SkaleToken")).transfer(
+        //         etop.vestingManager(),
+        //         escrowBalance - forbiddenToSend
+        //     ),
+        //     "Error of token send"
+        // );
         // if (IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) == 0) {
-        //     selfdestruct(payable(vesting.vestingManager()));
+        //     selfdestruct(payable(etop.vestingManager()));
         // }
         // should request undelegation of all delegations
     }
