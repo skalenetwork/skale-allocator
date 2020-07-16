@@ -165,6 +165,9 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
+        if (_msgSender() == _holder) {
+            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -185,8 +188,8 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     function cancelVesting() external allow("ETOP") {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
+        // uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
+        // uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         _availableAmountAfterTermination = etop.calculateAvailableAmount(_holder);
         // require(
         //     IERC20(contractManager.getContract("SkaleToken")).transfer(
