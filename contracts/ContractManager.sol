@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ContractManager.sol - SKALE Manager
-    Copyright (C) 2018-Present SKALE Labs
+    ContractManager.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -30,7 +30,6 @@ import "./utils/StringUtils.sol";
 /**
  * @title Main contract in upgradeable approach. This contract contains the actual
  * current mapping from contract IDs (in the form of human-readable strings) to addresses.
- * @author Artem Payvin
  */
 contract ContractManager is OwnableUpgradeSafe {
     using StringUtils for string;
@@ -46,9 +45,15 @@ contract ContractManager is OwnableUpgradeSafe {
     }
 
     /**
-     * Adds actual contract to mapping of actual contract addresses
-     * @param contractsName - contracts name in skale manager system
-     * @param newContractsAddress - contracts address in skale manager system
+     * @dev Allows Owner to add contract to mapping of actual contract addresses
+     *
+     * Emits ContractUpgraded event.
+     *
+     * Requirements:
+     *
+     * - Contract address is non-zero.
+     * - Contract address is not already added.
+     * - Contract contains code.
      */
     function setContractsAddress(string calldata contractsName, address newContractsAddress) external onlyOwner {
         // check newContractsAddress is not equal to zero

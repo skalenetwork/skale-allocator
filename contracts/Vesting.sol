@@ -28,7 +28,10 @@ import "./interfaces/ITimeHelpers.sol";
 import "./VestingEscrow.sol";
 import "./Permissions.sol";
 
-
+/**
+ * @title Vesting
+ * @dev 
+ */
 contract Vesting is ILocker, Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
@@ -133,6 +136,15 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         }));
     }
 
+    /**
+     * @dev Allows Owner to define and add a vesting plan.
+     *
+     * Requirements:
+     *
+     * - Vesting period must be less than or equal to the full period.
+     * - Vesting period must be in days, months, or years.
+     * - TODO? 
+     */
     function addVestingPlan(
         uint lockupPeriod, // months
         uint fullPeriod, // months
@@ -162,6 +174,14 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         }));
     }
 
+    /**
+     * @dev Allows Owner to stop vesting for an employee.
+     *
+     * Requirements:
+     *
+     * - Employee must be activated.
+     * - Employee plan must be cancelable.
+     */
     function stopVesting(address holder) external onlyOwner {
         require(
             !_vestingHolders[holder].active || _allPlans[_vestingHolders[holder].planId].isCancelable,
@@ -171,6 +191,16 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
         vestingEscrow.cancelVesting();
     }
 
+    /**
+     * @dev Allows Owner to register an employee into a Vesting plan.
+     *
+     * Requirements:
+     *
+     * - Vesting plan must exist.
+     * - Lockup amount must be less than or equal to the full allocation.
+     * - Vesting start must TODO? 
+     * - Employee must not already be registered TODO: what about arbitrary multis?
+     */
     function connectHolderToPlan(
         address holder,
         uint planId,

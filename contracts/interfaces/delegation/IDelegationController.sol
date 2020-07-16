@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    IDelegationController.sol - SKALE Manager
+    IDelegationController.sol - SKALE SAFT ETOP
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 

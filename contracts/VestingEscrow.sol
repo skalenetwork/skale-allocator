@@ -1,6 +1,6 @@
 /*
-    VestingEscrow.sol - SKALE Manager
-    Copyright (C) 2019-Present SKALE Labs
+    VestingEscrow.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -27,6 +27,11 @@ import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
 
+/**
+ * @title Vesting Escrow
+ * @dev This contract manages Treasury escrow operations for the SKALE Employee
+ * Token Open Plan.
+ */
 contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
@@ -75,6 +80,14 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         require(to == _holder || hasRole(DEFAULT_ADMIN_ROLE, to), "Not authorized transfer");
     }
 
+    /**
+     * @dev Allows holder to retrieve locked tokens.
+     * TODO: why only holder?
+     *
+     * Requirements:
+     *
+     * - Vesting term must be active.
+     */
     function retrieve() external onlyHolder {
         Vesting vesting = Vesting(contractManager.getContract("Vesting"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
@@ -103,6 +116,13 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         // }
     }
 
+    /**
+     * @dev Allows holder to propose delegation to a validator.
+     *
+     * Requirements:
+     *
+     * - Holder has sufficient delegatable tokens.
+     */
     function delegate(
         uint validatorId,
         uint amount,
@@ -121,6 +141,9 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         delegationController.delegate(validatorId, amount, delegationPeriod, info);
     }
 
+    /**
+     * @dev Allows delegator to request undelegation.
+     */
     function requestUndelegation(uint delegationId) external {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -128,11 +151,17 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         delegationController.requestUndelegation(delegationId);
     }
 
+    /**
+     * @dev Allows delegator to withdraw earned bounty.
+     */
     function withdrawBounty(uint validatorId, address to) external {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
 
+    /**
+     * @dev Allows the Vesting contract to cancel vesting TODO.
+     */
     function cancelVesting() external allow("Vesting") {
         Vesting vesting = Vesting(contractManager.getContract("Vesting"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
