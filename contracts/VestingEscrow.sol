@@ -26,6 +26,7 @@ import "./ETOP.sol";
 import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
+import "./interfaces/delegation/IValidatorService.sol";
 
 contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
@@ -121,6 +122,10 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
             "Not enough balance"
         );
+        IValidatorService validatorService = IValidatorService(
+            contractManager.getContract("ValidatorService")
+        );
+        require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
