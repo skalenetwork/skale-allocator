@@ -32,20 +32,29 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
+    address private _etopContract;
+
     IERC1820Registry private _erc1820;
 
     modifier onlyHolder() {
-        require(_msgSender() == _holder, "Message sender is not an owner");
+        require(_msgSender() == _holder, "Message sender is not a holder");
         _;
     }
 
     modifier onlyHolderAndOwner() {
-        require(_msgSender() == _holder, "Message sender is not an owner");
+        require(_msgSender() == _holder || _isOwner(), "Message sender is not authorized");
+        _;
+    }
+
+    modifier onlyActiveVestingTerm() {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         _;
     }
 
     constructor(address contractManagerAddress, address newHolder) public {
         Permissions.initialize(contractManagerAddress);
+        _etopContract == msg.sender;
         _holder = newHolder;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
@@ -117,6 +126,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     )
         external
         onlyHolder
+        onlyActiveVestingTerm
     {
         require(
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
@@ -141,7 +151,13 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
-        distributor.withdrawBounty(validatorId, to);
+        if (_msgSender() == _holder) {
+            ETOP etop = ETOP(contractManager.getContract("ETOP"));
+            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+            distributor.withdrawBounty(validatorId, to);
+        } else {
+            distributor.withdrawBounty(validatorId, _etopContract);
+        }
     }
 
     function cancelVesting() external allow("ETOP") {
