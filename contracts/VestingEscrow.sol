@@ -34,6 +34,8 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _etopContract;
 
+    uint private _availableAmountAfterTermination;
+
     IERC1820Registry private _erc1820;
 
     modifier onlyHolder() {
@@ -93,8 +95,13 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     function retrieve() external onlyHolder {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
-        uint availableAmount = etop.calculateAvailableAmount(_holder);
+        // require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        uint availableAmount = 0;
+        if (etop.isActiveVestingTerm(_holder)) {
+            availableAmount = etop.calculateAvailableAmount(_holder);
+        } else {
+            availableAmount = _availableAmountAfterTermination;
+        }
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint fullAmount = etop.getFullAmount(_holder);
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
@@ -116,6 +123,21 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         // if (IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) == 0) {
         //     selfdestruct(payable(etop.vestingManager()));
         // }
+    }
+
+    function retrieveAfterTermination() external onlyOwner {
+        require(!etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
+        uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
+        if (escrowBalance > forbiddenToSend) {
+            require(
+                IERC20(contractManager.getContract("SkaleToken")).transfer(
+                    _etopContract,
+                    escrowBalance.sub(forbiddenToSend)
+                ),
+                "Error of token send"
+            );
+        }
     }
 
     function delegate(
@@ -165,6 +187,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
+        _availableAmountAfterTermination = etop.calculateAvailableAmount(_holder);
         // require(
         //     IERC20(contractManager.getContract("SkaleToken")).transfer(
         //         etop.vestingManager(),
