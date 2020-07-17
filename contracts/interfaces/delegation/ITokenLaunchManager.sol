@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITokenState.sol - SKALE Manager
+    ITokenLaunchManager.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -24,8 +24,8 @@ pragma solidity 0.6.10;
 /**
  * @dev Interface of Delegatable Token operations.
  */
-interface ITokenState {
+interface ITokenLaunchManager {
 
-    function getAndUpdateLockedAmount(address holder) external returns (uint);
-    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint);
+    function SELLER_ROLE() external view returns (bytes32);
+    function hasRole(bytes32 role, address account) external view returns (bool);
 }
