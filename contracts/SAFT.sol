@@ -347,7 +347,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         if (vestingPeriod == TimeLine.DAY) {
             return timeHelpers.addDays(timestamp, timePoints);
         } else if (vestingPeriod == TimeLine.MONTH) {
-            return timeHelpers.addMonth(timestamp, timePoints);
+            return timeHelpers.addMonths(timestamp, timePoints);
         } else {
             return timeHelpers.addYears(timestamp, timePoints);
         }

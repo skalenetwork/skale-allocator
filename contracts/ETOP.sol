@@ -318,7 +318,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
             planParams.vestingPeriod
         );
-        return dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        return dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
     }
 
     function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
@@ -333,7 +333,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
             planParams.vestingPeriod
         );
-        return finishTime.sub(afterLockupTime).div(saftParams.regularPaymentTime);
+        return finishTime.sub(afterLockupTime).div(planParams.regularPaymentTime);
     }
 
     function _getPartPayment(
@@ -372,7 +372,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         if (vestingPeriod == TimeLine.DAY) {
             return timeHelpers.addDays(timestamp, timePoints);
         } else if (vestingPeriod == TimeLine.MONTH) {
-            return timeHelpers.addMonth(timestamp, timePoints);
+            return timeHelpers.addMonths(timestamp, timePoints);
         } else {
             return timeHelpers.addYears(timestamp, timePoints);
         }
