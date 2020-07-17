@@ -233,25 +233,28 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateMonth = timeHelpers.timestampToMonth(date);
-        uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            planHolder.startVestingTime,
-            planParams.lockupPeriod
-        ));
-        uint finishMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            planHolder.startVestingTime,
-            planParams.fullPeriod
-        ));
-        uint numberOfDonePayments = dateMonth.sub(lockupMonth).div(planParams.regularPaymentTime);
-        uint numberOfAllPayments = finishMonth.sub(lockupMonth).div(planParams.regularPaymentTime);
+        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint lockupTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
+        );
+        uint finishTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
+            planParams.vestingPeriod
+        );
+        uint numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        uint numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
                 planHolder.startVestingTime,
                 planParams.fullPeriod
             );
         }
-        uint nextPayment = dateMonth.add(1).sub(lockupMonth).div(planParams.regularPaymentTime);
-        return timeHelpers.addMonths(lockupDate, nextPayment);
+        uint nextPayment = finishTime
+            .sub(
+                planParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
+            );
+        return _addMonthsAndTimePoint(lockupDate, nextPayment, planParams.vestingPeriod);
     }
 
     function getPlan(uint planId) external view returns (Plan memory) {
@@ -291,15 +294,15 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
         availableAmount = 0;
-        // if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
-        //     availableAmount = planHolder.afterLockupAmount;
+        if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+            availableAmount = planHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
                 availableAmount = planHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
                 availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
-        // }
+        }
     }
 
     function _getNumberOfPayments(address wallet) internal view returns (uint) {
@@ -307,29 +310,30 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        // if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
-        //     return 0;
-        // }
-        uint dateMonth = timeHelpers.timestampToMonth(date);
-        // uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-        //     planHolder.startVestingTime,
-        //     planParams.lockupPeriod
-        // ));
-        return dateMonth.div(planParams.regularPaymentTime);
+        if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+            return 0;
+        }
+        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint lockupTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
+        );
+        return dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
     }
 
     function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        uint finishMonth = timeHelpers.timestampToMonth(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)
+        uint finishTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
+            planParams.vestingPeriod
         );
-        // uint afterLockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-        //     planHolder.startVestingTime,
-        //     planParams.lockupPeriod
-        // ));
-        return finishMonth.div(planParams.regularPaymentTime);
+        uint afterLockupTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
+        );
+        return finishTime.sub(afterLockupTime).div(saftParams.regularPaymentTime);
     }
 
     function _getPartPayment(
@@ -342,5 +346,35 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         returns(uint)
     {
         return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+    }
+
+    function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        if (vestingPeriod == TimeLine.DAY) {
+            return timeHelpers.timestampToDay(timestamp);
+        } else if (vestingPeriod == TimeLine.MONTH) {
+            return timeHelpers.timestampToMonth(timestamp);
+        } else {
+            return timeHelpers.timestampToYear(timestamp);
+        }
+    }
+
+    function _addMonthsAndTimePoint(
+        uint timestamp,
+        uint timePoints,
+        TimeLine vestingPeriod
+    )
+        private
+        view
+        returns (uint)
+    {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        if (vestingPeriod == TimeLine.DAY) {
+            return timeHelpers.addDays(timestamp, timePoints);
+        } else if (vestingPeriod == TimeLine.MONTH) {
+            return timeHelpers.addMonth(timestamp, timePoints);
+        } else {
+            return timeHelpers.addYears(timestamp, timePoints);
+        }
     }
 }

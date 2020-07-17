@@ -218,25 +218,28 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateMonth = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
-        uint lockupMonth = _getTimePointInCorrectPeriod(
+        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
             saftParams.vestingPeriod
         );
-        uint finishMonth = _getTimePointInCorrectPeriod(
+        uint finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
             saftParams.vestingPeriod
         );
-        uint numberOfDonePayments = dateMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
-        uint numberOfAllPayments = finishMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
+        uint numberOfDonePayments = dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        uint numberOfAllPayments = finishTime.sub(lockupTime).div(saftParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
                 saftHolder.startVestingTime,
                 saftParams.fullPeriod
             );
         }
-        uint nextPayment = dateMonth.add(1).sub(lockupMonth).div(saftParams.regularPaymentTime);
-        return timeHelpers.addMonths(lockupDate, nextPayment);
+        uint nextPayment = finishTime
+            .sub(
+                saftParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
+            );
+        return _addMonthsAndTimePoint(lockupDate, nextPayment, saftParams.vestingPeriod);
     }
 
     function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
@@ -328,6 +331,25 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             return timeHelpers.timestampToMonth(timestamp);
         } else {
             return timeHelpers.timestampToYear(timestamp);
+        }
+    }
+
+    function _addMonthsAndTimePoint(
+        uint timestamp,
+        uint timePoints,
+        TimeLine vestingPeriod
+    )
+        private
+        view
+        returns (uint)
+    {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        if (vestingPeriod == TimeLine.DAY) {
+            return timeHelpers.addDays(timestamp, timePoints);
+        } else if (vestingPeriod == TimeLine.MONTH) {
+            return timeHelpers.addMonth(timestamp, timePoints);
+        } else {
+            return timeHelpers.addYears(timestamp, timePoints);
         }
     }
 }
