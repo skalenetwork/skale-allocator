@@ -2,8 +2,14 @@ name: Build and test
 on: [push, pull_request]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Say hello
-      run: echo 'Hello'
+    - name: Install
+      run: yarn install
+    - name: Install slither
+      run: pip3 install -r scripts/requirements.txt
+    - name: Show slither version
+      run: slither --version
+    - name: lint
+      run: yarn fullcheck
