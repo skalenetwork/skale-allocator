@@ -161,7 +161,8 @@ contract ETOP is Permissions, IERC777Recipient {
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        _holderToEscrow[holder] = VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
+        _holderToEscrow[holder] =
+            VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
     }
 
     function getStartVestingTime(address holder) external view returns (uint) {
