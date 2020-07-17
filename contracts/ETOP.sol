@@ -25,13 +25,13 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./VestingEscrow.sol";
 import "./Permissions.sol";
+import "./VestingEscrowCreator.sol";
 
 
-contract ETOP is ILocker, Permissions, IERC777Recipient {
+contract ETOP is Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
@@ -60,7 +60,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
 
     address public vestingManager;
 
-    mapping (address => uint) private _vestedAmount;
+    // mapping (address => uint) private _vestedAmount;
 
     //        holder => Plan holder params
     mapping (address => PlanHolder) private _vestingHolders;
@@ -113,7 +113,6 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        // ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         require(fullPeriod >= lockupPeriod, "Incorrect periods");
         require(vestingPeriod >= 1 && vestingPeriod <= 3, "Incorrect vesting period");
         require(
@@ -135,9 +134,8 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             !_vestingHolders[holder].active,
             "You could not stop vesting for this holder"
         );
-        _vestedAmount[holder] = calculateAvailableAmount(holder);
-        VestingEscrow vestingEscrow = VestingEscrow(_holderToEscrow[holder]);
-        vestingEscrow.cancelVesting();
+        // _vestedAmount[holder] = calculateAvailableAmount(holder);
+        VestingEscrow(_holderToEscrow[holder]).cancelVesting(calculateAvailableAmount(holder));
     }
 
     function connectHolderToPlan(
@@ -163,23 +161,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        // VestingEscrow vestingEscrow = new VestingEscrow(address(contractManager), holder);
-        _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
-    }
-
-    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
-        if (! _vestingHolders[wallet].active) {
-            return 0;
-        }
-        return getLockedAmount(wallet);
-    }
-
-    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
-        if (!_allPlans[_vestingHolders[wallet].planId].isUnvestedDelegatable) {
-            return getLockedAmountForDelegation(wallet);
-        }
-        // metwork_launch_timestamp
-        return 0;
+        _holderToEscrow[holder] = VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
     }
 
     function getStartVestingTime(address holder) external view returns (uint) {

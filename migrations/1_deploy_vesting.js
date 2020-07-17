@@ -16,8 +16,8 @@ const { add, push, create } = scripts;
 
 let privateKey = process.env.PRIVATE_KEY;
 
-let SkaleToken = artifacts.require('./SkaleToken.sol');
-let ConstantsHolder = artifacts.require('./ConstantsHolder.sol');
+// let SkaleToken = artifacts.require('./SkaleToken.sol');
+// let ConstantsHolder = artifacts.require('./ConstantsHolder.sol');
 
 let gasLimit = 8000000;
 
@@ -42,6 +42,7 @@ async function deploy(deployer, networkName, accounts) {
     if (configFile.networks[networkName].host !== "" && configFile.networks[networkName].host !== undefined && configFile.networks[networkName].port !== "" && configFile.networks[networkName].port !== undefined) {
         let web3 = new Web3(new Web3.providers.HttpProvider("http://" + configFile.networks[networkName].host + ":" + configFile.networks[networkName].port));
         if (await web3.eth.getCode(erc1820Contract) == "0x") {
+            console.log("OK");
             console.log("Deploying ERC1820 contract!")
             await web3.eth.sendTransaction({ from: configFile.networks[networkName].from, to: erc1820Sender, value: erc1820Amount});
             console.log("Account " + erc1820Sender + " replenished with " + erc1820Amount + " wei");
@@ -82,36 +83,13 @@ async function deploy(deployer, networkName, accounts) {
     const contracts = [
         "ContractManager", // must be in first position
 
-        "DelegationController",
-        "DelegationPeriodManager",
-        "Distributor",
-        "Punisher",
-        "SlashingTable",
-        "TimeHelpers",
-        "TokenLaunchLocker",
-        "TokenLaunchManager",
-        "TokenState",
-        "ValidatorService",
-        "Vesting",
-
-        "ConstantsHolder",
-        "Nodes",
-        "NodeRotation",
-        "Monitors",
-        "SchainsInternal",
-        "Schains",
-        "Decryption",
-        "ECDH",
-        "KeyStorage",
-        "SkaleDKG",
-        "SkaleVerifier",
-        "SkaleManager",
-        "Pricing",
-        "Bounty"
+        "SAFT",
+        "VestingEscrowCreator",
+        "ETOP"
     ]
-    if (!production) {
-        contracts.push("TimeHelpersWithDebug");
-    }
+    // if (!production) {
+    //     contracts.push("TimeHelpersWithDebug");
+    // }
 
     contractsData = [];
     for (const contract of contracts) {
@@ -133,10 +111,10 @@ async function deploy(deployer, networkName, accounts) {
             contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
             contractManager = contract;
             console.log("contractManager address:", contract.address);
-        } else if (["TimeHelpers", "Decryption", "ECDH"].includes(contractName)) {
-            contract = await create(Object.assign({ contractAlias: contractName }, options));
-        } else if (["TimeHelpersWithDebug"].includes(contractName)) {
-            contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
+        // } else if (["TimeHelpers", "Decryption", "ECDH"].includes(contractName)) {
+        //     contract = await create(Object.assign({ contractAlias: contractName }, options));
+        // } else if (["TimeHelpersWithDebug"].includes(contractName)) {
+        //     contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
         } else {
             contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
         }
@@ -151,35 +129,41 @@ async function deploy(deployer, networkName, accounts) {
             console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
         });
     } 
-    if (!production) {
-        await contractManager.methods.setContractsAddress("TimeHelpers", deployed.get("TimeHelpersWithDebug").address).send({from: deployAccount}).then(function(res) {
-            console.log("TimeHelpersWithDebug was enabled");
-        });
-    }
+    // if (!production) {
+    //     await contractManager.methods.setContractsAddress("TimeHelpers", deployed.get("TimeHelpersWithDebug").address).send({from: deployAccount}).then(function(res) {
+    //         console.log("TimeHelpersWithDebug was enabled");
+    //     });
+    // }
     
-    await deployer.deploy(SkaleToken, contractManager.address, [], {gas: gasLimit * gas_multiplier});
-    await contractManager.methods.setContractsAddress("SkaleToken", SkaleToken.address).send({from: deployAccount}).then(function(res) {
-        console.log("Contract Skale Token with address", SkaleToken.address, "registred in Contract Manager");
-    });
+    // await deployer.deploy(SkaleToken, contractManager.address, [], {gas: gasLimit * gas_multiplier});
+    // await contractManager.methods.setContractsAddress("SkaleToken", SkaleToken.address).send({from: deployAccount}).then(function(res) {
+    //     console.log("Contract Skale Token with address", SkaleToken.address, "registred in Contract Manager");
+    // });
 
-    if (!production) {
-        // TODO: Remove after testing
-        const constants = await ConstantsHolder.at(deployed.get("ConstantsHolder").address);
-        await constants.setPeriods(3600, 300);
-        await constants.setCheckTime(120);
-        const skaleToken = await SkaleToken.deployed();
-        const money = "5000000000000000000000000000"; // 5e9 * 1e18
-        await skaleToken.mint(deployAccount, money, "0x", "0x");
-        await skaleToken.transfer(
-            deployed.get("SkaleManager").address,
-            "1000000000000000000000000000");
-    }
+    // if (!production) {
+    //     // TODO: Remove after testing
+    //     const constants = await ConstantsHolder.at(deployed.get("ConstantsHolder").address);
+    //     await constants.setPeriods(3600, 300);
+    //     await constants.setCheckTime(120);
+    //     const skaleToken = await SkaleToken.deployed();
+    //     const money = "5000000000000000000000000000"; // 5e9 * 1e18
+    //     await skaleToken.mint(deployAccount, money, "0x", "0x");
+    //     await skaleToken.transfer(
+    //         deployed.get("SkaleManager").address,
+    //         "1000000000000000000000000000");
+    // }
     
     console.log('Deploy done, writing results...');
 
     let jsonObject = {
-        skale_token_address: SkaleToken.address,
-        skale_token_abi: SkaleToken.abi
+        contract_manager_address: deployed.get("ContractManager").address,
+        contract_manager_abi: artifacts.require("./ContractManager").abi,
+        saft_address: deployed.get("SAFT").address,
+        saft_abi: artifacts.require("./SAFT").abi,
+        vesting_escrow_creator_address: deployed.get("VestingEscrowCreator").address,
+        vesting_escrow_creator_abi: artifacts.require("./VestingEscrowCreator").abi,
+        etop_address: deployed.get("ETOP").address,
+        etop_abi: artifacts.require("./ETOP").abi
     };
     for (const contractName of contracts) {
         propertyName = contractName.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();

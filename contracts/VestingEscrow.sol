@@ -50,13 +50,11 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     modifier onlyHolderAndOwner() {
-        require(_msgSender() == _holder || _isOwner(), "Message sender is not authorized");
-        _;
-    }
-
-    modifier onlyActiveVestingTerm() {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        require(
+            _msgSender() == _holder && etop.isActiveVestingTerm(_holder) || _msgSender() == etop.vestingManager(),
+            "Message sender is not authorized"
+        );
         _;
     }
 
@@ -110,7 +108,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         }
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint fullAmount = etop.getFullAmount(_holder);
-        uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
+        uint forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
         if (availableAmount > fullAmount.sub(escrowBalance)) {
             if (availableAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
             require(
@@ -126,9 +124,6 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
                 "Error of token send"
             );
         }
-        // if (IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) == 0) {
-        //     selfdestruct(payable(etop.vestingManager()));
-        // }
     }
 
     function retrieveAfterTermination() external onlyOwner {
@@ -157,8 +152,10 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
     )
         external
         onlyHolder
-        onlyActiveVestingTerm
     {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         require(
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
             "Not enough balance"
@@ -167,11 +164,12 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
             contractManager.getContract("ValidatorService")
         );
         require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
-        ETOP etop = ETOP(contractManager.getContract("ETOP"));
         if (!etop.isUnvestedDelegatableTerm(_holder)) {
-            require(_getAvailableAmountToRetriveOrDelegate() >= amount, "Incorrect amount to delegate");
-        } else {
-            require(etop.getFullAmount(_holder) - _getForbiddenToDelegateAmount() >= amount, "Incorrect amount to delegate");
+            // uint availableAmount = etop.calculateAvailableAmount(_holder)
+            //     .sub(
+            //         etop.getFullAmount(_holder).sub(IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)))
+            //     ).sub(tokenState.getAndUpdateForbiddenForDelegationAmount(address(this)));
+            require(etop.calculateAvailableAmount(_holder) >= amount, "Incorrect amount to delegate");
         }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -181,6 +179,10 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        require(
+            _msgSender() == _holder && etop.isActiveVestingTerm(_holder) || _msgSender() == etop.vestingManager(),
+            "Message sender is not authorized"
+        );
         if (_msgSender() == _holder) {
             require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         }
@@ -201,40 +203,26 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         }
     }
 
-    function cancelVesting() external allow("ETOP") {
-        ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        // uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        // uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
-        _availableAmountAfterTermination = etop.calculateAvailableAmount(_holder);
-        // require(
-        //     IERC20(contractManager.getContract("SkaleToken")).transfer(
-        //         etop.vestingManager(),
-        //         escrowBalance - forbiddenToSend
-        //     ),
-        //     "Error of token send"
-        // );
-        // if (IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) == 0) {
-        //     selfdestruct(payable(etop.vestingManager()));
-        // }
-        // should request undelegation of all delegations
+    function cancelVesting(uint availableAmount) external allow("ETOP") {
+        // ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        _availableAmountAfterTermination = availableAmount;
     }
 
-    function getGivenAmount() public view returns (uint) {
-        ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        return
-            etop.getFullAmount(_holder) - IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-    }
+    // function getGivenAmount() public view returns (uint) {
+    //     ETOP etop = ETOP(contractManager.getContract("ETOP"));
+    //     return
+    //         etop.getFullAmount(_holder).sub(IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)));
+    // }
 
-    function _getAvailableAmountToRetriveOrDelegate() internal returns (uint) {
-        ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        return etop.calculateAvailableAmount(_holder) - getGivenAmount() - _getForbiddenToDelegateAmount();
-    }
+    // function _getAvailableAmountToRetriveOrDelegate() internal returns (uint) {
+    //     ETOP etop = ETOP(contractManager.getContract("ETOP"));
+    //     // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+    //     return etop.calculateAvailableAmount(_holder).sub(getGivenAmount()).sub(_getForbiddenToDelegateAmount());
+    // }
 
-    function _getForbiddenToDelegateAmount() internal returns (uint) {
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        return tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
-    }
+    // function _getForbiddenToDelegateAmount() internal returns (uint) {
+    //     ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+    //     return tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
+    // }
 
 }
