@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /*
     SAFT.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
@@ -26,7 +28,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./interfaces/delegation//ITokenLaunchManager.sol";
-// import "./VestingEscrow.sol";
+import "./Permissions.sol";
 
 
 contract SAFT is ILocker, Permissions, IERC777Recipient {
@@ -64,7 +66,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
 
     modifier onlyOwnerAndActivateSeller() {
         ITokenLaunchManager tokenLaunchManager = ITokenLaunchManager(contractManager.getContract("TokenLaunchManager"));
-        require(_isOwner() || tokenLaunchManager.hasRole(SELLER_ROLE, _msgSender()), "Not authorized");
+        require(_isOwner() || tokenLaunchManager.hasRole(tokenLaunchManager.SELLER_ROLE(), _msgSender()), "Not authorized");
         _;
     }
 
@@ -132,13 +134,12 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint saftRoundId,
         uint startVestingTime, //timestamp
         uint fullAmount,
-        uint lockupAmount,
-        bool connectHolderToEscrow
+        uint lockupAmount
     )
         external
         onlyOwnerAndActivateSeller
     {
-        require(_saftRounds.length >= saftRoundId, "SAFT round does not exist");
+        require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
         require(!_vestingHolders[holder].registered, "SAFT holder is already added");
@@ -217,15 +218,15 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateMonth = timeHelpers.timestampToMonth(date);
-        uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.lockupPeriod
-        ));
-        uint finishMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.fullPeriod
-        ));
+        uint dateMonth = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint lockupMonth = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
+            saftParams.vestingPeriod
+        );
+        uint finishMonth = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
+            saftParams.vestingPeriod
+        );
         uint numberOfDonePayments = dateMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
         uint numberOfAllPayments = finishMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
@@ -284,26 +285,27 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
             return 0;
         }
-        uint dateMonth = timeHelpers.timestampToMonth(date);
-        uint lockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.lockupPeriod
-        ));
-        return dateMonth.sub(lockupMonth).div(saftParams.regularPaymentTime);
+        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint lockupTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
+            saftParams.vestingPeriod
+        );
+        return dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
     }
 
     function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        uint finishMonth = timeHelpers.timestampToMonth(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)
+        uint finishTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
+            saftParams.vestingPeriod
         );
-        uint afterLockupMonth = timeHelpers.timestampToMonth(timeHelpers.addMonths(
-            saftHolder.startVestingTime,
-            saftParams.lockupPeriod
-        ));
-        return finishMonth.sub(afterLockupMonth).div(saftParams.regularPaymentTime);
+        uint afterLockupTime = _getTimePointInCorrectPeriod(
+            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
+            saftParams.vestingPeriod
+        );
+        return finishTime.sub(afterLockupTime).div(saftParams.regularPaymentTime);
     }
 
     function _getPartPayment(
@@ -316,5 +318,16 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         returns(uint)
     {
         return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+    }
+
+    function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        if (vestingPeriod == TimeLine.DAY) {
+            return timeHelpers.timestampToDay(timestamp);
+        } else if (vestingPeriod == TimeLine.MONTH) {
+            return timeHelpers.timestampToMonth(timestamp);
+        } else {
+            return timeHelpers.timestampToYear(timestamp);
+        }
     }
 }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /*
     ETOP.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
@@ -106,7 +108,6 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
         uint vestingTimes, // months or days or years
-        bool isCancelable, // could owner cancel this plan
         bool isUnvestedDelegatable // could holder delegate
     )
         external
@@ -125,7 +126,6 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
             lockupPeriod: lockupPeriod,
             vestingPeriod: TimeLine(vestingPeriod - 1),
             regularPaymentTime: vestingTimes,
-            isCancelable: isCancelable,
             isUnvestedDelegatable: isUnvestedDelegatable
         }));
     }
@@ -150,7 +150,7 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        require(_allPlans.length >= planId, "Holder round does not exist");
+        require(_allPlans.length >= planId && planId > 0, "Holder round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
         require(!_vestingHolders[holder].registered, "Holder holder is already added");
@@ -209,8 +209,8 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         return _vestingHolders[holder].registered;
     }
 
-    function isCancelableVestingTerm(address holder) external view returns (bool) {
-        return _allPlans[_vestingHolders[holder].planId - 1].isCancelable;
+    function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
+        return _allPlans[_vestingHolders[holder].planId - 1].isUnvestedDelegatable;
     }
 
     function getFullAmount(address holder) external view returns (uint) {
@@ -341,6 +341,6 @@ contract ETOP is ILocker, Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.div(_getNumberOfAllPayments(wallet));
+        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
     }
 }

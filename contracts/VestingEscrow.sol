@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /*
     ETOPEscrow.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
@@ -20,15 +22,19 @@
 pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/delegation/ILocker.sol";
 import "./ETOP.sol";
+import "./Permissions.sol";
 import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
 import "./interfaces/delegation/IValidatorService.sol";
 
-contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
+contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
@@ -126,6 +132,9 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     function retrieveAfterTermination() external onlyOwner {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+
         require(!etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
@@ -158,6 +167,12 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
             contractManager.getContract("ValidatorService")
         );
         require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        if (!etop.isUnvestedDelegatableTerm(_holder)) {
+            require(_getAvailableAmountToRetriveOrDelegate() >= amount, "Incorrect amount to delegate");
+        } else {
+            require(etop.getFullAmount(_holder) - _getForbiddenToDelegateAmount() >= amount, "Incorrect amount to delegate");
+        }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -165,6 +180,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
         if (_msgSender() == _holder) {
             require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         }
@@ -187,7 +203,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     function cancelVesting() external allow("ETOP") {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         // uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         // uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         _availableAmountAfterTermination = etop.calculateAvailableAmount(_holder);
@@ -202,6 +218,23 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         //     selfdestruct(payable(etop.vestingManager()));
         // }
         // should request undelegation of all delegations
+    }
+
+    function getGivenAmount() public view returns (uint) {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        return
+            etop.getFullAmount(_holder) - IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
+    }
+
+    function _getAvailableAmountToRetriveOrDelegate() internal returns (uint) {
+        ETOP etop = ETOP(contractManager.getContract("ETOP"));
+        // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        return etop.calculateAvailableAmount(_holder) - getGivenAmount() - _getForbiddenToDelegateAmount();
+    }
+
+    function _getForbiddenToDelegateAmount() internal returns (uint) {
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        return tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
     }
 
 }

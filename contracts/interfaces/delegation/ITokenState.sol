@@ -27,4 +27,5 @@ pragma solidity 0.6.10;
 interface ITokenState {
 
     function getAndUpdateLockedAmount(address holder) external returns (uint);
+    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint);
 }
