@@ -1,0 +1,9 @@
+name: Build and test
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Say hello
+      run: echo 'Hello'
