@@ -5,6 +5,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
     - name: Install
       run: yarn install
     - name: Install slither
