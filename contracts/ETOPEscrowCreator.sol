@@ -28,7 +28,7 @@ pragma experimental ABIEncoderV2;
 // import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 // import "./interfaces/delegation/ILocker.sol";
 // import "./ETOP.sol";
-import "./VestingEscrow.sol";
+import "./ETOPEscrow.sol";
 import "./Permissions.sol";
 // import "./interfaces/delegation/IDelegationController.sol";
 // import "./interfaces/delegation/IDistributor.sol";
@@ -37,12 +37,12 @@ import "./Permissions.sol";
 
 /**
  * @title ETOP Escrow Creator
- * @dev This contract allows the creation of individual ETOP escrows..
+ * @dev This contract allows the creation of individual ETOP escrow contracts.
  */
-contract VestingEscrowCreator is  Permissions {
+contract ETOPEscrowCreator is  Permissions {
 
     function create(address holder) external returns (address) {
-        return address(new VestingEscrow(address(contractManager), holder));
+        return address(new ETOPEscrow(address(contractManager), holder));
     }
 
 }

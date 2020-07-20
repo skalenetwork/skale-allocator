@@ -114,9 +114,9 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         // require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
         uint availableAmount = 0;
         if (etop.isActiveVestingTerm(_holder)) {
-            availableAmount = etop.calculateAvailableAmount(_holder);
+            vestedAmount = etop.calculateVestedAmount(_holder);
         } else {
-            availableAmount = _availableAmountAfterTermination;
+            vestedAmount = _availableAmountAfterTermination;
         }
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint fullAmount = etop.getFullAmount(_holder);
@@ -194,11 +194,11 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         );
         require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
         if (!etop.isUnvestedDelegatableTerm(_holder)) {
-            // uint availableAmount = etop.calculateAvailableAmount(_holder)
+            // uint vestedAmount = etop.calculateVestedAmount(_holder)
             //     .sub(
             //         etop.getFullAmount(_holder).sub(IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)))
             //     ).sub(tokenState.getAndUpdateForbiddenForDelegationAmount(address(this)));
-            require(etop.calculateAvailableAmount(_holder) >= amount, "Incorrect amount to delegate");
+            require(etop.calculateVestedAmount(_holder) >= amount, "Incorrect amount to delegate");
         }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -263,10 +263,10 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     //         etop.getFullAmount(_holder).sub(IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)));
     // }
 
-    // function _getAvailableAmountToRetriveOrDelegate() internal returns (uint) {
+    // function _getAvailableAmountToRetrieveOrDelegate() internal returns (uint) {
     //     ETOP etop = ETOP(contractManager.getContract("ETOP"));
     //     // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-    //     return etop.calculateAvailableAmount(_holder).sub(getGivenAmount()).sub(_getForbiddenToDelegateAmount());
+    //     return etop.calculateVestedAmount(_holder).sub(getGivenAmount()).sub(_getForbiddenToDelegateAmount());
     // }
 
     // function _getForbiddenToDelegateAmount() internal returns (uint) {

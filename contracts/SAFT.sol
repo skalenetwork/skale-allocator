@@ -35,13 +35,16 @@ import "./Permissions.sol";
  * @dev This contract manages SKALE investor tokens based on the Simple
  * Agreement for Future Tokens (SAFT).
  *
- * An investor may participate in multiple SAFT rounds.
+ * An investor (holder) may participate in multiple SAFT rounds.
  *
- * The process to onboard investors is as follows:
+ * A SAFT is defined by an initial token lock period, followed by periodic
+ * unlocking.
  *
- * 1- SAFT investors are registered by SKALE.
- * 2- SAFT investors approve their address.
- * 3- SKALE then activates each investor.
+ * The process to onboard SAFT holders is as follows:
+ *
+ * 1- SAFT holders are registered to a SAFT by SKALE or ConsenSys Activate.
+ * 2- SAFT holders approve their address.
+ * 3- SKALE then activates each holder.
  */
 contract SAFT is ILocker, Permissions, IERC777Recipient {
 
@@ -73,7 +76,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     //        holder => SAFT holder params
     mapping (address => SaftHolder) private _vestingHolders;
 
-    //        holder => address of vesting escrow
+    //           holder => address of vesting escrow
     // mapping (address => address) private _holderToEscrow;
 
     modifier onlyOwnerAndActivateSeller() {
@@ -113,8 +116,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to activate an holder address and transfers locked 
-     * tokens to an holder address.
+     * @dev Allows Owner to activate a holder address and transfers locked
+     * tokens to a holder address.
      *
      * Requirements:
      *
@@ -141,7 +144,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      *
      * - Lockup period must be less than or equal to the full period.
      * - Locked period must be in days, months, or years.
-     * - Unlock schedule must follow unlocking period TODO: clarify
+     * - THe full period must equal the lock period plus the unlock schedule.
      */
     function addSAFTRound(
         uint lockupPeriod, // months
@@ -168,19 +171,19 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner and Activate to register an holder into a SAFT round.
+     * @dev Allows Owner and Activate to register a holder to a SAFT round.
      *
      * Requirements:
      *
      * - SAFT round must already exist.
      * - The lockup amount must be less than or equal to the full allocation.
-     * - The start date for unlocking must not have already passed. TODO: to be changed
+     * - The start date for unlocking must not have already passed.
      * - The holder address must not already be included in this SAFT round.
      */
-    function connectInvestorToSAFT( TODO: update naming
+    function connectHolderToSAFT(
         address holder,
         uint saftRoundId,
-        uint startVestingTime, //timestamp
+        uint startVestingTime, // timestamp
         uint fullAmount,
         uint lockupAmount
     )
@@ -201,7 +204,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             afterLockupAmount: lockupAmount
         });
         // if (connectHolderToEscrow) {
-        //     _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
+        //     _holderToEscrow[holder] = address(new ETOPEscrow(address(contractManager), holder));
         // } else {
         //     _holderToEscrow[holder] = holder;
         // }
@@ -226,7 +229,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the start time of SAFT.  TODO clarify language
+     * @dev Returns the start time of the SAFT.
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
@@ -360,13 +363,13 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Returns the locked amount of tokens.
      */
     function getLockedAmount(address wallet) public view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+        return _vestingHolders[wallet].fullAmount - calculateUnlockedAmount(wallet);
     }
 
     /**
-     * @dev Calculates and returns the amount of unlocked tokens. TODO: available -> unlock
+     * @dev Calculates and returns the amount of unlocked tokens.
      */
-    function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
+    function calculateUnlockedAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];

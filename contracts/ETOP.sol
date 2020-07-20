@@ -26,15 +26,18 @@ import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC182
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./VestingEscrow.sol";
+import "./ETOPEscrow.sol";
 import "./Permissions.sol";
-import "./VestingEscrowCreator.sol";
+import "./ETOPEscrowCreator.sol";
 
 /**
  * @title ETOP
  * @dev This contract manages SKALE Employee Token Option Plans.
  *
  * An employee may have multiple holdings under an ETOP.
+ *
+ * An ETOP is defined by an initial token vesting cliff period, followed by
+ * periodic vesting.
  */
 contract ETOP is Permissions, IERC777Recipient {
 
@@ -42,7 +45,7 @@ contract ETOP is Permissions, IERC777Recipient {
 
     struct Plan {
         uint fullPeriod;
-        uint lockupPeriod; // months
+        uint vestingCliffPeriod; // months
         TimeLine vestingPeriod;
         uint regularPaymentTime; // amount of days/months/years
         bool isUnvestedDelegatable;
@@ -130,30 +133,30 @@ contract ETOP is Permissions, IERC777Recipient {
      *
      * Requirements:
      *
-     * - Lockup period must be less than or equal to the full period.
+     * - Vesting cliff period must be less than or equal to the full period.
      * - Vesting period must be in days, months, or years.
-     * - Vesting schedule must follow initial vest period.
+     * - Full period must equal vesting cliff plus vesting schedule.
      */
     function addVestingPlan(
-        uint lockupPeriod, // months
+        uint vestingCliffPeriod, // months
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
         uint vestingTimes, // months or days or years
-        bool isUnvestedDelegatable // could holder delegate
+        bool isUnvestedDelegatable // can holder delegate all un-vested
     )
         external
         onlyOwner
     {
-        require(fullPeriod >= lockupPeriod, "Incorrect periods");
+        require(fullPeriod >= vestingCliffPeriod, "Incorrect periods");
         require(vestingPeriod >= 1 && vestingPeriod <= 3, "Incorrect vesting period");
         require(
-            (fullPeriod - lockupPeriod) == vestingTimes ||
-            ((fullPeriod - lockupPeriod) / vestingTimes) * vestingTimes == fullPeriod - lockupPeriod,
+            (fullPeriod - vestingCliffPeriod) == vestingTimes ||
+            ((fullPeriod - vestingCliffPeriod) / vestingTimes) * vestingTimes == fullPeriod - vestingCliffPeriod,
             "Incorrect vesting times"
         );
         _allPlans.push(Plan({
             fullPeriod: fullPeriod,
-            lockupPeriod: lockupPeriod,
+            vestingCliffPeriod: vestingCliffPeriod,
             vestingPeriod: TimeLine(vestingPeriod - 1),
             regularPaymentTime: vestingTimes,
             isUnvestedDelegatable: isUnvestedDelegatable
@@ -172,8 +175,8 @@ contract ETOP is Permissions, IERC777Recipient {
             !_vestingHolders[holder].active,
             "You could not stop vesting for this holder"
         );
-        // _vestedAmount[holder] = calculateAvailableAmount(holder);
-        VestingEscrow(_holderToEscrow[holder]).cancelVesting(calculateAvailableAmount(holder));
+        // _vestedAmount[holder] = calculateVestedAmount(holder);
+        ETOPEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
 
     /**
@@ -183,7 +186,7 @@ contract ETOP is Permissions, IERC777Recipient {
      *
      * - ETOP must already exist.
      * - The vesting amount must be less than or equal to the full allocation.
-     * - The start date for unlocking must not have already passed. TODO: to be changed
+     * - The start date for unlocking must not have already passed. TODO: incorrect!
      * - The holder address must not already be included in the ETOP.
      */
     function connectHolderToPlan(
@@ -213,7 +216,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the time when ETOP begins periodic vesting.  TODO confirm
+     * @dev Returns the time when ETOP plan begins.  TODO confirm
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
@@ -233,7 +236,7 @@ contract ETOP is Permissions, IERC777Recipient {
      * @dev Returns the lockup period in months.
      */
     function getLockupPeriodInMonth(address holder) external view returns (uint) {
-        return _allPlans[_vestingHolders[holder].planId - 1].lockupPeriod;
+        return _allPlans[_vestingHolders[holder].planId - 1].vestingCliffPeriod;
     }
 
     /**
@@ -258,7 +261,8 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder TODO
+     * @dev Confirms whether the holder's plan allows all unvested tokens to be
+     * delegated.
      */
     function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
         return _allPlans[_vestingHolders[holder].planId - 1].isUnvestedDelegatable;
@@ -280,7 +284,7 @@ contract ETOP is Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         PlanHolder memory planHolder = _vestingHolders[holder];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
+        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
     }
 
     /**
@@ -291,13 +295,13 @@ contract ETOP is Permissions, IERC777Recipient {
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[holder];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        uint lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
+        uint lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
         if (date < lockupDate) {
             return lockupDate;
         }
         uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
         uint finishTime = _getTimePointInCorrectPeriod(
@@ -357,29 +361,29 @@ contract ETOP is Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        if (now < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+        if (now < timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
             return _vestingHolders[wallet].fullAmount;
         }
-        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
 
     /**
      * @dev Returns the locked amount of tokens. TODO: clarify difference from above?
      */
     function getLockedAmountForDelegation(address wallet) public view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
 
     /**
      * @dev Calculates and returns the amount of vested tokens. TODO confirm
      */
-    function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
+    function calculateVestedAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
         availableAmount = 0;
-        if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+        if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
             availableAmount = planHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
                 availableAmount = planHolder.fullAmount;
@@ -398,12 +402,12 @@ contract ETOP is Permissions, IERC777Recipient {
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+        if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
             return 0;
         }
         uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
         return dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
@@ -421,7 +425,7 @@ contract ETOP is Permissions, IERC777Recipient {
             planParams.vestingPeriod
         );
         uint afterLockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
         return finishTime.sub(afterLockupTime).div(planParams.regularPaymentTime);
