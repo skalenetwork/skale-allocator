@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITimeHelpers.sol - SKALE SAFT ETOP
-    Copyright (C) 2020-Present SKALE Labs
+    IValidatorService.sol - SKALE Manager
+    Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -22,15 +22,9 @@
 pragma solidity 0.6.10;
 
 /**
- * @title Time Helpers Interface
- * @dev Interface of Time Helper functions of the Time Helpers SKALE Manager
- * contract.
+ * @dev Interface of Delegatable Token operations.
  */
-interface ITimeHelpers {
-    function addDays(uint fromTimestamp, uint n) external pure returns (uint);
-    function addMonths(uint fromTimestamp, uint n) external pure returns (uint);
-    function addYears(uint fromTimestamp, uint n) external pure returns (uint);
-    function timestampToDay(uint timestamp) external view returns (uint);
-    function timestampToMonth(uint timestamp) external view returns (uint);
-    function timestampToYear(uint timestamp) external view returns (uint);
+interface IValidatorService {
+
+    function isAuthorizedValidator(uint validatorId) external view returns (bool);
 }

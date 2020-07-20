@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    Permissions.sol - SKALE Manager
-    Copyright (C) 2018-Present SKALE Labs
+    Permissions.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify

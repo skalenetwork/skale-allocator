@@ -28,8 +28,10 @@ import "./utils/StringUtils.sol";
 
 
 /**
- * @title Main contract in upgradeable approach. This contract contains the actual
- * current mapping from contract IDs (in the form of human-readable strings) to addresses.
+ * @title Contract Manager
+ * @dev This contract is the main contract for upgradeable approach. This
+ * contract contains the current mapping from contract IDs (in the form of
+ * human-readable strings) to addresses.
  */
 contract ContractManager is OwnableUpgradeSafe {
     using StringUtils for string;
@@ -68,6 +70,13 @@ contract ContractManager is OwnableUpgradeSafe {
         emit ContractUpgraded(contractsName, newContractsAddress);
     }
 
+    /**
+     * @dev Returns the contract address of a given contract name.
+     *
+     * Requirements:
+     *
+     * - Contract mapping must exist.
+     */
     function getContract(string calldata name) external view returns (address contractAddress) {
         contractAddress = contracts[keccak256(abi.encodePacked(name))];
         require(contractAddress != address(0), name.strConcat(" contract has not been found"));

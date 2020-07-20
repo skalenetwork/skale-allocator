@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    SAFT.sol - SKALE SAFT ETOP
+    ETOP.sol - SKALE SAFT ETOP
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
@@ -25,40 +25,34 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./interfaces/delegation//ITokenLaunchManager.sol";
+import "./VestingEscrow.sol";
 import "./Permissions.sol";
+import "./VestingEscrowCreator.sol";
 
 /**
- * @title SAFT
- * @dev This contract manages SKALE investor tokens based on the Simple
- * Agreement for Future Tokens (SAFT).
+ * @title ETOP
+ * @dev This contract manages SKALE Employee Token Option Plans.
  *
- * An investor may participate in multiple SAFT rounds.
- *
- * The process to onboard investors is as follows:
- *
- * 1- SAFT investors are registered by SKALE.
- * 2- SAFT investors approve their address.
- * 3- SKALE then activates each investor.
+ * An employee may have multiple holdings under an ETOP.
  */
-contract SAFT is ILocker, Permissions, IERC777Recipient {
+contract ETOP is Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
-    struct SAFTRound {
+    struct Plan {
         uint fullPeriod;
         uint lockupPeriod; // months
         TimeLine vestingPeriod;
         uint regularPaymentTime; // amount of days/months/years
+        bool isUnvestedDelegatable;
     }
 
-    struct SaftHolder {
+    struct PlanHolder {
         bool registered;
         bool approved;
         bool active;
-        uint saftRoundId;
+        uint planId;
         uint startVestingTime;
         uint fullAmount;
         uint afterLockupAmount;
@@ -66,21 +60,18 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
 
     IERC1820Registry private _erc1820;
 
-    // array of SAFT configs
-    SAFTRound[] private _saftRounds;
-    // SAFTRound[] private _otherPlans;
+    // array of Plan configs
+    Plan[] private _allPlans;
 
-    //        holder => SAFT holder params
-    mapping (address => SaftHolder) private _vestingHolders;
+    address public vestingManager;
+
+    // mapping (address => uint) private _vestedAmount;
+
+    //        holder => Plan holder params
+    mapping (address => PlanHolder) private _vestingHolders;
 
     //        holder => address of vesting escrow
-    // mapping (address => address) private _holderToEscrow;
-
-    modifier onlyOwnerAndActivateSeller() {
-        ITokenLaunchManager tokenLaunchManager = ITokenLaunchManager(contractManager.getContract("TokenLaunchManager"));
-        require(_isOwner() || tokenLaunchManager.hasRole(tokenLaunchManager.SELLER_ROLE(), _msgSender()), "Not authorized");
-        _;
-    }
+    mapping (address => address) private _holderToEscrow;
 
     function tokensReceived(
         address operator,
@@ -98,22 +89,22 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows `msg.sender` to approve their address as a SAFT holder.
+     * @dev Allows `msg.sender` to approve their address as an ETOP holder.
      *
      * Requirements:
      *
      * - Holder address must be already registered.
      * - Holder address must not already be approved.
      */
-    function approveSAFTHolder() external {
+    function approveHolder() external {
         address holder = msg.sender;
-        require(_vestingHolders[holder].registered, "SAFT is not registered");
-        require(!_vestingHolders[holder].approved, "SAFT is already approved");
+        require(_vestingHolders[holder].registered, "Holder is not registered");
+        require(!_vestingHolders[holder].approved, "Holder is already approved");
         _vestingHolders[holder].approved = true;
     }
 
     /**
-     * @dev Allows Owner to activate an holder address and transfers locked 
+     * @dev Allows Owner to activate a holder address and transfer locked
      * tokens to an holder address.
      *
      * Requirements:
@@ -121,13 +112,13 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * - Holder address must be already registered.
      * - Holder address must be approved.
      */
-    function startUnlocking(address holder) external onlyOwner {
-        require(_vestingHolders[holder].registered, "SAFT is not registered");
-        require(_vestingHolders[holder].approved, "SAFT is not approved");
+    function startVesting(address holder) external onlyOwner {
+        require(_vestingHolders[holder].registered, "Holder is not registered");
+        require(_vestingHolders[holder].approved, "Holder is not approved");
         _vestingHolders[holder].active = true;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
-                holder,
+                _holderToEscrow[holder],
                 _vestingHolders[holder].fullAmount
             ),
             "Error of token sending"
@@ -135,19 +126,20 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add a SAFT round.
+     * @dev Allows Owner to define and add a an ETOP.
      *
      * Requirements:
      *
      * - Lockup period must be less than or equal to the full period.
-     * - Locked period must be in days, months, or years.
-     * - Unlock schedule must follow unlocking period TODO: clarify
+     * - Vesting period must be in days, months, or years.
+     * - Vesting schedule must follow initial vest period.
      */
-    function addSAFTRound(
+    function addVestingPlan(
         uint lockupPeriod, // months
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
-        uint vestingTimes // months or days or years
+        uint vestingTimes, // months or days or years
+        bool isUnvestedDelegatable // could holder delegate
     )
         external
         onlyOwner
@@ -159,199 +151,201 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             ((fullPeriod - lockupPeriod) / vestingTimes) * vestingTimes == fullPeriod - lockupPeriod,
             "Incorrect vesting times"
         );
-        _saftRounds.push(SAFTRound({
+        _allPlans.push(Plan({
             fullPeriod: fullPeriod,
             lockupPeriod: lockupPeriod,
             vestingPeriod: TimeLine(vestingPeriod - 1),
-            regularPaymentTime: vestingTimes
+            regularPaymentTime: vestingTimes,
+            isUnvestedDelegatable: isUnvestedDelegatable
         }));
     }
 
     /**
-     * @dev Allows Owner and Activate to register an holder into a SAFT round.
+     * @dev Allows Owner to terminate an ETOP vesting.
      *
      * Requirements:
      *
-     * - SAFT round must already exist.
-     * - The lockup amount must be less than or equal to the full allocation.
-     * - The start date for unlocking must not have already passed. TODO: to be changed
-     * - The holder address must not already be included in this SAFT round.
+     * - ETOP must be active. TODO:
      */
-    function connectInvestorToSAFT( TODO: update naming
+    function stopVesting(address holder) external onlyOwner {
+        require(
+            !_vestingHolders[holder].active,
+            "You could not stop vesting for this holder"
+        );
+        // _vestedAmount[holder] = calculateAvailableAmount(holder);
+        VestingEscrow(_holderToEscrow[holder]).cancelVesting(calculateAvailableAmount(holder));
+    }
+
+    /**
+     * @dev Allows Owner to register a holder to an ETOP.
+     *
+     * Requirements:
+     *
+     * - ETOP must already exist.
+     * - The vesting amount must be less than or equal to the full allocation.
+     * - The start date for unlocking must not have already passed. TODO: to be changed
+     * - The holder address must not already be included in the ETOP.
+     */
+    function connectHolderToPlan(
         address holder,
-        uint saftRoundId,
+        uint planId,
         uint startVestingTime, //timestamp
         uint fullAmount,
         uint lockupAmount
     )
         external
-        onlyOwnerAndActivateSeller
+        onlyOwner
     {
-        require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
+        require(_allPlans.length >= planId && planId > 0, "ETOP does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
-        require(!_vestingHolders[holder].registered, "SAFT holder is already added");
-        _vestingHolders[holder] = SaftHolder({
+        require(!_vestingHolders[holder].registered, "Holder is already added");
+        _vestingHolders[holder] = PlanHolder({
             registered: true,
             approved: false,
             active: false,
-            saftRoundId: saftRoundId,
+            planId: planId,
             startVestingTime: startVestingTime,
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        // if (connectHolderToEscrow) {
-        //     _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
-        // } else {
-        //     _holderToEscrow[holder] = holder;
-        // }
+        _holderToEscrow[holder] = VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
     }
 
     /**
-     * @dev Updates and returns the current locked amount of tokens.
-     */
-    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
-        if (! _vestingHolders[wallet].active) {
-            return 0;
-        }
-        return getLockedAmount(wallet);
-    }
-
-    /**
-     * @dev Updates and returns the slashed amount of tokens.
-     */
-    function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
-        // network_launch_timestamp
-        return 0;
-    }
-
-    /**
-     * @dev Returns the start time of SAFT.  TODO clarify language
+     * @dev Returns the time when ETOP begins periodic vesting.  TODO confirm
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
     }
 
     /**
-     * @dev Returns the time of final unlock.
+     * @dev Returns the time when ETOP completes periodic vesting.  TODO confirm
      */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        SaftHolder memory saftHolder = _vestingHolders[holder];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod);
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod);
     }
 
     /**
      * @dev Returns the lockup period in months.
      */
     function getLockupPeriodInMonth(address holder) external view returns (uint) {
-        return _saftRounds[_vestingHolders[holder].saftRoundId - 1].lockupPeriod;
+        return _allPlans[_vestingHolders[holder].planId - 1].lockupPeriod;
     }
 
     /**
-     * @dev Confirms whether the holder is in an active state.
+     * @dev Confirms whether the holder is active in the ETOP.
      */
     function isActiveVestingTerm(address holder) external view returns (bool) {
         return _vestingHolders[holder].active;
     }
 
     /**
-     * @dev Confirms whether the holder is approved in a SAFT round.
+     * @dev Confirms whether the holder is approved in an ETOP.
      */
-    function isApprovedSAFT(address holder) external view returns (bool) {
+    function isApprovedHolder(address holder) external view returns (bool) {
         return _vestingHolders[holder].approved;
     }
 
     /**
-     * @dev Confirms whether the holder is in a registered state.
+     * @dev Confirms whether the holder is approved in an ETOP.
      */
-    function isSAFTRegistered(address holder) external view returns (bool) {
+    function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].registered;
     }
 
     /**
+     * @dev Confirms whether the holder TODO
+     */
+    function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
+        return _allPlans[_vestingHolders[holder].planId - 1].isUnvestedDelegatable;
+    }
+
+    /**
      * @dev Returns the locked and unlocked (full) amount of tokens allocated to
-     * the holder address in SAFT.
+     * the holder address in ETOP.
      */
     function getFullAmount(address holder) external view returns (uint) {
         return _vestingHolders[holder].fullAmount;
     }
 
     /**
-     * @dev Returns the timestamp when lockup period ends and periodic unlocking
+     * @dev Returns the timestamp when lockup period end and periodic vesting
      * begins. TODO confirm
      */
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        SaftHolder memory saftHolder = _vestingHolders[holder];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
     }
 
     /**
-     * @dev Returns the time of next unlock.
+     * @dev Returns the time of next vest period.
      */
-    function getTimeOfNextUnlock(address holder) external view returns (uint) {
+    function getTimeOfNextVest(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
-        SaftHolder memory saftHolder = _vestingHolders[holder];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        uint lockupDate = timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
+        PlanHolder memory planHolder = _vestingHolders[holder];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        uint lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod);
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
-            saftParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
         );
         uint finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
-            saftParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
+            planParams.vestingPeriod
         );
-        uint numberOfDonePayments = dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
-        uint numberOfAllPayments = finishTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        uint numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        uint numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
-                saftHolder.startVestingTime,
-                saftParams.fullPeriod
+                planHolder.startVestingTime,
+                planParams.fullPeriod
             );
         }
         uint nextPayment = finishTime
             .sub(
-                saftParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
+                planParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment, saftParams.vestingPeriod);
+        return _addMonthsAndTimePoint(lockupDate, nextPayment, planParams.vestingPeriod);
     }
 
     /**
-     * @dev Returns the SAFT round parameters.
+     * @dev Returns the ETOP parameters.
      *
      * Requirements:
      *
-     * - SAFT round must already exist.
+     * - ETOP must already exist.
      */
-    function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
-        require(saftRoundId < _saftRounds.length, "SAFT Round does not exist");
-        return _saftRounds[saftRoundId];
+    function getPlan(uint planId) external view returns (Plan memory) {
+        require(planId < _allPlans.length, "Plan Round does not exist");
+        return _allPlans[planId];
     }
 
     /**
-     * @dev Returns the SAFT round parameters for a holder address.
+     * @dev Returns the ETOP parameters for a holder address.
      *
      * Requirements:
      *
-     * - Holder address must be registered to a SAFT.
+     * - Holder address must be registered to an ETOP.
      */
-    function getSAFTHolderParams(address holder) external view returns (SaftHolder memory) {
-        require(_vestingHolders[holder].registered, "SAFT holder is not registered");
+    function getHolderParams(address holder) external view returns (PlanHolder memory) {
+        require(_vestingHolders[holder].registered, "Plan holder is not registered");
         return _vestingHolders[holder];
     }
 
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
-        // vestingManager = msg.sender;
+        vestingManager = msg.sender;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
@@ -360,68 +354,81 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Returns the locked amount of tokens.
      */
     function getLockedAmount(address wallet) public view returns (uint) {
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        if (now < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+            return _vestingHolders[wallet].fullAmount;
+        }
         return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
     }
 
     /**
-     * @dev Calculates and returns the amount of unlocked tokens. TODO: available -> unlock
+     * @dev Returns the locked amount of tokens. TODO: clarify difference from above?
+     */
+    function getLockedAmountForDelegation(address wallet) public view returns (uint) {
+        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+    }
+
+    /**
+     * @dev Calculates and returns the amount of vested tokens. TODO confirm
      */
     function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
-        SaftHolder memory saftHolder = _vestingHolders[wallet];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
         availableAmount = 0;
-        if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            availableAmount = saftHolder.afterLockupAmount;
-            if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
-                availableAmount = saftHolder.fullAmount;
+        if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
+            availableAmount = planHolder.afterLockupAmount;
+            if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
+                availableAmount = planHolder.fullAmount;
             } else {
-                uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
+                uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
                 availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
         }
     }
 
     /**
-     * @dev Returns the number of unlocking events that have occurred.
+     * @dev Returns the number of vesting events that have completed.
      */
-    function _getNumberOfCompletedUnlocks(address wallet) internal view returns (uint) {
+    function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
-        SaftHolder memory saftHolder = _vestingHolders[wallet];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod)) {
             return 0;
         }
-        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
-            saftParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
         );
-        return dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        return dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
     }
 
     /**
-     * @dev Returns the total number of unlocking events.
+     * @dev Returns the number of total vesting events.
      */
-    function _getNumberOfAllUnlocks(address wallet) internal view returns (uint) {
+    function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        SaftHolder memory saftHolder = _vestingHolders[wallet];
-        SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
+        PlanHolder memory planHolder = _vestingHolders[wallet];
+        Plan memory planParams = _allPlans[planHolder.planId - 1];
         uint finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
-            saftParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
+            planParams.vestingPeriod
         );
         uint afterLockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
-            saftParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startVestingTime, planParams.lockupPeriod),
+            planParams.vestingPeriod
         );
-        return finishTime.sub(afterLockupTime).div(saftParams.regularPaymentTime);
+        return finishTime.sub(afterLockupTime).div(planParams.regularPaymentTime);
     }
 
     /**
-     * @dev Returns the amount of tokens that are unlocked in each unlocking
+     * @dev Returns the amount of tokens that are unlocked in each vesting
      * period.
      */
     function _getPartPayment(
