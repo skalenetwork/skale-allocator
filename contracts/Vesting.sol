@@ -87,8 +87,7 @@ contract Vesting is ILocker, Permissions, IERC777Recipient {
     {
 
     }
-
-    function approveSAFTHolder() external {
+     function approveSAFTHolder() external {
         address holder = msg.sender;
         require(_vestingHolders[holder].registered, "SAFT is not registered");
         require(!_vestingHolders[holder].approved, "SAFT is already approved");

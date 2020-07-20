@@ -122,6 +122,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * Requirements:
      *
      * - Holder has sufficient delegatable tokens.
+     * TODO : add require for trusted validator
      */
     function delegate(
         uint validatorId,
@@ -153,6 +154,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     /**
      * @dev Allows delegator to withdraw earned bounty.
+     * TODO: add require is vesting active
      */
     function withdrawBounty(uint validatorId, address to) external {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
@@ -160,7 +162,8 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows the Vesting contract to cancel vesting TODO.
+     * @dev Allows the Vesting contract to cancel vesting schedule and returns
+     * locked tokens to ETOP balance.
      */
     function cancelVesting() external allow("Vesting") {
         Vesting vesting = Vesting(contractManager.getContract("Vesting"));
