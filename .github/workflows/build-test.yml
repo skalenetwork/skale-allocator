@@ -21,4 +21,4 @@ jobs:
     - name: Test deployment
       run: ./scripts/test_deploy.sh
     - name: Run tests
-      run: yarn test
+      run: ./scripts/coverage.sh
