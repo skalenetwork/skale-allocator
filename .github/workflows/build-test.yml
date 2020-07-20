@@ -2,7 +2,7 @@ name: Build and test
 on: [push, pull_request]
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -20,3 +20,5 @@ jobs:
       run: yarn fullcheck
     - name: Test deployment
       run: ./scripts/test_deploy.sh
+    - name: Run tests
+      run: yarn test

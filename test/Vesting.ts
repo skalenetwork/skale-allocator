@@ -31,6 +31,10 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         // await skaleToken.mint(Vesting.address, 1e9, "0x", "0x");
     });
 
+    it("should run tests", async() => {
+        console.log("Dummy test. Remove after adding unit tests.");
+    });
+
     // it("should register SAFT investor", async () => {
     //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
     //     await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
