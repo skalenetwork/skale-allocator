@@ -60,7 +60,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     constructor(address contractManagerAddress, address newHolder) public {
         Permissions.initialize(contractManagerAddress);
-        _etopContract == msg.sender;
+        _etopContract = msg.sender;
         _holder = newHolder;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
