@@ -18,3 +18,5 @@ jobs:
       run: slither --version
     - name: lint
       run: yarn fullcheck
+    - name: Test deployment
+      run: ./scripts/test_deploy.sh
