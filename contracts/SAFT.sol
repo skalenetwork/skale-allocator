@@ -381,7 +381,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
                 unlockedAmount = saftHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
-                unlockedAmount = unlockedAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
+                unlockedAmount = unlockedAmount.add(partPayment.mul(_getNumberOfCompletedUnlocks(wallet)));
             }
         }
     }

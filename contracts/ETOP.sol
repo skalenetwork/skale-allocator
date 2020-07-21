@@ -217,7 +217,7 @@ contract ETOP is Permissions, IERC777Recipient {
             afterLockupAmount: lockupAmount
         });
         _holderToEscrow[holder] =
-            VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
+            ETOPEscrowCreator(contractManager.getContract("ETOPEscrowCreator")).create(holder);
     }
 
     /**
@@ -368,7 +368,7 @@ contract ETOP is Permissions, IERC777Recipient {
      * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
     function getLockedAmountForDelegation(address wallet) external view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
 
     function initialize(address contractManagerAddress) public override initializer {
@@ -381,7 +381,7 @@ contract ETOP is Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the vested token amount.
      */
-    function calculateAvailableAmount(address wallet) public view returns (uint vestedAmount) {
+    function calculateVestedAmount(address wallet) public view returns (uint vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
@@ -393,7 +393,7 @@ contract ETOP is Permissions, IERC777Recipient {
                 vestedAmount = planHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
-                vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
+                vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfCompletedVestingEvents(wallet)));
             }
         }
     }
@@ -448,7 +448,7 @@ contract ETOP is Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllVestingEvents(wallet));
     }
 
     /**

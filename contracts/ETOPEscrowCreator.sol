@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    VestingEscrowCreator.sol - SKALE SAFT ETOP
+    ETOPEscrowCreator.sol - SKALE SAFT ETOP
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
