@@ -436,7 +436,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllUnlocks(wallet));
     }
 
     /**
