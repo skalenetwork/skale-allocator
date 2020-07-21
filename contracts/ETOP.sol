@@ -205,7 +205,8 @@ contract ETOP is Permissions, IERC777Recipient {
     {
         require(_allPlans.length >= planId && planId > 0, "ETOP does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
-        // require(startVestingTime <= now, "Incorrect period starts");  TODO: Remove to allow both past and future vesting start date
+        // require(startVestingTime <= now, "Incorrect period starts");
+        // TODO: Remove to allow both past and future vesting start date
         require(!_vestingHolders[holder].registered, "Holder is already added");
         _vestingHolders[holder] = PlanHolder({
             registered: true,
