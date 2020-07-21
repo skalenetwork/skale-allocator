@@ -29,7 +29,7 @@ import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./interfaces/delegation//ITokenLaunchManager.sol";
 import "./Permissions.sol";
-
+import "@nomiclabs/buidler/console.sol";
 
 contract SAFT is ILocker, Permissions, IERC777Recipient {
 
@@ -268,6 +268,9 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
+        // console.log(date);
+        // console.log(timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod));
+        // console.log(timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod));
         availableAmount = 0;
         if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
             availableAmount = saftHolder.afterLockupAmount;

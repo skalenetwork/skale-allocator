@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITimeHelpers.sol - SKALE Manager
-    Copyright (C) 2019-Present SKALE Labs
-    @author Artem Payvin
+    LockerMock.sol - SKALE Manager
+    Copyright (C) 2018-Present SKALE Labs
+    @author Dmytro Stebaiev
 
     SKALE Manager is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,14 @@
 
 pragma solidity 0.6.10;
 
-interface ITimeHelpers {
-    function addDays(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addMonths(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addYears(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function timestampToDay(uint timestamp) external view virtual returns (uint);
-    function timestampToMonth(uint timestamp) external view virtual returns (uint);
-    function timestampToYear(uint timestamp) external view virtual returns (uint);
+import "../interfaces/delegation/ILocker.sol";
+
+contract LockerMock is ILocker {
+    function getAndUpdateLockedAmount(address) external override returns (uint) {
+        return 13;
+    }
+    
+    function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
+        return 13;
+    }
 }

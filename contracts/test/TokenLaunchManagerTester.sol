@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITimeHelpers.sol - SKALE Manager
+    ITokenLaunchManager.sol - SKALE Manager
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -21,11 +21,19 @@
 
 pragma solidity 0.6.10;
 
-interface ITimeHelpers {
-    function addDays(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addMonths(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addYears(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function timestampToDay(uint timestamp) external view virtual returns (uint);
-    function timestampToMonth(uint timestamp) external view virtual returns (uint);
-    function timestampToYear(uint timestamp) external view virtual returns (uint);
+// import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+
+import "../Permissions.sol";
+
+
+/**
+ * @dev Interface of Delegatable Token operations.
+ */
+contract TokenLaunchManagerTester is Permissions {
+
+    bytes32 public constant SELLER_ROLE = keccak256("SELLER_ROLE");
+
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+    }
 }

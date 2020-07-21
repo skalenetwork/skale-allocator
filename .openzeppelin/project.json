@@ -1,0 +1,25 @@
+{
+  "manifestVersion": "2.2",
+  "contracts": {
+    "SAFT": "SAFT",
+    "ETOP": "ETOP",
+    "ContractManager": "ContractManager",
+    "VestingEscrowCreator": "VestingEscrowCreator"
+  },
+  "dependencies": {},
+  "name": "skale-saft-etop",
+  "version": "1.0.0",
+  "compiler": {
+    "manager": "openzeppelin",
+    "compilerSettings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": "200"
+      }
+    },
+    "solcVersion": "0.6.10",
+    "artifactsDir": "build/contracts",
+    "contractsDir": "contracts"
+  },
+  "telemetryOptIn": true
+}
