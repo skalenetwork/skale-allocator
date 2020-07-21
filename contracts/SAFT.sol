@@ -27,7 +27,6 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777R
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./interfaces/delegation//ITokenLaunchManager.sol";
 import "./Permissions.sol";
 
 /**
@@ -67,6 +66,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint afterLockupAmount;
     }
 
+    bytes32 public constant ACTIVATE_ROLE = keccak256("ACTIVATE_ROLE");
+
     IERC1820Registry private _erc1820;
 
     // array of SAFT configs
@@ -79,9 +80,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     //           holder => address of vesting escrow
     // mapping (address => address) private _holderToEscrow;
 
-    modifier onlyOwnerAndActivateSeller() {
-        ITokenLaunchManager tokenLaunchManager = ITokenLaunchManager(contractManager.getContract("TokenLaunchManager"));
-        require(_isOwner() || tokenLaunchManager.hasRole(tokenLaunchManager.SELLER_ROLE(), _msgSender()), "Not authorized");
+    modifier onlyOwnerAndActivate() {
+        require(_isOwner() || hasRole(ACTIVATE_ROLE, _msgSender()), "Not authorized");
         _;
     }
 
@@ -188,7 +188,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint lockupAmount
     )
         external
-        onlyOwnerAndActivateSeller
+        onlyOwnerAndActivate
     {
         require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");

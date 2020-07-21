@@ -216,7 +216,8 @@ contract ETOP is Permissions, IERC777Recipient {
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        _holderToEscrow[holder] = VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
+        _holderToEscrow[holder] =
+            VestingEscrowCreator(contractManager.getContract("VestingEscrowCreator")).create(holder);
     }
 
     /**
@@ -351,17 +352,10 @@ contract ETOP is Permissions, IERC777Recipient {
         return _vestingHolders[holder];
     }
 
-    function initialize(address contractManagerAddress) public override initializer {
-        Permissions.initialize(contractManagerAddress);
-        vestingManager = msg.sender;
-        _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-        _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
-    }
-
     /**
      * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
-    function getLockedAmount(address wallet) public view returns (uint) {
+    function getLockedAmount(address wallet) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
@@ -370,18 +364,24 @@ contract ETOP is Permissions, IERC777Recipient {
         }
         return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
-
     /**
      * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
-    function getLockedAmountForDelegation(address wallet) public view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
+    function getLockedAmountForDelegation(address wallet) external view returns (uint) {
+        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+    }
+
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+        vestingManager = msg.sender;
+        _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+        _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
     /**
      * @dev Calculates and returns the vested token amount.
      */
-    function calculateVestedAmount(address wallet) public view returns (uint availableAmount) {
+    function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];

@@ -1,12 +1,8 @@
 {
   "name": "@skalenetwork/skale-saft-etop",
-  "version": "1.4.2",
+  "version": "0.0.1",
   "private": true,
-  "description": "SKALE SAFT ETOP system, Decentralized task manager",
-  "homepage": "https://github.com/skalenetwork/skale-saft-etop#readme",
-  "bugs": {
-    "url": "https://github.com/skalenetwork/skale-saft-etop/issues"
-  },
+  "description": "Contracts to manage SAFT and ETOP",  
   "repository": {
     "type": "git",
     "url": "git+https://github.com/skalenetwork/skale-saft-etop.git"
@@ -28,7 +24,7 @@
   "scripts": {
     "compile": "rm -rf ./build && npx truffle compile",
     "deploy": "bash ./scripts/deploy.sh",
-    "generate": "yarn compile && typechain --target truffle './build/**/*.json'",
+    "generate": "yarn compile && typechain --target truffle 'build/contracts/*.json'",
     "hooks": "git config core.hooksPath .githooks || true",
     "lint": "npx solhint \"contracts/**/*.sol\"",
     "prepare": "yarn generate && yarn hooks",
