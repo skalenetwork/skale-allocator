@@ -151,7 +151,7 @@ contract ETOP is Permissions, IERC777Recipient {
         require(_allPlans.length >= planId && planId > 0, "Holder round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
-        require(!_vestingHolders[holder].registered, "Holder holder is already added");
+        require(!_vestingHolders[holder].registered, "Holder is already added");
         _vestingHolders[holder] = PlanHolder({
             registered: true,
             approved: false,
@@ -197,6 +197,10 @@ contract ETOP is Permissions, IERC777Recipient {
 
     function getFullAmount(address holder) external view returns (uint) {
         return _vestingHolders[holder].fullAmount;
+    }
+
+    function getEscrowAddress(address holder) external view returns (address) {
+        return _holderToEscrow[holder];
     }
 
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {

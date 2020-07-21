@@ -1,247 +1,251 @@
 import { ContractManagerInstance,
-    DelegationControllerInstance,
-    SkaleTokenInstance,
-    ValidatorServiceInstance,
-    VestingInstance} from "../../types/truffle-contracts";
+    // DelegationControllerInstance,
+    SkaleTokenTesterInstance,
+    // ValidatorServiceInstance,
+    ETOPInstance,
+    VestingEscrowContract,
+    VestingEscrowInstance} from "./../types/truffle-contracts";
 
-import { calculateLockedAmount } from "../tools/vestingCalculation";
-import { currentTime, getTimeAtDate, skipTimeToDate } from "../tools/time";
+const VestingEscrow: VestingEscrowContract = artifacts.require("./VestingEscrow");
+
+import { calculateLockedAmount } from "./tools/vestingCalculation";
+import { currentTime, getTimeAtDate, skipTimeToDate } from "./tools/time";
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { deployContractManager } from "../tools/deploy/contractManager";
-import { deployDelegationController } from "../tools/deploy/delegation/delegationController";
-import { deployValidatorService } from "../tools/deploy/delegation/validatorService";
-import { deployVesting } from "../tools/deploy/delegation/vesting";
-import { deploySkaleToken } from "../tools/deploy/skaleToken";
+import { deployContractManager } from "./tools/deploy/contractManager";
+// import { deployDelegationController } from "../tools/deploy/delegation/delegationController";
+// import { deployValidatorService } from "../tools/deploy/delegation/validatorService";
+import { deployETOP } from "./tools/deploy/etop";
+import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
 chai.should();
 chai.use(chaiAsPromised);
 
-contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
+contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     let contractManager: ContractManagerInstance;
-    let skaleToken: SkaleTokenInstance;
-    let validatorService: ValidatorServiceInstance;
-    let Vesting: VestingInstance;
-    let delegationController: DelegationControllerInstance;
+    let skaleToken: SkaleTokenTesterInstance;
+    // let validatorService: ValidatorServiceInstance;
+    let ETOP: ETOPInstance;
+    // let delegationController: DelegationControllerInstance;
 
     beforeEach(async () => {
         contractManager = await deployContractManager();
-        skaleToken = await deploySkaleToken(contractManager);
-        validatorService = await deployValidatorService(contractManager);
-        delegationController = await deployDelegationController(contractManager);
-        Vesting = await deployVesting(contractManager);
+        skaleToken = await deploySkaleTokenTester(contractManager);
+        // validatorService = await deployValidatorService(contractManager);
+        // delegationController = await deployDelegationController(contractManager);
+        ETOP = await deployETOP(contractManager);
 
         // each test will start from July 1
         await skipTimeToDate(web3, 1, 6);
-        await skaleToken.mint(Vesting.address, 1e9, "0x", "0x");
+        await skaleToken.mint(ETOP.address, 1e9, "0x", "0x");
     });
 
-    it("should register SAFT investor", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    it("should register ETOP holder", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
-    it("should get SAFT data", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        ((await Vesting.getStartVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
-        ((await Vesting.getLockupPeriodInMonth(holder)).toNumber()).should.be.equal(6);
-        ((await Vesting.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
-        (await Vesting.isCancelableVestingTerm(holder)).should.be.equal(false);
-        ((await Vesting.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
+    it("should get ETOP data", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        ((await ETOP.getStartVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
+        ((await ETOP.getLockupPeriodInMonth(holder)).toNumber()).should.be.equal(6);
+        ((await ETOP.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
+        // (await ETOP.isCancelableVestingTerm(holder)).should.be.equal(false);
+        ((await ETOP.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
     });
 
-    it("should approve SAFT", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        await Vesting.approveSAFTHolder({from: holder});
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    it("should approve ETOP", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        await ETOP.approveHolder({from: holder});
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
-    it("should not approve SAFT from hacker", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        await Vesting.approveSAFTHolder({from: hacker}).should.be.eventually.rejectedWith("SAFT is not registered");
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    it("should not approve ETOP from hacker", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        await ETOP.approveHolder({from: hacker}).should.be.eventually.rejectedWith("Holder is not registered");
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
-    it("should not approve SAFT twice", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        await Vesting.approveSAFTHolder({from: holder});
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-        await Vesting.approveSAFTHolder({from: holder}).should.be.eventually.rejectedWith("SAFT is already approved");
+    it("should not approve ETOP twice", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        await ETOP.approveHolder({from: holder});
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+        await ETOP.approveHolder({from: holder}).should.be.eventually.rejectedWith("Holder is already approved");
     });
 
-    it("should not start vesting without approve SAFT", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        await Vesting.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not approved");
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    it("should not start vesting without approve ETOP", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder is not approved");
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
-    it("should not start vesting without registering SAFT", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not registered");
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    it("should not start vesting without registering ETOP", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder is not registered");
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
-    it("should start vesting with register & approve SAFT", async () => {
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-        await Vesting.approveSAFTHolder({from: holder});
-        (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-        await Vesting.startVesting(holder, {from: owner});
-        (await Vesting.isActiveVestingTerm(holder)).should.be.eq(true);
+    it("should start vesting with register & approve ETOP", async () => {
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+        await ETOP.approveHolder({from: holder});
+        (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+        await ETOP.startVesting(holder, {from: owner});
+        (await ETOP.isActiveVestingTerm(holder)).should.be.eq(true);
     });
 
     // it("should stop cancelable vesting before start", async () => {
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-    //     await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-    //     await Vesting.approveSAFTHolder({from: holder});
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await Vesting.stopVesting(holder, {from: owner});
-    //     await Vesting.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+    //     await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+    //     await ETOP.approveHolder({from: holder});
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     await ETOP.stopVesting(holder, {from: owner});
+    //     await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("ETOP is already canceled");
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
     // it("should stop cancelable vesting after start", async () => {
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-    //     await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-    //     await Vesting.approveSAFTHolder({from: holder});
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await Vesting.startVesting(holder, {from: owner});
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(true);
-    //     await Vesting.stopVesting(holder, {from: owner});
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await Vesting.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+    //     await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+    //     await ETOP.approveHolder({from: holder});
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     await ETOP.startVesting(holder, {from: owner});
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(true);
+    //     await ETOP.stopVesting(holder, {from: owner});
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("ETOP is already canceled");
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
     // it("should stop not-cancelable vesting before start", async () => {
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-    //     await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-    //     await Vesting.approveSAFTHolder({from: holder});
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await Vesting.stopVesting(holder, {from: owner});
-    //     await Vesting.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+    //     await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+    //     await ETOP.approveHolder({from: holder});
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     await ETOP.stopVesting(holder, {from: owner});
+    //     await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("ETOP is already canceled");
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
     // it("should not stop not-cancelable vesting before start", async () => {
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(false);
-    //     await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     (await Vesting.isSAFTRegistered(holder)).should.be.eq(true);
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(false);
-    //     await Vesting.approveSAFTHolder({from: holder});
-    //     (await Vesting.isApprovedSAFT(holder)).should.be.eq(true);
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await Vesting.startVesting(holder, {from: owner});
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(true);
-    //     await Vesting.stopVesting(holder, {from: owner}).should.be.eventually.rejectedWith("You could not stop vesting for holder");
-    //     (await Vesting.isActiveVestingTerm(holder)).should.be.eq(true);
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
+    //     await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
+    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
+    //     await ETOP.approveHolder({from: holder});
+    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
+    //     await ETOP.startVesting(holder, {from: owner});
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(true);
+    //     await ETOP.stopVesting(holder, {from: owner}).should.be.eventually.rejectedWith("You could not stop vesting for holder");
+    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(true);
     // });
 
-    it("should not register SAFT Round if sender is not owner", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
-        // await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
+    it("should not register ETOP Plan if sender is not owner", async () => {
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
+        // await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
-    it("should not connect holder to SAFT if sender is not owner", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
+    it("should not connect holder to Plan  if sender is not owner", async () => {
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
+        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
-    it("should not register already registered SAFT investor", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
+    it("should not register already registered ETOP holder", async () => {
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Holder is already added");
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Holder is already added");
+        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
+        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("ETOP holder is already added");
     });
 
-    it("should not register SAFT Round if periods incorrect", async () => {
-        await Vesting.addSAFTRound(37, 36, 2, 6, {from: owner}).should.be.eventually.rejectedWith("Incorrect periods");
+    it("should not register ETOP Plan if periods incorrect", async () => {
+        await ETOP.addVestingPlan(37, 36, 2, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect periods");
     });
 
-    it("should not register SAFT Round if vesting times incorrect", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 7, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
+    it("should not register ETOP Plan if vesting times incorrect", async () => {
+        await ETOP.addVestingPlan(6, 36, 2, 7, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
     });
 
-    it("should not connect holder to SAFT Round if amounts incorrect", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
+    it("should not connect holder to ETOP Plan if amounts incorrect", async () => {
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
     });
 
-    it("should not connect holder to SAFT Round if period starts incorrect", async () => {
+    it("should not connect holder to ETOP Plan if period starts incorrect", async () => {
         const time = await currentTime(web3);
         const currentDate = new Date(time * 1000);
         const nextYear = currentDate.getFullYear() + 1;
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
     });
 
-    it("should be possible to delegate SAFT tokens", async () => {
-        await Vesting.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await Vesting.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
-        // await Vesting.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
-        await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
-        await validatorService.enableValidator(1, {from: owner});
-        const amount = 15000;
-        const delegationPeriod = 3;
-        await delegationController.delegate(
-            1, amount, delegationPeriod, "D2 is even", {from: holder});
-        const delegationId = 0;
-        await delegationController.acceptPendingDelegation(delegationId, {from: owner});
-        (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
-    });
+    // it("should be possible to delegate ETOP tokens", async () => {
+    //     await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+    //     await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+    //     // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
+    //     await ETOP.approveHolder({from: holder});
+    //     await ETOP.startVesting(holder, {from: owner});
+    //     (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
+    //     await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
+    //     await validatorService.enableValidator(1, {from: owner});
+    //     const amount = 15000;
+    //     const delegationPeriod = 3;
+    //     await delegationController.delegate(
+    //         1, amount, delegationPeriod, "D2 is even", {from: holder});
+    //     const delegationId = 0;
+    //     await delegationController.acceptPendingDelegation(delegationId, {from: owner});
+    //     (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
+    // });
 
-    it("should allow to retrieve all tokens if SAFT registered along time ago", async () => {
+    it("should allow to retrieve all tokens if ETOP registered along time ago", async () => {
         const lockupPeriod = 6;
         const fullPeriod = 15;
         const fullAmount = 4e6;
@@ -249,15 +253,17 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const vestPeriod = 2;
         const vestTime = 3;
         const startDate = getTimeAtDate(1, 9, 2018);
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
-        // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        // await Vesting.retrieve({from: holder});
-        (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        const escrowAddress = await ETOP.getEscrowAddress(holder);
+        const escrow = VestingEscrow.at(escrowAddress);
+        // await ETOP.retrieve({from: holder});
+        (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
     });
 
     it("should operate with fractional payments", async () => {
@@ -268,36 +274,36 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const vestPeriod = 2;
         const vestTime = 1;
         const startDate = await currentTime(web3);
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-        // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        let lockedAmount = await Vesting.getLockedAmount(holder);
+        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        let lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
-        lockedAmount = await Vesting.getLockedAmount(holder);
+        lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
         await skipTimeToDate(web3, 1, 8);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
-        lockedAmount.toNumber().should.be.equal(Math.round(fullAmount - lockupAmount - (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestPeriod)));
+        lockedAmount.toNumber().should.be.equal(Math.round(fullAmount - lockupAmount - (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
         await skipTimeToDate(web3, 1, 9);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
-        lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount - Math.trunc(2 * (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestPeriod)));
+        lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount - Math.trunc(2 * (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
         await skipTimeToDate(web3, 1, 10);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(0);
     });
 
-    it("should correctly operate SAFT 4: one time payment", async () => {
+    it("should correctly operate ETOP 4: one time payment", async () => {
         const lockupPeriod = 10;
         const fullPeriod = 10;
         const fullAmount = 2e6;
@@ -305,66 +311,66 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const vestPeriod = 2;
         const vestTime = 0;
         const startDate = await currentTime(web3);
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-        // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        let lockedAmount = await Vesting.getLockedAmount(holder);
+        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        let lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
-        lockedAmount = await Vesting.getLockedAmount(holder);
+        lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 8);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 9);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 10);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 11);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 12);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 1);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 2);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 3);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 4);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(0);
     });
 
-    it("should correctly operate SAFT 5: each month payment", async () => {
+    it("should correctly operate ETOP 5: each month payment", async () => {
         const lockupPeriod = 1;
         const fullPeriod = 10;
         const fullAmount = 2e6;
@@ -372,68 +378,68 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const vestPeriod = 2;
         const vestTime = 1;
         const startDate = await currentTime(web3);
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-        // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        let lockedAmount = await Vesting.getLockedAmount(holder);
+        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        let lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
         await skipTimeToDate(web3, 1, 8);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 2 * lockupAmount);
         await skipTimeToDate(web3, 1, 9);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 3 * lockupAmount);
         await skipTimeToDate(web3, 1, 10);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 4 * lockupAmount);
         await skipTimeToDate(web3, 1, 11);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 5 * lockupAmount);
         await skipTimeToDate(web3, 1, 12);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 6 * lockupAmount);
         await skipTimeToDate(web3, 1, 1);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 7 * lockupAmount);
         await skipTimeToDate(web3, 1, 2);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 8 * lockupAmount);
         await skipTimeToDate(web3, 1, 3);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 9 * lockupAmount);
         await skipTimeToDate(web3, 1, 4);
-        lockedAmount = await Vesting.getLockedAmount(holder);
-        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 10 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(0);
     });
 
-    it("should correctly operate SAFT 6: only initial payment", async () => {
+    it("should correctly operate ETOP 6: only initial payment", async () => {
         const lockupPeriod = 0;
         const fullPeriod = 0;
         const fullAmount = 2e6;
@@ -441,26 +447,26 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const vestPeriod = 2;
         const vestTime = 0;
         const startDate = await currentTime(web3);
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-        // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await Vesting.approveSAFTHolder({from: holder});
-        await Vesting.startVesting(holder, {from: owner});
-        const lockedAmount = await Vesting.getLockedAmount(holder);
-        const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        const lockedAmount = await ETOP.getLockedAmount(holder);
+        const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(0);
     });
 
-    describe("when SAFTs are registered at the past", async () => {
+    describe("when ETOPs are registered at the past", async () => {
         const lockupPeriod = 6;
         const fullPeriod = 36;
         const fullAmount = 6e6;
         const lockupAmount = 1e6;
         const vestTime = 6;
         const vestPeriod = 2;
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
 
         let startDate: number;
 
@@ -469,24 +475,28 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             const currentDate = new Date(time * 1000);
             const previousYear = currentDate.getFullYear() - 1;
             startDate = getTimeAtDate(1, 9, previousYear)
-            // SAFT example 0
+            // ETOP example 0
             const saftRound = 1;
-            await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-            await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-            // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-            await Vesting.approveSAFTHolder({from: holder});
-            await Vesting.startVesting(holder, {from: owner});
+            await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+            await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+            // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+            await ETOP.approveHolder({from: holder});
+            await ETOP.startVesting(holder, {from: owner});
         });
 
         it("should unlock tokens after lockup", async () => {
-            const lockedAmount = await Vesting.getLockedAmount(holder);
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
-            // SAFT 0 lockup amount unlocked
+            const lockedAmount = await ETOP.getLockedAmount(holder);
+            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            // ETOP 0 lockup amount unlocked
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
         });
 
         it("should be able to transfer token", async () => {
+            const escrowAddress = await ETOP.getEscrowAddress(holder);
+            const escrow :VestingEscrowInstance = VestingEscrow.at(escrowAddress);
+            console.log(escrow.address);
+            await escrow.retrieve({from: holder});
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
             await skaleToken.transfer(holder1, "100", {from: holder});
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount - 100);
@@ -494,27 +504,30 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         });
 
         it("should not be able to transfer more than unlocked", async () => {
+            const escrowAddress = await ETOP.getEscrowAddress(holder);
+            const escrow = VestingEscrow.at(escrowAddress);
+            await escrow.retrieve({from: holder});
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
             await skaleToken.transfer(holder1, "1000001", {from: holder}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");;
         });
 
         it("should unlock tokens first part after lockup", async () => {
             await skipTimeToDate(web3, 1, 9)
-            const lockedAmount = await Vesting.getLockedAmount(holder);
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            const lockedAmount = await ETOP.getLockedAmount(holder);
+            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
         });
     });
 
-    describe("when All SAFTs are registered", async () => {
+    describe("when All ETOPs are registered", async () => {
         const lockupPeriod = 6;
         const fullPeriod = 36;
         const fullAmount = 6e6;
         const lockupAmount = 1e6;
         const vestTime = 6;
         const vestPeriod = 2; // month
-        const isCancelable = false;
+        const isUnvestedDelegatable = false;
         const saftRound = 1;
 
         const lockupPeriod1 = 12;
@@ -523,7 +536,7 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const lockupAmount1 = 5e5;
         const vestTime1 = 3;
         const vestPeriod1 = 2; // month
-        const isCancelable1 = false;
+        const isUnvestedDelegatable1 = false;
         const saftRound1 = 2;
 
         const lockupPeriod2 = 9;
@@ -532,7 +545,7 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const lockupAmount2 = 5e5;
         const vestTime2 = 6;
         const vestPeriod2 = 2; // month
-        const isCancelable2 = false;
+        const isUnvestedDelegatable2 = false;
         const saftRound2 = 3;
 
         const lockupPeriod3 = 12;
@@ -541,104 +554,116 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const lockupAmount3 = 12e6;
         const vestTime3 = 1;
         const vestPeriod3 = 2; // month
-        const isCancelable3 = false;
+        const isUnvestedDelegatable3 = false;
         const saftRound3 = 4;
 
         let startDate: number;
 
         beforeEach(async () => {
             startDate = await currentTime(web3);
-            // SAFT example 0
-            // await Vesting.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-            await Vesting.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-            await Vesting.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
-            await Vesting.approveSAFTHolder({from: holder});
-            await Vesting.startVesting(holder, {from: owner});
-            // SAFT example 1
-            // await Vesting.addVestingTerm(holder1, startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, isCancelable1, {from: owner});
-            await Vesting.addSAFTRound(lockupPeriod1, fullPeriod1, vestPeriod1, vestTime1, {from: owner});
-            await Vesting.connectHolderToPlan(holder1, saftRound1, startDate, fullAmount1, lockupAmount1, {from: owner});
-            await Vesting.approveSAFTHolder({from: holder1});
-            await Vesting.startVesting(holder1, {from: owner});
-            // SAFT example 2
-            // await Vesting.addVestingTerm(holder2, startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, isCancelable2, {from: owner});
-            await Vesting.addSAFTRound(lockupPeriod2, fullPeriod2, vestPeriod2, vestTime2, {from: owner});
-            await Vesting.connectHolderToPlan(holder2, saftRound2, startDate, fullAmount2, lockupAmount2, {from: owner});
-            await Vesting.approveSAFTHolder({from: holder2});
-            await Vesting.startVesting(holder2, {from: owner});
-            // SAFT example 3
-            await Vesting.addSAFTRound(lockupPeriod3, fullPeriod3, vestPeriod3, vestTime3, {from: owner});
-            await Vesting.connectHolderToPlan(holder3, saftRound3, startDate, fullAmount3, lockupAmount3, {from: owner});
-            await Vesting.approveSAFTHolder({from: holder3});
-            await Vesting.startVesting(holder3, {from: owner});
+            // ETOP example 0
+            // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+            await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+            await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+            await ETOP.approveHolder({from: holder});
+            await ETOP.startVesting(holder, {from: owner});
+            // ETOP example 1
+            // await ETOP.addVestingTerm(holder1, startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, isCancelable1, {from: owner});
+            await ETOP.addVestingPlan(lockupPeriod1, fullPeriod1, vestPeriod1, vestTime1, isUnvestedDelegatable1, {from: owner});
+            await ETOP.connectHolderToPlan(holder1, saftRound1, startDate, fullAmount1, lockupAmount1, {from: owner});
+            await ETOP.approveHolder({from: holder1});
+            await ETOP.startVesting(holder1, {from: owner});
+            // ETOP example 2
+            // await ETOP.addVestingTerm(holder2, startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, isCancelable2, {from: owner});
+            await ETOP.addVestingPlan(lockupPeriod2, fullPeriod2, vestPeriod2, vestTime2, isUnvestedDelegatable2, {from: owner});
+            await ETOP.connectHolderToPlan(holder2, saftRound2, startDate, fullAmount2, lockupAmount2, {from: owner});
+            await ETOP.approveHolder({from: holder2});
+            await ETOP.startVesting(holder2, {from: owner});
+            // ETOP example 3
+            await ETOP.addVestingPlan(lockupPeriod3, fullPeriod3, vestPeriod3, vestTime3, isUnvestedDelegatable3, {from: owner});
+            await ETOP.connectHolderToPlan(holder3, saftRound3, startDate, fullAmount3, lockupAmount3, {from: owner});
+            await ETOP.approveHolder({from: holder3});
+            await ETOP.startVesting(holder3, {from: owner});
         });
 
-        it("should show balance of all SAFTs", async () => {
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
-            (await skaleToken.balanceOf(holder1)).toNumber().should.be.equal(fullAmount1);
-            (await skaleToken.balanceOf(holder2)).toNumber().should.be.equal(fullAmount2);
-            (await skaleToken.balanceOf(holder3)).toNumber().should.be.equal(fullAmount3);
+        it("should show balance of all ETOPs", async () => {
+            let escrowAddress = await ETOP.getEscrowAddress(holder);
+            // console.log(escrowAddress);
+            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
+            escrowAddress = await ETOP.getEscrowAddress(holder1);
+            // console.log(escrowAddress);
+            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
+            escrowAddress = await ETOP.getEscrowAddress(holder2);
+            // console.log(escrowAddress);
+            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
+            escrowAddress = await ETOP.getEscrowAddress(holder3);
+            // console.log(escrowAddress);
+            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
         });
 
-        it("should not transferable of SAFT 0", async () => {
-            await skaleToken.transfer(hacker, "100", {from: holder}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");
-            await skaleToken.transfer(hacker, "100", {from: holder1}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");
-            await skaleToken.transfer(hacker, "100", {from: holder2}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");
-            await skaleToken.transfer(hacker, "100", {from: holder3}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");
+        it("should not transferable of ETOP 0", async () => {
+            await skaleToken.transfer(hacker, "100", {from: holder}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
+            await skaleToken.transfer(hacker, "100", {from: holder1}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
+            await skaleToken.transfer(hacker, "100", {from: holder2}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
+            await skaleToken.transfer(hacker, "100", {from: holder3}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
         });
 
-        it("All tokens should be locked of all SAFTs", async () => {
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
-            let lockedAmount = await Vesting.getLockedAmount(holder);
+        it("All tokens should be locked of all ETOPs", async () => {
+            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedAmount = await ETOP.getLockedAmount(holder);
             lockedAmount.toNumber().should.be.equal(fullAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder1);
+            lockedAmount = await ETOP.getLockedAmount(holder1);
             lockedAmount.toNumber().should.be.equal(fullAmount1);
 
-            lockedAmount = await Vesting.getLockedAmount(holder2);
+            lockedAmount = await ETOP.getLockedAmount(holder2);
             lockedAmount.toNumber().should.be.equal(fullAmount2);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             lockedAmount.toNumber().should.be.equal(fullAmount3);
         });
 
         it("After 6 month", async () => {
             await skipTimeToDate(web3, 1, 12);
 
-            let lockedAmount = await Vesting.getLockedAmount(holder);
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
-            // SAFT 0 lockup amount unlocked
+            let lockedAmount = await ETOP.getLockedAmount(holder);
+            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            // ETOP 0 lockup amount unlocked
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder1);
+            lockedAmount = await ETOP.getLockedAmount(holder1);
             lockedAmount.toNumber().should.be.equal(fullAmount1);
 
-            lockedAmount = await Vesting.getLockedAmount(holder2);
+            lockedAmount = await ETOP.getLockedAmount(holder2);
             lockedAmount.toNumber().should.be.equal(fullAmount2);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             lockedAmount.toNumber().should.be.equal(fullAmount3);
         });
 
         it("After 9 month", async () => {
             await skipTimeToDate(web3, 1, 3);
-            let lockedAmount = await Vesting.getLockedAmount(holder);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
-            // SAFT 0 only lockup amount unlocked
+            let lockedAmount = await ETOP.getLockedAmount(holder);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            // ETOP 0 only lockup amount unlocked
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder1);
+            lockedAmount = await ETOP.getLockedAmount(holder1);
             lockedAmount.toNumber().should.be.equal(fullAmount1);
 
-            // SAFT 2 lockup amount unlocked
-            lockedAmount = await Vesting.getLockedAmount(holder2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2);
+            // ETOP 2 lockup amount unlocked
+            lockedAmount = await ETOP.getLockedAmount(holder2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount2 - lockupAmount2);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             lockedAmount.toNumber().should.be.equal(fullAmount3);
         });
 
@@ -646,26 +671,26 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 12);
             await skipTimeToDate(web3, 1, 6);
 
-            let lockedAmount = await Vesting.getLockedAmount(holder);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            let lockedAmount = await ETOP.getLockedAmount(holder);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
 
-            // SAFT 1 lockup amount unlocked
-            lockedAmount = await Vesting.getLockedAmount(holder1);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1);
+            // ETOP 1 lockup amount unlocked
+            lockedAmount = await ETOP.getLockedAmount(holder1);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount1 - lockupAmount1);
 
-            // SAFT 2 lockup amount unlocked
-            lockedAmount = await Vesting.getLockedAmount(holder2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2);
+            // ETOP 2 lockup amount unlocked
+            lockedAmount = await ETOP.getLockedAmount(holder2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount2 - lockupAmount2);
 
-            // SAFT 3 lockup amount unlocked
-            lockedAmount = await Vesting.getLockedAmount(holder3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            // ETOP 3 lockup amount unlocked
+            lockedAmount = await ETOP.getLockedAmount(holder3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount3 - lockupAmount3);
         });
@@ -673,10 +698,23 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         it("should be possible to send tokens", async () => {
             await skipTimeToDate(web3, 1, 12);
             await skipTimeToDate(web3, 1, 6);
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
-            (await skaleToken.balanceOf(holder1)).toNumber().should.be.equal(fullAmount1);
-            (await skaleToken.balanceOf(holder2)).toNumber().should.be.equal(fullAmount2);
-            (await skaleToken.balanceOf(holder3)).toNumber().should.be.equal(fullAmount3);
+            let escrowAddress = await ETOP.getEscrowAddress(holder);
+            let escrow = VestingEscrow.at(escrowAddress);
+            // await escrow.retrieve({from: holder});
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
+            await escrow.retrieve({from: holder});
+            escrowAddress = await ETOP.getEscrowAddress(holder1);
+            escrow = VestingEscrow.at(escrowAddress);
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
+            await escrow.retrieve({from: holder1});
+            escrowAddress = await ETOP.getEscrowAddress(holder2);
+            escrow = VestingEscrow.at(escrowAddress);
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
+            await escrow.retrieve({from: holder2});
+            escrowAddress = await ETOP.getEscrowAddress(holder3);
+            escrow = VestingEscrow.at(escrowAddress);
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
+            await escrow.retrieve({from: holder3});
             await skaleToken.transfer(hacker, "100", {from: holder});
             await skaleToken.transfer(hacker, "100", {from: holder1});
             await skaleToken.transfer(hacker, "100", {from: holder2});
@@ -692,25 +730,25 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 3);
             await skipTimeToDate(web3, 1, 9);
 
-            let lockedAmount = await Vesting.getLockedAmount(holder);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            let lockedAmount = await ETOP.getLockedAmount(holder);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
 
-            // SAFT 1 unlocked all tokens
-            lockedAmount = await Vesting.getLockedAmount(holder1);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1);
+            // ETOP 1 unlocked all tokens
+            lockedAmount = await ETOP.getLockedAmount(holder1);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
-            // SAFT 2 unlocked all tokens
-            lockedAmount = await Vesting.getLockedAmount(holder2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2);
+            // ETOP 2 unlocked all tokens
+            lockedAmount = await ETOP.getLockedAmount(holder2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount3 - lockupAmount3);
         });
@@ -726,40 +764,40 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 5);
             await skipTimeToDate(web3, 1, 10);
 
-            let lockedAmount = await Vesting.getLockedAmount(holder);
+            let lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked16 = lockedAmount.toNumber();
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             saft3unlocked16 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 11);
 
-            lockedAmount = await Vesting.getLockedAmount(holder);
+            lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked17 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             saft3unlocked17 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             saft0unlocked16.should.be.equal(saft0unlocked17);
 
             await skipTimeToDate(web3, 1, 12);
 
-            lockedAmount = await Vesting.getLockedAmount(holder);
+            lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked18 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
             saft3unlocked18 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             (saft3unlocked16 - saft3unlocked17).should.be.equal(saft3unlocked17 - saft3unlocked18);
@@ -776,36 +814,36 @@ contract("Vesting", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 4);
             await skipTimeToDate(web3, 1, 6);
 
-            let lockedAmount = await Vesting.getLockedAmount(holder);
+            let lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked24 = lockedAmount.toNumber();
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 12);
 
-            lockedAmount = await Vesting.getLockedAmount(holder);
+            lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked30 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 6);
 
-            lockedAmount = await Vesting.getLockedAmount(holder);
+            lockedAmount = await ETOP.getLockedAmount(holder);
             saft0unlocked36 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
-            lockedAmount = await Vesting.getLockedAmount(holder3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3);
+            lockedAmount = await ETOP.getLockedAmount(holder3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
