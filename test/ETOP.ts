@@ -261,7 +261,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await ETOP.approveHolder({from: holder});
         await ETOP.startVesting(holder, {from: owner});
         const escrowAddress = await ETOP.getEscrowAddress(holder);
-        const escrow = VestingEscrow.at(escrowAddress);
+        const escrow = await VestingEscrow.at(escrowAddress);
         // await ETOP.retrieve({from: holder});
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
     });
@@ -494,21 +494,20 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
         it("should be able to transfer token", async () => {
             const escrowAddress = await ETOP.getEscrowAddress(holder);
-            const escrow :VestingEscrowInstance = VestingEscrow.at(escrowAddress);
-            console.log(escrow.address);
+            const escrow = await VestingEscrow.at(escrowAddress);
             await escrow.retrieve({from: holder});
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
+            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(lockupAmount);
             await skaleToken.transfer(holder1, "100", {from: holder});
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount - 100);
+            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(lockupAmount - 100);
             (await skaleToken.balanceOf(holder1)).toNumber().should.be.equal(100);
         });
 
         it("should not be able to transfer more than unlocked", async () => {
             const escrowAddress = await ETOP.getEscrowAddress(holder);
-            const escrow = VestingEscrow.at(escrowAddress);
+            const escrow = await VestingEscrow.at(escrowAddress);
             await escrow.retrieve({from: holder});
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
-            await skaleToken.transfer(holder1, "1000001", {from: holder}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");;
+            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(lockupAmount);
+            await skaleToken.transfer(holder1, "1000001", {from: holder}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
         });
 
         it("should unlock tokens first part after lockup", async () => {
@@ -588,20 +587,12 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
         it("should show balance of all ETOPs", async () => {
             let escrowAddress = await ETOP.getEscrowAddress(holder);
-            // console.log(escrowAddress);
-            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             escrowAddress = await ETOP.getEscrowAddress(holder1);
-            // console.log(escrowAddress);
-            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
             escrowAddress = await ETOP.getEscrowAddress(holder2);
-            // console.log(escrowAddress);
-            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
             escrowAddress = await ETOP.getEscrowAddress(holder3);
-            // console.log(escrowAddress);
-            // console.log((await skaleToken.balanceOf(escrowAddress)).toNumber());
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
         });
 
@@ -699,30 +690,33 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 12);
             await skipTimeToDate(web3, 1, 6);
             let escrowAddress = await ETOP.getEscrowAddress(holder);
-            let escrow = VestingEscrow.at(escrowAddress);
-            // await escrow.retrieve({from: holder});
+            let escrow = await VestingEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             await escrow.retrieve({from: holder});
             escrowAddress = await ETOP.getEscrowAddress(holder1);
-            escrow = VestingEscrow.at(escrowAddress);
+            escrow = await VestingEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
             await escrow.retrieve({from: holder1});
             escrowAddress = await ETOP.getEscrowAddress(holder2);
-            escrow = VestingEscrow.at(escrowAddress);
+            escrow = await VestingEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
             await escrow.retrieve({from: holder2});
             escrowAddress = await ETOP.getEscrowAddress(holder3);
-            escrow = VestingEscrow.at(escrowAddress);
+            escrow = await VestingEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
             await escrow.retrieve({from: holder3});
             await skaleToken.transfer(hacker, "100", {from: holder});
             await skaleToken.transfer(hacker, "100", {from: holder1});
             await skaleToken.transfer(hacker, "100", {from: holder2});
             await skaleToken.transfer(hacker, "100", {from: holder3});
-            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount - 100);
-            (await skaleToken.balanceOf(holder1)).toNumber().should.be.equal(fullAmount1 - 100);
-            (await skaleToken.balanceOf(holder2)).toNumber().should.be.equal(fullAmount2 - 100);
-            (await skaleToken.balanceOf(holder3)).toNumber().should.be.equal(fullAmount3 - 100);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount - lockedCalculatedAmount - 100);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
+            (await skaleToken.balanceOf(holder1)).toNumber().should.be.equal(fullAmount1 - lockedCalculatedAmount - 100);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
+            (await skaleToken.balanceOf(holder2)).toNumber().should.be.equal(fullAmount2 - lockedCalculatedAmount - 100);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, fullPeriod3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            (await skaleToken.balanceOf(holder3)).toNumber().should.be.equal(fullAmount3 - lockedCalculatedAmount - 100);
             (await skaleToken.balanceOf(hacker)).toNumber().should.be.equal(400);
         });
 

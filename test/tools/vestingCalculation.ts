@@ -25,17 +25,6 @@ function calculatePartPayment(startDate: number, lockupPeriod: number, fullPerio
     return Math.floor((fullAmount - lockupAmount) / numberOfPartPayments);
 }
 
-// function getTimePointInCorrectPeriod(date: Date, vestPeriod: number, vestTime: number) {
-//     if (vestPeriod === 1) {
-//         const dateDay = date.getTime() / 1000 * 86400;
-//         return dateDay + vestTime;
-//     } else if (vestPeriod === 2) {
-//         return date.getMonth() + vestTime;
-//     } else {
-//         return date.getFullYear() + vestTime;
-//     }
-// }
-
 function addTimePointToTimestamp(date: Date, vestPeriod: number, vestTime: number) {
     if (vestPeriod === 1) {
         const newDate = new Date(date);
@@ -76,23 +65,10 @@ export function calculateLockedAmount(time: number, startDate: number, lockupPer
     let lockedAmount = fullAmount - lockupAmount;
     const partPayment = calculatePartPayment(startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
 
-    // temp = lockupDate.getMonth() + vestPeriod;
-    // temp = getTimePointInCorrectPeriod(lockupDate, vestPeriod, vestTime);
     let indexTime = addTimePointToTimestamp(lockupDate, vestPeriod, vestTime);
-    // const indexTime = new Date(lockupDate.setFullYear(lockupDate.getFullYear() + Math.floor(temp / 12), temp % 12));
-
-    // console.log(indexTime.getDate());
-    // console.log(currentTime.toString());
-    // console.log(initDate.toString());
-    // console.log(lockupDate.toString());
-    // console.log(finishDate.toString());
 
     while (Math.floor(indexTime.getTime() / 1000) < Math.floor(currentTime.getTime() / 1000)) {
-        // console.log(indexTime.getTime());
         lockedAmount -= partPayment;
-        // temp = indexTime.getMonth() + vestPeriod;
-        // temp = getTimePointInCorrectPeriod(indexTime, vestPeriod, vestTime);
-        // indexTime.setFullYear(indexTime.getFullYear() + Math.floor(temp / 12), temp % 12);
         indexTime = addTimePointToTimestamp(indexTime, vestPeriod, vestTime);
     }
     return lockedAmount;

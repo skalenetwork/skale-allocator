@@ -278,35 +278,20 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
         lockedAmount = await SAFT.getLockedAmount(holder);
-        // console.log("Iter 1");
-        // console.log("Locked Amount:", lockedAmount.toNumber());
-        // console.log("Predicted Amount:", fullAmount - lockupAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
         await skipTimeToDate(web3, 1, 8);
         lockedAmount = await SAFT.getLockedAmount(holder);
         let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
-        // console.log("Iter 2");
-        // console.log("Locked Amount:", lockedAmount.toNumber());
-        // console.log("Predicted Amount:", Math.round(fullAmount - lockupAmount - (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
-        // console.log("Calculated Amount:", lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(Math.round(fullAmount - lockupAmount - (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
         await skipTimeToDate(web3, 1, 9);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
-        // console.log("Iter 3");
-        // console.log("Locked Amount:", lockedAmount.toNumber());
-        // console.log("Predicted Amount:", fullAmount - lockupAmount - Math.trunc(2 * (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
-        // console.log("Calculated Amount:", lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount - Math.trunc(2 * (fullAmount - lockupAmount) / ((fullPeriod - lockupPeriod) / vestTime)));
         await skipTimeToDate(web3, 1, 10);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
-        // console.log("Iter 4");
-        // console.log("Locked Amount:", lockedAmount.toNumber());
-        // console.log("Predicted Amount:", 0);
-        // console.log("Calculated Amount:", lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(0);
     });
@@ -509,7 +494,6 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
         it("should not be able to transfer more than unlocked", async () => {
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
-            // console.log((await SAFT.getLockedAmount(holder)).toNumber());
             await skaleToken.transfer(holder1, "1000001", {from: holder}).should.be.eventually.rejectedWith("Token should be unlocked for transferring");;
         });
 
@@ -517,9 +501,6 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 9)
             const lockedAmount = await SAFT.getLockedAmount(holder);
             const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
-            // console.log("Locked Amount:", lockedAmount.toNumber());
-            // console.log("Predicted Amount:", fullAmount - lockupAmount);
-            // console.log("Calculated Amount:", lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
         });
