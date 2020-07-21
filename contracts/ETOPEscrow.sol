@@ -109,7 +109,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         // require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
-        uint availableAmount = 0;
+        uint vestedAmount = 0;
         if (etop.isActiveVestingTerm(_holder)) {
             vestedAmount = etop.calculateVestedAmount(_holder);
         } else {
@@ -118,12 +118,12 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint fullAmount = etop.getFullAmount(_holder);
         uint forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
-        if (availableAmount > fullAmount.sub(escrowBalance)) {
-            if (availableAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
+        if (vestedAmount > fullAmount.sub(escrowBalance)) {
+            if (vestedAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     _holder,
-                    availableAmount
+                    vestedAmount
                         .sub(
                             fullAmount
                                 .sub(escrowBalance)
@@ -249,7 +249,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * vesting is performed upon termination.
      * TODO: missing moving ETOP holder to deactivated state?
      */
-    function cancelVesting(uint availableAmount) external allow("ETOP") {
-        _availableAmountAfterTermination = availableAmount;
+    function cancelVesting(uint vestedAmount) external allow("ETOP") {
+        _availableAmountAfterTermination = vestedAmount;
     }
 }

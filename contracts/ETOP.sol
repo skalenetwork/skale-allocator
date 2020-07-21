@@ -381,19 +381,19 @@ contract ETOP is Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the vested token amount.
      */
-    function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
+    function calculateAvailableAmount(address wallet) public view returns (uint vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        availableAmount = 0;
+        vestedAmount = 0;
         if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
-            availableAmount = planHolder.afterLockupAmount;
+            vestedAmount = planHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
-                availableAmount = planHolder.fullAmount;
+                vestedAmount = planHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
-                availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
+                vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
         }
     }

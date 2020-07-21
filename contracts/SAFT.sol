@@ -369,19 +369,19 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the amount of unlocked tokens.
      */
-    function calculateUnlockedAmount(address wallet) public view returns (uint availableAmount) {
+    function calculateUnlockedAmount(address wallet) public view returns (uint unlockedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        availableAmount = 0;
+        unlockedAmount = 0;
         if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            availableAmount = saftHolder.afterLockupAmount;
+            unlockedAmount = saftHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
-                availableAmount = saftHolder.fullAmount;
+                unlockedAmount = saftHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
-                availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
+                unlockedAmount = unlockedAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
             }
         }
     }
