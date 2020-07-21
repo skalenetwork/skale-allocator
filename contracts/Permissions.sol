@@ -53,7 +53,6 @@ contract Permissions is AccessControlUpgradeSafe {
     /**
      * @dev allow - throws if called by any account and contract other than the owner
      * or `contractName` contract
-     * @param contractName - human readable name of contract
      */
     modifier allow(string memory contractName) {
         require(

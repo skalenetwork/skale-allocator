@@ -1,15 +1,15 @@
 {
-  "name": "@skalenetwork/skale-manager",
+  "name": "@skalenetwork/skale-saft-etop",
   "version": "1.4.2",
   "private": true,
-  "description": "SKALE Manager system, Decentralized task manager",
-  "homepage": "https://github.com/skalenetwork/skale-manager#readme",
+  "description": "SKALE SAFT ETOP system, Decentralized task manager",
+  "homepage": "https://github.com/skalenetwork/skale-saft-etop#readme",
   "bugs": {
-    "url": "https://github.com/skalenetwork/skale-manager/issues"
+    "url": "https://github.com/skalenetwork/skale-saft-etop/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/skalenetwork/skale-manager.git"
+    "url": "git+https://github.com/skalenetwork/skale-saft-etop.git"
   },
   "license": "AGPL-3.0",
   "author": "SKALE Labs",

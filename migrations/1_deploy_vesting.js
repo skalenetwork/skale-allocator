@@ -84,7 +84,7 @@ async function deploy(deployer, networkName, accounts) {
         "ContractManager", // must be in first position
 
         "SAFT",
-        "VestingEscrowCreator",
+        "ETOPEscrowCreator",
         "ETOP"
     ]
     // if (!production) {
@@ -160,8 +160,8 @@ async function deploy(deployer, networkName, accounts) {
         contract_manager_abi: artifacts.require("./ContractManager").abi,
         saft_address: deployed.get("SAFT").address,
         saft_abi: artifacts.require("./SAFT").abi,
-        vesting_escrow_creator_address: deployed.get("VestingEscrowCreator").address,
-        vesting_escrow_creator_abi: artifacts.require("./VestingEscrowCreator").abi,
+        vesting_escrow_creator_address: deployed.get("ETOPEscrowCreator").address,
+        vesting_escrow_creator_abi: artifacts.require("./ETOPEscrowCreator").abi,
         etop_address: deployed.get("ETOP").address,
         etop_abi: artifacts.require("./ETOP").abi
     };

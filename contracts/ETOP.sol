@@ -38,6 +38,9 @@ import "./ETOPEscrowCreator.sol";
  *
  * An ETOP is defined by an initial token vesting cliff period, followed by
  * periodic vesting.
+ *
+ * Employees (holders) may be registered into a particular plan, and be assigned
+ * individual start states and allocations.
  */
 contract ETOP is Permissions, IERC777Recipient {
 
@@ -73,7 +76,7 @@ contract ETOP is Permissions, IERC777Recipient {
     //        holder => Plan holder params
     mapping (address => PlanHolder) private _vestingHolders;
 
-    //        holder => address of vesting escrow
+    //        holder => address of ETOP escrow
     mapping (address => address) private _holderToEscrow;
 
     function tokensReceived(
@@ -108,7 +111,7 @@ contract ETOP is Permissions, IERC777Recipient {
 
     /**
      * @dev Allows Owner to activate a holder address and transfer locked
-     * tokens to an holder address.
+     * tokens to the associated ETOP escrow address.
      *
      * Requirements:
      *
@@ -129,25 +132,25 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add a an ETOP.
+     * @dev Allows Owner to define and add an ETOP.
      *
      * Requirements:
      *
      * - Vesting cliff period must be less than or equal to the full period.
      * - Vesting period must be in days, months, or years.
-     * - Full period must equal vesting cliff plus vesting schedule.
+     * - Full period must equal vesting cliff plus entire vesting schedule.
      */
-    function addVestingPlan(
+    function addETOP(
         uint vestingCliffPeriod, // months
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
         uint vestingTimes, // months or days or years
-        bool isUnvestedDelegatable // can holder delegate all un-vested
+        bool isUnvestedDelegatable // can holder delegate all un-vested tokens
     )
         external
         onlyOwner
     {
-        require(fullPeriod >= vestingCliffPeriod, "Incorrect periods");
+        require(fullPeriod >= vestingCliffPeriod, "Cliff period exceeds full period");
         require(vestingPeriod >= 1 && vestingPeriod <= 3, "Incorrect vesting period");
         require(
             (fullPeriod - vestingCliffPeriod) == vestingTimes ||
@@ -164,17 +167,19 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to terminate an ETOP vesting.
+     * @dev Allows Owner to terminate vesting of an ETOP holder. Performed when
+     * a holder is terminated.
      *
      * Requirements:
      *
-     * - ETOP must be active. TODO:
+     * - ETOP holder must be active.
      */
     function stopVesting(address holder) external onlyOwner {
         require(
             !_vestingHolders[holder].active,
-            "You could not stop vesting for this holder"
+            "Cannot stop vesting for a deactivated holder"
         );
+        // TODO add deactivate logic!!!
         // _vestedAmount[holder] = calculateVestedAmount(holder);
         ETOPEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
@@ -186,13 +191,12 @@ contract ETOP is Permissions, IERC777Recipient {
      *
      * - ETOP must already exist.
      * - The vesting amount must be less than or equal to the full allocation.
-     * - The start date for unlocking must not have already passed. TODO: incorrect!
      * - The holder address must not already be included in the ETOP.
      */
     function connectHolderToPlan(
         address holder,
         uint planId,
-        uint startVestingTime, //timestamp
+        uint startVestingTime, // timestamp
         uint fullAmount,
         uint lockupAmount
     )
@@ -201,7 +205,7 @@ contract ETOP is Permissions, IERC777Recipient {
     {
         require(_allPlans.length >= planId && planId > 0, "ETOP does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
-        require(startVestingTime <= now, "Incorrect period starts");
+        // require(startVestingTime <= now, "Incorrect period starts");  TODO: Remove to allow both past and future vesting start date
         require(!_vestingHolders[holder].registered, "Holder is already added");
         _vestingHolders[holder] = PlanHolder({
             registered: true,
@@ -216,14 +220,14 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the time when ETOP plan begins.  TODO confirm
+     * @dev Returns vesting start date of the holder's ETOP.
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
     }
 
     /**
-     * @dev Returns the time when ETOP completes periodic vesting.  TODO confirm
+     * @dev Returns the final vesting date of the holder's ETOP.
      */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -233,9 +237,9 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the lockup period in months.
+     * @dev Returns the vesting cliff period in months.
      */
-    function getLockupPeriodInMonth(address holder) external view returns (uint) {
+    function getVestingCliffInMonth(address holder) external view returns (uint) {
         return _allPlans[_vestingHolders[holder].planId - 1].vestingCliffPeriod;
     }
 
@@ -254,14 +258,14 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is approved in an ETOP.
+     * @dev Confirms whether the holder is registered in an ETOP.
      */
     function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].registered;
     }
 
     /**
-     * @dev Confirms whether the holder's plan allows all unvested tokens to be
+     * @dev Confirms whether the holder's ETOP allows all un-vested tokens to be
      * delegated.
      */
     function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
@@ -277,8 +281,8 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the timestamp when lockup period end and periodic vesting
-     * begins. TODO confirm
+     * @dev Returns the timestamp when vesting cliff ends and periodic vesting
+     * begins.
      */
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -288,7 +292,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the time of next vest period.
+     * @dev Returns the time of the next vesting period.
      */
     function getTimeOfNextVest(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -355,7 +359,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the locked amount of tokens.
+     * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
     function getLockedAmount(address wallet) public view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -368,14 +372,14 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the locked amount of tokens. TODO: clarify difference from above?
+     * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
     function getLockedAmountForDelegation(address wallet) public view returns (uint) {
         return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
 
     /**
-     * @dev Calculates and returns the amount of vested tokens. TODO confirm
+     * @dev Calculates and returns the vested token amount.
      */
     function calculateVestedAmount(address wallet) public view returns (uint availableAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -448,7 +452,8 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev TODO?
+     * @dev Returns timestamp when adding timepoints (days/months/years) to
+     * timestamp.
      */
     function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -462,7 +467,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev TODO?
+     * @dev Returns timepoints (days/months/years) from a given timestamp.
      */
     function _addMonthsAndTimePoint(
         uint timestamp,

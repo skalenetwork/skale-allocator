@@ -144,7 +144,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      *
      * - Lockup period must be less than or equal to the full period.
      * - Locked period must be in days, months, or years.
-     * - THe full period must equal the lock period plus the unlock schedule.
+     * - The full period must equal the lock period plus the unlock schedule.
      */
     function addSAFTRound(
         uint lockupPeriod, // months
@@ -283,7 +283,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
 
     /**
      * @dev Returns the timestamp when lockup period ends and periodic unlocking
-     * begins. TODO confirm
+     * begins.
      */
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -440,7 +440,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev TODO?
+     * @dev Returns timestamp when adding timepoints (days/months/years) to
+     * timestamp.
      */
     function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -454,7 +455,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev TODO?
+     * @dev Returns timepoints (days/months/years) from a given timestamp.
      */
     function _addMonthsAndTimePoint(
         uint timestamp,

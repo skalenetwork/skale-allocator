@@ -36,7 +36,7 @@ import "./interfaces/delegation/IValidatorService.sol";
 
 /**
  * @title ETOP Escrow
- * @dev This contract manages Treasury escrow operations for the SKALE Employee
+ * @dev This contract manages ETOP escrow operations for the SKALE Employee
  * Token Open Plan.
  */
 contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
@@ -102,11 +102,8 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows holder to retrieve locked tokens.
-     *
-     * Requirements:
-     *
-     * - Holder can only retrieve vested and undelegated tokens. TODO: CONFIRM!
+     * @dev Allows Holder to retrieve locked tokens from SKALE Token to the ETOP
+     * Escrow contract.
      */
     function retrieve() external onlyHolder {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
@@ -139,18 +136,18 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows ETOP Owner to retrieve tokens after holder termination.
+     * @dev Allows ETOP Owner to retrieve remaining transferrable escrow balance
+     * after ETOP holder termination. Slashed tokens are non-transferable.
      *
      * Requirements:
      *
      * - ETOP must be active.
-     * - Transfer amount must be less than the full allocation minus slashed tokens TODO: LTE?m confirm?
      */
     function retrieveAfterTermination() external onlyOwner {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
-        require(!etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        require(!etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -165,13 +162,14 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows holder to propose delegation to a validator.
+     * @dev Allows ETOP holder to propose a delegation to a validator.
      *
      * Requirements:
      *
+     * - ETOP holder must be active.
      * - Holder has sufficient delegatable tokens.
-     * - ETOP must be active.
-     * - If trusted list is enabled, validator must be member of list.
+     * - If trusted list is enabled, validator must be a member of this trusted
+     * list.
      */
     function delegate(
         uint validatorId,
@@ -184,7 +182,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         // ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         require(
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
             "Not enough balance"
@@ -207,13 +205,14 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Holder and Owner to request undelegation. Owner can request
-     * undelegation after holder's termination.
+     * @dev Allows Holder and Owner to request undelegation. Only Owner can
+     * request undelegation after ETOP holder is deactivated (upon holder
+     * termination).
      *
      * Requirements:
      *
-     * - Holder must be `msg.sender`.
-     * - ETOP must be active.
+     * - Holder or ETOP Owner must be `msg.sender`.
+     * - ETOP holder must be active when Holder is `msg.sender`.
      */
     function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
@@ -222,7 +221,7 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
             "Message sender is not authorized"
         );
         if (_msgSender() == _holder) {
-            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -231,18 +230,19 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Holder and Owner to withdraw earned bounty. Owner can
-     * withdraw bounty after holder's termination.
+     * @dev Allows Holder and Owner to withdraw earned bounty. Only Owner can
+     * withdraw bounty to ETOP contract after ETOP holder is deactivated.
      *
      * Requirements:
      *
-     * - ETOP must be active.
+     * - Holder or ETOP Owner must be `msg.sender`.
+     * - ETOP must be active when Holder is `msg.sender`.
      */
     function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             ETOP etop = ETOP(contractManager.getContract("ETOP"));
-            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
             distributor.withdrawBounty(validatorId, to);
         } else {
             distributor.withdrawBounty(validatorId, _etopContract);
@@ -250,7 +250,9 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows ETOP contract to cancel vesting of a holder.
+     * @dev Allows ETOP contract to cancel vesting of an ETOP holder. Cancel
+     * vesting is performed upon termination.
+     * TODO: missing moving ETOP holder to deactivated state?
      */
     function cancelVesting(uint availableAmount) external allow("ETOP") {
         // ETOP etop = ETOP(contractManager.getContract("ETOP"));
