@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    VestingEscrowCreator.sol - SKALE Manager
-    Copyright (C) 2019-Present SKALE Labs
+    ETOPEscrowCreator.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -28,17 +28,21 @@ pragma experimental ABIEncoderV2;
 // import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 // import "./interfaces/delegation/ILocker.sol";
 // import "./ETOP.sol";
-import "./VestingEscrow.sol";
+import "./ETOPEscrow.sol";
 import "./Permissions.sol";
 // import "./interfaces/delegation/IDelegationController.sol";
 // import "./interfaces/delegation/IDistributor.sol";
 // import "./interfaces/delegation/ITokenState.sol";
 // import "./interfaces/delegation/IValidatorService.sol";
 
-contract VestingEscrowCreator is  Permissions {
+/**
+ * @title ETOP Escrow Creator
+ * @dev This contract allows the creation of individual ETOP escrow contracts.
+ */
+contract ETOPEscrowCreator is  Permissions {
 
     function create(address holder) external returns (address) {
-        return address(new VestingEscrow(address(contractManager), holder));
+        return address(new ETOPEscrow(address(contractManager), holder));
     }
 
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ETOPEscrow.sol - SKALE Manager
-    Copyright (C) 2019-Present SKALE Labs
+    ETOPEscrow.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -34,7 +34,12 @@ import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
 import "./interfaces/delegation/IValidatorService.sol";
 
-contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
+/**
+ * @title ETOP Escrow
+ * @dev This contract manages ETOP escrow operations for the SKALE Employee
+ * Token Open Plan.
+ */
+contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
@@ -96,25 +101,29 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         require(to == _holder || hasRole(DEFAULT_ADMIN_ROLE, to), "Not authorized transfer");
     }
 
+    /**
+     * @dev Allows Holder to retrieve locked tokens from SKALE Token to the ETOP
+     * Escrow contract.
+     */
     function retrieve() external onlyHolder {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         // require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
-        uint availableAmount = 0;
+        uint vestedAmount = 0;
         if (etop.isActiveVestingTerm(_holder)) {
-            availableAmount = etop.calculateAvailableAmount(_holder);
+            vestedAmount = etop.calculateVestedAmount(_holder);
         } else {
-            availableAmount = _availableAmountAfterTermination;
+            vestedAmount = _availableAmountAfterTermination;
         }
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint fullAmount = etop.getFullAmount(_holder);
         uint forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
-        if (availableAmount > fullAmount.sub(escrowBalance)) {
-            if (availableAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
+        if (vestedAmount > fullAmount.sub(escrowBalance)) {
+            if (vestedAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     _holder,
-                    availableAmount
+                    vestedAmount
                         .sub(
                             fullAmount
                                 .sub(escrowBalance)
@@ -126,11 +135,19 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         }
     }
 
+    /**
+     * @dev Allows ETOP Owner to retrieve remaining transferrable escrow balance
+     * after ETOP holder termination. Slashed tokens are non-transferable.
+     *
+     * Requirements:
+     *
+     * - ETOP must be active.
+     */
     function retrieveAfterTermination() external onlyOwner {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
-        require(!etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        require(!etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -144,6 +161,16 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         }
     }
 
+    /**
+     * @dev Allows ETOP holder to propose a delegation to a validator.
+     *
+     * Requirements:
+     *
+     * - ETOP holder must be active.
+     * - Holder has sufficient delegatable tokens.
+     * - If trusted list is enabled, validator must be a member of this trusted
+     * list.
+     */
     function delegate(
         uint validatorId,
         uint amount,
@@ -154,7 +181,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         onlyHolder
     {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         require(
             IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
             "Not enough balance"
@@ -164,7 +191,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         );
         require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
         if (!etop.isUnvestedDelegatableTerm(_holder)) {
-            require(etop.calculateAvailableAmount(_holder) >= amount, "Incorrect amount to delegate");
+            require(etop.calculateVestedAmount(_holder) >= amount, "Incorrect amount to delegate");
         }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -172,6 +199,16 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         delegationController.delegate(validatorId, amount, delegationPeriod, info);
     }
 
+    /**
+     * @dev Allows Holder and Owner to request undelegation. Only Owner can
+     * request undelegation after ETOP holder is deactivated (upon holder
+     * termination).
+     *
+     * Requirements:
+     *
+     * - Holder or ETOP Owner must be `msg.sender`.
+     * - ETOP holder must be active when Holder is `msg.sender`.
+     */
     function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
         require(
@@ -179,7 +216,7 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
             "Message sender is not authorized"
         );
         if (_msgSender() == _holder) {
-            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
         }
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
@@ -187,18 +224,32 @@ contract VestingEscrow is IERC777Recipient, IERC777Sender, Permissions {
         delegationController.requestUndelegation(delegationId);
     }
 
+    /**
+     * @dev Allows Holder and Owner to withdraw earned bounty. Only Owner can
+     * withdraw bounty to ETOP contract after ETOP holder is deactivated.
+     *
+     * Requirements:
+     *
+     * - Holder or ETOP Owner must be `msg.sender`.
+     * - ETOP must be active when Holder is `msg.sender`.
+     */
     function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             ETOP etop = ETOP(contractManager.getContract("ETOP"));
-            require(etop.isActiveVestingTerm(_holder), "ETOP term is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
             distributor.withdrawBounty(validatorId, to);
         } else {
             distributor.withdrawBounty(validatorId, _etopContract);
         }
     }
 
-    function cancelVesting(uint availableAmount) external allow("ETOP") {
-        _availableAmountAfterTermination = availableAmount;
+    /**
+     * @dev Allows ETOP contract to cancel vesting of an ETOP holder. Cancel
+     * vesting is performed upon termination.
+     * TODO: missing moving ETOP holder to deactivated state?
+     */
+    function cancelVesting(uint vestedAmount) external allow("ETOP") {
+        _availableAmountAfterTermination = vestedAmount;
     }
 }
