@@ -4,7 +4,7 @@ module.exports = {
     compileCommand: 'npx buidler compile',
     testCommand: 'npx buidler test',
     norpc: true,
-    skipFiles: ['thirdparty/', 'interfaces/', 'test/', 'utils/'],
+    skipFiles: ['thirdparty/', 'test/'],
     copyPackages: ['@openzeppelin/contracts'],
     providerOptions: {
         "gas": 100000000,
