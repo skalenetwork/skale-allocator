@@ -73,7 +73,7 @@ export function calculateLockedAmount(time: number, startDate: number, lockupPer
     let indexTime = addTimePointToTimestamp(lockupDate, vestPeriod, vestTime);
     // console.log("Index Time:", indexTime.toUTCString());
 
-    while (Math.floor(indexTime.getTime() / 1000) < Math.floor(currentTime.getTime() / 1000)) {
+    while (Math.floor(indexTime.getTime() / 1000) <= Math.floor(currentTime.getTime() / 1000)) {
         // console.log("Index Time:", indexTime.toUTCString());
         lockedAmount -= partPayment;
         indexTime = addTimePointToTimestamp(indexTime, vestPeriod, vestTime);
