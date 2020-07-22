@@ -33,9 +33,34 @@ module.exports = {
   },
   networks: {
     buidlerevm: {
-      gas: 100000000,
+      accounts: [
+        {
+          privateKey: process.env.PRIVATE_KEY_1,
+          balance: "0xd3c21bcecceda0000000"
+        },
+        {
+          privateKey: process.env.PRIVATE_KEY_2,
+          balance: "0xd3c21bcecceda0000000"
+        },
+        {
+          privateKey: process.env.PRIVATE_KEY_3,
+          balance: "0xd3c21bcecceda0000000"
+        },
+        {
+          privateKey: process.env.PRIVATE_KEY_4,
+          balance: "0xd3c21bcecceda0000000"
+        },
+        {
+          privateKey: process.env.PRIVATE_KEY_5,
+          balance: "0xd3c21bcecceda0000000"
+        },
+        {
+          privateKey: process.env.PRIVATE_KEY_6,
+          balance: "0xd3c21bcecceda0000000"
+        }
+      ],
+      gas: 0xfffffffffff,
       blockGasLimit: 0xfffffffffff,
-      gasPrice: 0x01,
       port: 8555
     }
   }
