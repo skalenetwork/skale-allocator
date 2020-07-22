@@ -2,12 +2,12 @@
 function calculatePartPayment(startDate: number, lockupPeriod: number, fullPeriod: number, fullAmount: number, lockupAmount: number, vestPeriod: number, vestTime: number) {
     const initDate = new Date(startDate * 1000);
     let tempDate = new Date(initDate.getTime());
-    let temp = initDate.getMonth() + lockupPeriod;
-    const lockupDate = new Date(tempDate.setFullYear(initDate.getFullYear() + Math.floor(temp / 12), temp % 12));
+    let temp = initDate.getUTCMonth() + lockupPeriod;
+    const lockupDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
 
     tempDate = new Date(initDate.getTime());
-    temp = initDate.getMonth() + fullPeriod;
-    const finishDate = new Date(tempDate.setFullYear(initDate.getFullYear() + Math.floor(temp / 12), temp % 12));
+    temp = initDate.getUTCMonth() + fullPeriod;
+    const finishDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
 
     const lockupTime = Math.floor(lockupDate.getTime() / 1000);
     const finishTime = Math.floor(finishDate.getTime() / 1000);
@@ -28,15 +28,15 @@ function calculatePartPayment(startDate: number, lockupPeriod: number, fullPerio
 function addTimePointToTimestamp(date: Date, vestPeriod: number, vestTime: number) {
     if (vestPeriod === 1) {
         const newDate = new Date(date);
-        newDate.setDate(date.getDate() + vestTime);
+        newDate.setUTCDate(date.getUTCDate() + vestTime);
         return newDate;
     } else if (vestPeriod === 2) {
         const newDate = new Date(date);
-        newDate.setMonth(date.getMonth() + vestTime);
+        newDate.setUTCMonth(date.getUTCMonth() + vestTime);
         return newDate;
     } else {
         const newDate = new Date(date);
-        newDate.setFullYear(date.getFullYear() + vestTime);
+        newDate.setUTCFullYear(date.getUTCFullYear() + vestTime);
         return newDate;
     }
 }
@@ -45,14 +45,19 @@ export function calculateLockedAmount(time: number, startDate: number, lockupPer
     const initDate = new Date(startDate * 1000);
 
     let tempDate = new Date(initDate.getTime());
-    let temp = initDate.getMonth() + lockupPeriod;
-    const lockupDate = new Date(tempDate.setFullYear(initDate.getFullYear() + Math.floor(temp / 12), temp % 12));
+    let temp = initDate.getUTCMonth() + lockupPeriod;
+    const lockupDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
 
     tempDate = new Date(initDate.getTime());
-    temp = initDate.getMonth() + fullPeriod;
-    const finishDate = new Date(tempDate.setFullYear(initDate.getFullYear() + Math.floor(temp / 12), temp % 12));
+    temp = initDate.getUTCMonth() + fullPeriod;
+    const finishDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
 
     const currentTime = new Date(time * 1000);
+
+    // console.log("Current time:", currentTime.toUTCString());
+    // console.log("Start time:  ", initDate.toUTCString());
+    // console.log("Lockup time: ", lockupDate.toUTCString());
+    // console.log("Finish time: ", finishDate.toUTCString());
 
     if (Math.floor(currentTime.getTime() / 1000) >= Math.floor(finishDate.getTime() / 1000)) {
         return 0;
@@ -66,10 +71,14 @@ export function calculateLockedAmount(time: number, startDate: number, lockupPer
     const partPayment = calculatePartPayment(startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
 
     let indexTime = addTimePointToTimestamp(lockupDate, vestPeriod, vestTime);
+    // console.log("Index Time:", indexTime.toUTCString());
 
     while (Math.floor(indexTime.getTime() / 1000) < Math.floor(currentTime.getTime() / 1000)) {
+        // console.log("Index Time:", indexTime.toUTCString());
         lockedAmount -= partPayment;
         indexTime = addTimePointToTimestamp(indexTime, vestPeriod, vestTime);
+        // console.log("New Index Time:", indexTime.toUTCString());
+
     }
     return lockedAmount;
 }

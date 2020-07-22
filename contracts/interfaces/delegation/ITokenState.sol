@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITokenState.sol - SKALE Manager
+    ITokenState.sol - SKALE SAFT ETOP
     Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
@@ -22,7 +22,7 @@
 pragma solidity 0.6.10;
 
 /**
- * @dev Interface of Delegatable Token operations.
+ * @dev Interface of Token State contract.
  */
 interface ITokenState {
 

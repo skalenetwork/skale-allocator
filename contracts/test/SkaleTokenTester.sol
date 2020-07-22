@@ -64,11 +64,11 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address wallet) external override returns (uint) {
+    function getAndUpdateDelegatedAmount(address) external override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address wallet) external override returns (uint) {
+    function getAndUpdateSlashedAmount(address) external override returns (uint) {
         return 0;
     }
 

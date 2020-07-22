@@ -1,34 +1,29 @@
 import { ContractManagerInstance,
-    // DelegationControllerInstance,
     SkaleTokenTesterInstance,
-    // ValidatorServiceInstance,
     SAFTInstance} from "./../types/truffle-contracts";
 
 import { calculateLockedAmount } from "./tools/vestingCalculation";
 import { currentTime, getTimeAtDate, skipTimeToDate } from "./tools/time";
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
+import chai from "chai";
+// const chai = __importDefault(require("chai"));
+import chaiAsPromised from "chai-as-promised";
+// const chaiAsPromised = __importDefault(require("chai-as-promised"));
 import { deployContractManager } from "./tools/deploy/contractManager";
-// import { deployDelegationController } from "./tools/deploy/delegation/delegationController";
-// import { deployValidatorService } from "./tools/deploy/delegation/validatorService";
 import { deploySAFT } from "./tools/deploy/saft";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
+
 chai.should();
 chai.use(chaiAsPromised);
 
 contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     let contractManager: ContractManagerInstance;
     let skaleToken: SkaleTokenTesterInstance;
-    // let validatorService: ValidatorServiceInstance;
     let SAFT: SAFTInstance;
-    // let delegationController: DelegationControllerInstance;
 
     beforeEach(async () => {
-        contractManager = await deployContractManager();
+        contractManager = await deployContractManager(owner);
         skaleToken = await deploySkaleTokenTester(contractManager);
-        // validatorService = await deployValidatorService(contractManager);
-        // delegationController = await deployDelegationController(contractManager);
         SAFT = await deploySAFT(contractManager);
 
         // each test will start from July 1
@@ -39,7 +34,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should register SAFT investor", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
@@ -48,7 +43,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should get SAFT data", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         ((await SAFT.getStartVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
         ((await SAFT.getLockupPeriodInMonth(holder)).toNumber()).should.be.equal(6);
@@ -59,7 +54,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should approve SAFT", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         await SAFT.approveSAFTHolder({from: holder});
@@ -70,7 +65,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should not approve SAFT from hacker", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         await SAFT.approveSAFTHolder({from: hacker}).should.be.eventually.rejectedWith("SAFT is not registered");
@@ -81,7 +76,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should not approve SAFT twice", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         await SAFT.approveSAFTHolder({from: holder});
@@ -93,17 +88,17 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should not start vesting without approve SAFT", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
-        await SAFT.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not approved");
+        await SAFT.startUnlocking(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not approved");
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
     it("should not start vesting without registering SAFT", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
-        await SAFT.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not registered");
+        await SAFT.startUnlocking(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is not registered");
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
@@ -112,13 +107,13 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     it("should start vesting with register & approve SAFT", async () => {
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(false);
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await SAFT.isSAFTRegistered(holder)).should.be.eq(true);
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(false);
         await SAFT.approveSAFTHolder({from: holder});
         (await SAFT.isApprovedSAFT(holder)).should.be.eq(true);
         (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         (await SAFT.isActiveVestingTerm(holder)).should.be.eq(true);
     });
 
@@ -131,7 +126,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     //     (await SAFT.isApprovedSAFT(holder)).should.be.eq(true);
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     //     await SAFT.stopVesting(holder, {from: owner});
-    //     await SAFT.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
+    //     await SAFT.startUnlocking(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
@@ -143,11 +138,11 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     //     await SAFT.approveSAFTHolder({from: holder});
     //     (await SAFT.isApprovedSAFT(holder)).should.be.eq(true);
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await SAFT.startVesting(holder, {from: owner});
+    //     await SAFT.startUnlocking(holder, {from: owner});
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(true);
     //     await SAFT.stopVesting(holder, {from: owner});
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await SAFT.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
+    //     await SAFT.startUnlocking(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
@@ -160,7 +155,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     //     (await SAFT.isApprovedSAFT(holder)).should.be.eq(true);
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     //     await SAFT.stopVesting(holder, {from: owner});
-    //     await SAFT.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
+    //     await SAFT.startUnlocking(holder, {from: owner}).should.be.eventually.rejectedWith("SAFT is already canceled");
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
     // });
 
@@ -172,7 +167,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     //     await SAFT.approveSAFTHolder({from: holder});
     //     (await SAFT.isApprovedSAFT(holder)).should.be.eq(true);
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await SAFT.startVesting(holder, {from: owner});
+    //     await SAFT.startUnlocking(holder, {from: owner});
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(true);
     //     await SAFT.stopVesting(holder, {from: owner}).should.be.eventually.rejectedWith("You could not stop vesting for holder");
     //     (await SAFT.isActiveVestingTerm(holder)).should.be.eq(true);
@@ -180,22 +175,22 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should not register SAFT Round if sender is not owner", async () => {
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
-        // await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        // await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
     it("should not connect holder to SAFT if sender is not owner", async () => {
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Not authorized");
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Not authorized");
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
     it("should not register already registered SAFT investor", async () => {
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
+        await SAFT.connectHolderToSAFT(holder, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("SAFT holder is already added");
     });
@@ -210,7 +205,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should not connect holder to SAFT Round if amounts incorrect", async () => {
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
     });
 
     it("should not connect holder to SAFT Round if period starts incorrect", async () => {
@@ -218,16 +213,16 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const currentDate = new Date(time * 1000);
         const nextYear = currentDate.getFullYear() + 1;
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
     });
 
     // it("should be possible to delegate SAFT tokens", async () => {
     //     await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-    //     await SAFT.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+    //     await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
     //     // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
     //     await SAFT.approveSAFTHolder({from: holder});
-    //     await SAFT.startVesting(holder, {from: owner});
+    //     await SAFT.startUnlocking(holder, {from: owner});
     //     (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
     //     await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
     //     await validatorService.enableValidator(1, {from: owner});
@@ -252,9 +247,9 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const saftRound = 1;
         // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         await SAFT.approveSAFTHolder({from: holder});
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         // await SAFT.retrieve({from: holder});
         (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(fullAmount);
     });
@@ -270,10 +265,10 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const isCancelable = false;
         const saftRound = 1;
         await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await SAFT.approveSAFTHolder({from: holder});
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         let lockedAmount = await SAFT.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
@@ -307,10 +302,10 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const isCancelable = false;
         const saftRound = 1;
         await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await SAFT.approveSAFTHolder({from: holder});
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         let lockedAmount = await SAFT.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
@@ -374,39 +369,57 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const isCancelable = false;
         const saftRound = 1;
         await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await SAFT.approveSAFTHolder({from: holder});
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         let lockedAmount = await SAFT.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         await skipTimeToDate(web3, 1, 7);
         lockedAmount = await SAFT.getLockedAmount(holder);
         let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - lockupAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
         await skipTimeToDate(web3, 1, 8);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - 2 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 2 * lockupAmount);
         await skipTimeToDate(web3, 1, 9);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - 3 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 3 * lockupAmount);
         await skipTimeToDate(web3, 1, 10);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - 4 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 4 * lockupAmount);
         await skipTimeToDate(web3, 1, 11);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - 5 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 5 * lockupAmount);
         await skipTimeToDate(web3, 1, 12);
         lockedAmount = await SAFT.getLockedAmount(holder);
         lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("Locked Amount:    ", lockedAmount.toNumber());
+        // console.log("Calculated Amount:", lockedCalculatedAmount);
+        // console.log("Predicted Amount: ", fullAmount - 6 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 6 * lockupAmount);
         await skipTimeToDate(web3, 1, 1);
@@ -443,10 +456,10 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const isCancelable = false;
         const saftRound = 1;
         await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-        await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await SAFT.approveSAFTHolder({from: holder});
-        await SAFT.startVesting(holder, {from: owner});
+        await SAFT.startUnlocking(holder, {from: owner});
         const lockedAmount = await SAFT.getLockedAmount(holder);
         const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
         lockedAmount.toNumber().should.be.equal(0);
@@ -471,10 +484,10 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             // SAFT example 0
             const saftRound = 1;
             await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-            await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+            await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
             // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
             await SAFT.approveSAFTHolder({from: holder});
-            await SAFT.startVesting(holder, {from: owner});
+            await SAFT.startUnlocking(holder, {from: owner});
         });
 
         it("should unlock tokens after lockup", async () => {
@@ -501,6 +514,9 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 9)
             const lockedAmount = await SAFT.getLockedAmount(holder);
             const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+            // console.log("Locked Amount:    ", lockedAmount.toNumber());
+            // console.log("Calculated Amount:", lockedCalculatedAmount);
+            // console.log("Predicted Amount: ", fullAmount - lockupAmount);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
         });
@@ -550,26 +566,26 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             // SAFT example 0
             // await SAFT.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
             await SAFT.addSAFTRound(lockupPeriod, fullPeriod, vestPeriod, vestTime, {from: owner});
-            await SAFT.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+            await SAFT.connectHolderToSAFT(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
             await SAFT.approveSAFTHolder({from: holder});
-            await SAFT.startVesting(holder, {from: owner});
+            await SAFT.startUnlocking(holder, {from: owner});
             // SAFT example 1
             // await SAFT.addVestingTerm(holder1, startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, isCancelable1, {from: owner});
             await SAFT.addSAFTRound(lockupPeriod1, fullPeriod1, vestPeriod1, vestTime1, {from: owner});
-            await SAFT.connectHolderToPlan(holder1, saftRound1, startDate, fullAmount1, lockupAmount1, {from: owner});
+            await SAFT.connectHolderToSAFT(holder1, saftRound1, startDate, fullAmount1, lockupAmount1, {from: owner});
             await SAFT.approveSAFTHolder({from: holder1});
-            await SAFT.startVesting(holder1, {from: owner});
+            await SAFT.startUnlocking(holder1, {from: owner});
             // SAFT example 2
             // await SAFT.addVestingTerm(holder2, startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, isCancelable2, {from: owner});
             await SAFT.addSAFTRound(lockupPeriod2, fullPeriod2, vestPeriod2, vestTime2, {from: owner});
-            await SAFT.connectHolderToPlan(holder2, saftRound2, startDate, fullAmount2, lockupAmount2, {from: owner});
+            await SAFT.connectHolderToSAFT(holder2, saftRound2, startDate, fullAmount2, lockupAmount2, {from: owner});
             await SAFT.approveSAFTHolder({from: holder2});
-            await SAFT.startVesting(holder2, {from: owner});
+            await SAFT.startUnlocking(holder2, {from: owner});
             // SAFT example 3
             await SAFT.addSAFTRound(lockupPeriod3, fullPeriod3, vestPeriod3, vestTime3, {from: owner});
-            await SAFT.connectHolderToPlan(holder3, saftRound3, startDate, fullAmount3, lockupAmount3, {from: owner});
+            await SAFT.connectHolderToSAFT(holder3, saftRound3, startDate, fullAmount3, lockupAmount3, {from: owner});
             await SAFT.approveSAFTHolder({from: holder3});
-            await SAFT.startVesting(holder3, {from: owner});
+            await SAFT.startUnlocking(holder3, {from: owner});
         });
 
         it("should show balance of all SAFTs", async () => {

@@ -27,11 +27,11 @@ import "../SAFT.sol";
 
 contract TokenStateTester is Permissions, ITokenState {
 
-    function getAndUpdateForbiddenForDelegationAmount(address holder) external override returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
         return SAFT(contractManager.getContract("SAFT")).getAndUpdateLockedAmount(wallet);
     }
 

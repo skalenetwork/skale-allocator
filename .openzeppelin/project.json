@@ -1,16 +1,15 @@
 {
   "manifestVersion": "2.2",
   "contracts": {
-    "SAFT": "SAFT",
-    "ETOP": "ETOP",
     "ContractManager": "ContractManager",
-    "VestingEscrowCreator": "VestingEscrowCreator"
+    "SAFT": "SAFT",
+    "ETOPEscrowCreator": "ETOPEscrowCreator",
+    "ETOP": "ETOP"
   },
   "dependencies": {},
-  "name": "skale-saft-etop",
-  "version": "1.0.0",
+  "name": "@skalenetwork/skale-saft-etop",
+  "version": "0.0.1",
   "compiler": {
-    "manager": "openzeppelin",
     "compilerSettings": {
       "optimizer": {
         "enabled": true,
@@ -18,6 +17,10 @@
       }
     },
     "solcVersion": "0.6.10",
+    "typechain": {
+      "enabled": false
+    },
+    "manager": "openzeppelin",
     "artifactsDir": "build/contracts",
     "contractsDir": "contracts"
   },

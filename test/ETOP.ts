@@ -3,16 +3,15 @@ import { ContractManagerInstance,
     SkaleTokenTesterInstance,
     // ValidatorServiceInstance,
     ETOPInstance,
-    VestingEscrowContract,
-    VestingEscrowInstance} from "./../types/truffle-contracts";
+    ETOPEscrowContract} from "./../types/truffle-contracts";
 
-const VestingEscrow: VestingEscrowContract = artifacts.require("./VestingEscrow");
+const ETOPEscrow: ETOPEscrowContract = artifacts.require("./ETOPEscrow");
 
 import { calculateLockedAmount } from "./tools/vestingCalculation";
 import { currentTime, getTimeAtDate, skipTimeToDate } from "./tools/time";
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
 import { deployContractManager } from "./tools/deploy/contractManager";
 // import { deployDelegationController } from "../tools/deploy/delegation/delegationController";
 // import { deployValidatorService } from "../tools/deploy/delegation/validatorService";
@@ -29,7 +28,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     // let delegationController: DelegationControllerInstance;
 
     beforeEach(async () => {
-        contractManager = await deployContractManager();
+        contractManager = await deployContractManager(owner);
         skaleToken = await deploySkaleTokenTester(contractManager);
         // validatorService = await deployValidatorService(contractManager);
         // delegationController = await deployDelegationController(contractManager);
@@ -42,7 +41,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should register ETOP holder", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -51,11 +50,11 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should get ETOP data", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         ((await ETOP.getStartVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
-        ((await ETOP.getLockupPeriodInMonth(holder)).toNumber()).should.be.equal(6);
+        ((await ETOP.getVestingCliffInMonth(holder)).toNumber()).should.be.equal(6);
         ((await ETOP.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
         // (await ETOP.isCancelableVestingTerm(holder)).should.be.equal(false);
         ((await ETOP.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
@@ -63,7 +62,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should approve ETOP", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -74,7 +73,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should not approve ETOP from hacker", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -85,7 +84,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should not approve ETOP twice", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -97,7 +96,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should not start vesting without approve ETOP", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -116,7 +115,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     it("should start vesting with register & approve ETOP", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
@@ -184,51 +183,51 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     // });
 
     it("should not register ETOP Plan if sender is not owner", async () => {
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
         // await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
     it("should not connect holder to Plan  if sender is not owner", async () => {
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
         // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: hacker}).should.be.eventually.rejectedWith("Ownable: caller is not the owner");
     });
 
     it("should not register already registered ETOP holder", async () => {
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Holder is already added");
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Holder is already added");
         // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
         // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("ETOP holder is already added");
     });
 
     it("should not register ETOP Plan if periods incorrect", async () => {
-        await ETOP.addVestingPlan(37, 36, 2, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect periods");
+        await ETOP.addETOP(37, 36, 2, 6, false, {from: owner}).should.be.eventually.rejectedWith("Cliff period exceeds full period");
     });
 
     it("should not register ETOP Plan if vesting times incorrect", async () => {
-        await ETOP.addVestingPlan(6, 36, 2, 7, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
+        await ETOP.addETOP(6, 36, 2, 7, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
     });
 
     it("should not connect holder to ETOP Plan if amounts incorrect", async () => {
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
     });
 
-    it("should not connect holder to ETOP Plan if period starts incorrect", async () => {
-        const time = await currentTime(web3);
-        const currentDate = new Date(time * 1000);
-        const nextYear = currentDate.getFullYear() + 1;
-        await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
-        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
-        // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
-    });
+    // it("should not connect holder to ETOP Plan if period starts incorrect", async () => {
+    //     const time = await currentTime(web3);
+    //     const currentDate = new Date(time * 1000);
+    //     const nextYear = currentDate.getFullYear() + 1;
+    //     await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
+    //     await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+    //     // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+    // });
 
     // it("should be possible to delegate ETOP tokens", async () => {
-    //     await ETOP.addVestingPlan(6, 36, 2, 6, false, {from: owner});
+    //     await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
     //     await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
     //     // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
     //     await ETOP.approveHolder({from: holder});
@@ -256,12 +255,12 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const isUnvestedDelegatable = false;
         const saftRound = 1;
         // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
         await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         await ETOP.approveHolder({from: holder});
         await ETOP.startVesting(holder, {from: owner});
         const escrowAddress = await ETOP.getEscrowAddress(holder);
-        const escrow = await VestingEscrow.at(escrowAddress);
+        const escrow = await ETOPEscrow.at(escrowAddress);
         // await ETOP.retrieve({from: holder});
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
     });
@@ -276,7 +275,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const startDate = await currentTime(web3);
         const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
         await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await ETOP.approveHolder({from: holder});
@@ -313,7 +312,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const startDate = await currentTime(web3);
         const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
         await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await ETOP.approveHolder({from: holder});
@@ -380,7 +379,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const startDate = await currentTime(web3);
         const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
         await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await ETOP.approveHolder({from: holder});
@@ -449,7 +448,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         const startDate = await currentTime(web3);
         const isUnvestedDelegatable = false;
         const saftRound = 1;
-        await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
         await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
         // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
         await ETOP.approveHolder({from: holder});
@@ -477,7 +476,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             startDate = getTimeAtDate(1, 9, previousYear)
             // ETOP example 0
             const saftRound = 1;
-            await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+            await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
             await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
             // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
             await ETOP.approveHolder({from: holder});
@@ -494,7 +493,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
         it("should be able to transfer token", async () => {
             const escrowAddress = await ETOP.getEscrowAddress(holder);
-            const escrow = await VestingEscrow.at(escrowAddress);
+            const escrow = await ETOPEscrow.at(escrowAddress);
             await escrow.retrieve({from: holder});
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(lockupAmount);
             await skaleToken.transfer(holder1, "100", {from: holder});
@@ -504,7 +503,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
         it("should not be able to transfer more than unlocked", async () => {
             const escrowAddress = await ETOP.getEscrowAddress(holder);
-            const escrow = await VestingEscrow.at(escrowAddress);
+            const escrow = await ETOPEscrow.at(escrowAddress);
             await escrow.retrieve({from: holder});
             (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(lockupAmount);
             await skaleToken.transfer(holder1, "1000001", {from: holder}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
@@ -562,24 +561,24 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             startDate = await currentTime(web3);
             // ETOP example 0
             // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
-            await ETOP.addVestingPlan(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+            await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
             await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
             await ETOP.approveHolder({from: holder});
             await ETOP.startVesting(holder, {from: owner});
             // ETOP example 1
             // await ETOP.addVestingTerm(holder1, startDate, lockupPeriod1, fullPeriod1, fullAmount1, lockupAmount1, vestPeriod1, isCancelable1, {from: owner});
-            await ETOP.addVestingPlan(lockupPeriod1, fullPeriod1, vestPeriod1, vestTime1, isUnvestedDelegatable1, {from: owner});
+            await ETOP.addETOP(lockupPeriod1, fullPeriod1, vestPeriod1, vestTime1, isUnvestedDelegatable1, {from: owner});
             await ETOP.connectHolderToPlan(holder1, saftRound1, startDate, fullAmount1, lockupAmount1, {from: owner});
             await ETOP.approveHolder({from: holder1});
             await ETOP.startVesting(holder1, {from: owner});
             // ETOP example 2
             // await ETOP.addVestingTerm(holder2, startDate, lockupPeriod2, fullPeriod2, fullAmount2, lockupAmount2, vestPeriod2, isCancelable2, {from: owner});
-            await ETOP.addVestingPlan(lockupPeriod2, fullPeriod2, vestPeriod2, vestTime2, isUnvestedDelegatable2, {from: owner});
+            await ETOP.addETOP(lockupPeriod2, fullPeriod2, vestPeriod2, vestTime2, isUnvestedDelegatable2, {from: owner});
             await ETOP.connectHolderToPlan(holder2, saftRound2, startDate, fullAmount2, lockupAmount2, {from: owner});
             await ETOP.approveHolder({from: holder2});
             await ETOP.startVesting(holder2, {from: owner});
             // ETOP example 3
-            await ETOP.addVestingPlan(lockupPeriod3, fullPeriod3, vestPeriod3, vestTime3, isUnvestedDelegatable3, {from: owner});
+            await ETOP.addETOP(lockupPeriod3, fullPeriod3, vestPeriod3, vestTime3, isUnvestedDelegatable3, {from: owner});
             await ETOP.connectHolderToPlan(holder3, saftRound3, startDate, fullAmount3, lockupAmount3, {from: owner});
             await ETOP.approveHolder({from: holder3});
             await ETOP.startVesting(holder3, {from: owner});
@@ -690,19 +689,19 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             await skipTimeToDate(web3, 1, 12);
             await skipTimeToDate(web3, 1, 6);
             let escrowAddress = await ETOP.getEscrowAddress(holder);
-            let escrow = await VestingEscrow.at(escrowAddress);
+            let escrow = await ETOPEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             await escrow.retrieve({from: holder});
             escrowAddress = await ETOP.getEscrowAddress(holder1);
-            escrow = await VestingEscrow.at(escrowAddress);
+            escrow = await ETOPEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
             await escrow.retrieve({from: holder1});
             escrowAddress = await ETOP.getEscrowAddress(holder2);
-            escrow = await VestingEscrow.at(escrowAddress);
+            escrow = await ETOPEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
             await escrow.retrieve({from: holder2});
             escrowAddress = await ETOP.getEscrowAddress(holder3);
-            escrow = await VestingEscrow.at(escrowAddress);
+            escrow = await ETOPEscrow.at(escrowAddress);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
             await escrow.retrieve({from: holder3});
             await skaleToken.transfer(hacker, "100", {from: holder});

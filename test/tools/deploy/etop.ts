@@ -3,7 +3,7 @@ import { deployFunctionFactory } from "./factory";
 import { deploySkaleTokenTester } from "./test/skaleTokenTester";
 import { deployTimeHelpersTester } from "./test/timeHelpersTester";
 import { deployTokenStateTester } from "./test/tokenStateTester";
-import { deployVestingEscrowCreator } from "./vestingEscrowCreator";
+import { deployETOPEscrowCreator } from "./etopEscrowCreator";
 
 const deployETOP: (contractManager: ContractManagerInstance) => Promise<ETOPInstance>
     = deployFunctionFactory("ETOP",
@@ -11,7 +11,7 @@ const deployETOP: (contractManager: ContractManagerInstance) => Promise<ETOPInst
                                 await deploySkaleTokenTester(contractManager);
                                 await deployTimeHelpersTester(contractManager);
                                 await deployTokenStateTester(contractManager);
-                                await deployVestingEscrowCreator(contractManager);
+                                await deployETOPEscrowCreator(contractManager);
                             });
 
 export { deployETOP };

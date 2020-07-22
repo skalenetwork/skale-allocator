@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    SAFT.sol - SKALE Manager
-    Copyright (C) 2019-Present SKALE Labs
+    SAFT.sol - SKALE SAFT ETOP
+    Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -27,10 +27,24 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777R
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./interfaces/delegation//ITokenLaunchManager.sol";
 import "./Permissions.sol";
-import "@nomiclabs/buidler/console.sol";
 
+/**
+ * @title SAFT
+ * @dev This contract manages SKALE investor tokens based on the Simple
+ * Agreement for Future Tokens (SAFT).
+ *
+ * An investor (holder) may participate in multiple SAFT rounds.
+ *
+ * A SAFT is defined by an initial token lock period, followed by periodic
+ * unlocking.
+ *
+ * The process to onboard SAFT holders is as follows:
+ *
+ * 1- SAFT holders are registered to a SAFT by SKALE or ConsenSys Activate.
+ * 2- SAFT holders approve their address.
+ * 3- SKALE then activates each holder.
+ */
 contract SAFT is ILocker, Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
@@ -52,6 +66,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint afterLockupAmount;
     }
 
+    bytes32 public constant ACTIVATE_ROLE = keccak256("ACTIVATE_ROLE");
+
     IERC1820Registry private _erc1820;
 
     // array of SAFT configs
@@ -61,12 +77,11 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     //        holder => SAFT holder params
     mapping (address => SaftHolder) private _vestingHolders;
 
-    //        holder => address of vesting escrow
+    //           holder => address of vesting escrow
     // mapping (address => address) private _holderToEscrow;
 
-    modifier onlyOwnerAndActivateSeller() {
-        ITokenLaunchManager tokenLaunchManager = ITokenLaunchManager(contractManager.getContract("TokenLaunchManager"));
-        require(_isOwner() || tokenLaunchManager.hasRole(tokenLaunchManager.SELLER_ROLE(), _msgSender()), "Not authorized");
+    modifier onlyOwnerAndActivate() {
+        require(_isOwner() || hasRole(ACTIVATE_ROLE, _msgSender()), "Not authorized");
         _;
     }
 
@@ -85,6 +100,14 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
 
     }
 
+    /**
+     * @dev Allows `msg.sender` to approve their address as a SAFT holder.
+     *
+     * Requirements:
+     *
+     * - Holder address must be already registered.
+     * - Holder address must not already be approved.
+     */
     function approveSAFTHolder() external {
         address holder = msg.sender;
         require(_vestingHolders[holder].registered, "SAFT is not registered");
@@ -92,7 +115,16 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         _vestingHolders[holder].approved = true;
     }
 
-    function startVesting(address holder) external onlyOwner {
+    /**
+     * @dev Allows Owner to activate a holder address and transfers locked
+     * tokens to a holder address.
+     *
+     * Requirements:
+     *
+     * - Holder address must be already registered.
+     * - Holder address must be approved.
+     */
+    function startUnlocking(address holder) external onlyOwner {
         require(_vestingHolders[holder].registered, "SAFT is not registered");
         require(_vestingHolders[holder].approved, "SAFT is not approved");
         _vestingHolders[holder].active = true;
@@ -105,6 +137,15 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         );
     }
 
+    /**
+     * @dev Allows Owner to define and add a SAFT round.
+     *
+     * Requirements:
+     *
+     * - Lockup period must be less than or equal to the full period.
+     * - Locked period must be in days, months, or years.
+     * - The full period must equal the lock period plus the unlock schedule.
+     */
     function addSAFTRound(
         uint lockupPeriod, // months
         uint fullPeriod, // months
@@ -129,15 +170,25 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         }));
     }
 
-    function connectHolderToPlan(
+    /**
+     * @dev Allows Owner and Activate to register a holder to a SAFT round.
+     *
+     * Requirements:
+     *
+     * - SAFT round must already exist.
+     * - The lockup amount must be less than or equal to the full allocation.
+     * - The start date for unlocking must not have already passed.
+     * - The holder address must not already be included in this SAFT round.
+     */
+    function connectHolderToSAFT(
         address holder,
         uint saftRoundId,
-        uint startVestingTime, //timestamp
+        uint startVestingTime, // timestamp
         uint fullAmount,
         uint lockupAmount
     )
         external
-        onlyOwnerAndActivateSeller
+        onlyOwnerAndActivate
     {
         require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
@@ -153,12 +204,15 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             afterLockupAmount: lockupAmount
         });
         // if (connectHolderToEscrow) {
-        //     _holderToEscrow[holder] = address(new VestingEscrow(address(contractManager), holder));
+        //     _holderToEscrow[holder] = address(new ETOPEscrow(address(contractManager), holder));
         // } else {
         //     _holderToEscrow[holder] = holder;
         // }
     }
 
+    /**
+     * @dev Updates and returns the current locked amount of tokens.
+     */
     function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
         if (! _vestingHolders[wallet].active) {
             return 0;
@@ -166,15 +220,24 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return getLockedAmount(wallet);
     }
 
+    /**
+     * @dev Updates and returns the slashed amount of tokens.
+     */
     function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
-        // metwork_launch_timestamp
+        // network_launch_timestamp
         return 0;
     }
 
+    /**
+     * @dev Returns the start time of the SAFT.
+     */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
     }
 
+    /**
+     * @dev Returns the time of final unlock.
+     */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         SaftHolder memory saftHolder = _vestingHolders[holder];
@@ -182,26 +245,46 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod);
     }
 
+    /**
+     * @dev Returns the lockup period in months.
+     */
     function getLockupPeriodInMonth(address holder) external view returns (uint) {
         return _saftRounds[_vestingHolders[holder].saftRoundId - 1].lockupPeriod;
     }
 
+    /**
+     * @dev Confirms whether the holder is in an active state.
+     */
     function isActiveVestingTerm(address holder) external view returns (bool) {
         return _vestingHolders[holder].active;
     }
 
+    /**
+     * @dev Confirms whether the holder is approved in a SAFT round.
+     */
     function isApprovedSAFT(address holder) external view returns (bool) {
         return _vestingHolders[holder].approved;
     }
 
+    /**
+     * @dev Confirms whether the holder is in a registered state.
+     */
     function isSAFTRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].registered;
     }
 
+    /**
+     * @dev Returns the locked and unlocked (full) amount of tokens allocated to
+     * the holder address in SAFT.
+     */
     function getFullAmount(address holder) external view returns (uint) {
         return _vestingHolders[holder].fullAmount;
     }
 
+    /**
+     * @dev Returns the timestamp when lockup period ends and periodic unlocking
+     * begins.
+     */
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         SaftHolder memory saftHolder = _vestingHolders[holder];
@@ -209,7 +292,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
     }
 
-    function getTimeOfNextPayment(address holder) external view returns (uint) {
+    /**
+     * @dev Returns the time of next unlock.
+     */
+    function getTimeOfNextUnlock(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[holder];
@@ -242,11 +328,25 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return _addMonthsAndTimePoint(lockupDate, nextPayment, saftParams.vestingPeriod);
     }
 
+    /**
+     * @dev Returns the SAFT round parameters.
+     *
+     * Requirements:
+     *
+     * - SAFT round must already exist.
+     */
     function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
         require(saftRoundId < _saftRounds.length, "SAFT Round does not exist");
         return _saftRounds[saftRoundId];
     }
 
+    /**
+     * @dev Returns the SAFT round parameters for a holder address.
+     *
+     * Requirements:
+     *
+     * - Holder address must be registered to a SAFT.
+     */
     function getSAFTHolderParams(address holder) external view returns (SaftHolder memory) {
         require(_vestingHolders[holder].registered, "SAFT holder is not registered");
         return _vestingHolders[holder];
@@ -259,31 +359,37 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
+    /**
+     * @dev Returns the locked amount of tokens.
+     */
     function getLockedAmount(address wallet) public view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateAvailableAmount(wallet);
+        return _vestingHolders[wallet].fullAmount - calculateUnlockedAmount(wallet);
     }
 
-    function calculateAvailableAmount(address wallet) public view returns (uint availableAmount) {
+    /**
+     * @dev Calculates and returns the amount of unlocked tokens.
+     */
+    function calculateUnlockedAmount(address wallet) public view returns (uint unlockedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        // console.log(date);
-        // console.log(timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod));
-        // console.log(timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod));
-        availableAmount = 0;
+        unlockedAmount = 0;
         if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            availableAmount = saftHolder.afterLockupAmount;
+            unlockedAmount = saftHolder.afterLockupAmount;
             if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
-                availableAmount = saftHolder.fullAmount;
+                unlockedAmount = saftHolder.fullAmount;
             } else {
                 uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
-                availableAmount = availableAmount.add(partPayment.mul(_getNumberOfPayments(wallet)));
+                unlockedAmount = unlockedAmount.add(partPayment.mul(_getNumberOfCompletedUnlocks(wallet)));
             }
         }
     }
 
-    function _getNumberOfPayments(address wallet) internal view returns (uint) {
+    /**
+     * @dev Returns the number of unlocking events that have occurred.
+     */
+    function _getNumberOfCompletedUnlocks(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
@@ -299,7 +405,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
     }
 
-    function _getNumberOfAllPayments(address wallet) internal view returns (uint) {
+    /**
+     * @dev Returns the total number of unlocking events.
+     */
+    function _getNumberOfAllUnlocks(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
@@ -314,6 +423,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         return finishTime.sub(afterLockupTime).div(saftParams.regularPaymentTime);
     }
 
+    /**
+     * @dev Returns the amount of tokens that are unlocked in each unlocking
+     * period.
+     */
     function _getPartPayment(
         address wallet,
         uint fullAmount,
@@ -323,9 +436,13 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllPayments(wallet));
+        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllUnlocks(wallet));
     }
 
+    /**
+     * @dev Returns timestamp when adding timepoints (days/months/years) to
+     * timestamp.
+     */
     function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         if (vestingPeriod == TimeLine.DAY) {
@@ -337,6 +454,9 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         }
     }
 
+    /**
+     * @dev Returns timepoints (days/months/years) from a given timestamp.
+     */
     function _addMonthsAndTimePoint(
         uint timestamp,
         uint timePoints,
