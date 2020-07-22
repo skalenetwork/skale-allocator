@@ -56,8 +56,22 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         ((await ETOP.getStartVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
         ((await ETOP.getVestingCliffInMonth(holder)).toNumber()).should.be.equal(6);
         ((await ETOP.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
-        // (await ETOP.isCancelableVestingTerm(holder)).should.be.equal(false);
+        (await ETOP.isUnvestedDelegatableTerm(holder)).should.be.equal(false);
         ((await ETOP.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
+        const plan = await ETOP.getPlan(0);
+        plan.fullPeriod.should.be.equal('36');
+        plan.vestingCliffPeriod.should.be.equal('6');
+        plan.vestingPeriod.should.be.equal('1');
+        plan.regularPaymentTime.should.be.equal('6');
+        plan.isUnvestedDelegatable.should.be.equal(false);
+        const holderParams = await ETOP.getHolderParams(holder);
+        holderParams.registered.should.be.equal(true);
+        holderParams.approved.should.be.equal(false);
+        holderParams.active.should.be.equal(false);
+        holderParams.planId.should.be.equal('1');
+        holderParams.startVestingTime.should.be.equal(getTimeAtDate(1, 6, 2020).toString());
+        holderParams.fullAmount.should.be.equal('1000000');
+        holderParams.afterLockupAmount.should.be.equal('100000');
     });
 
     it("should approve ETOP", async () => {
