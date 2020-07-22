@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITimeHelpers.sol - SKALE SAFT ETOP
-    Copyright (C) 2020-Present SKALE Labs
+    ITokenLaunchManager.sol - SKALE Manager
+    Copyright (C) 2019-Present SKALE Labs
     @author Artem Payvin
 
     SKALE Manager is free software: you can redistribute it and/or modify
@@ -21,16 +21,19 @@
 
 pragma solidity 0.6.10;
 
+// import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+
+import "../Permissions.sol";
+
+
 /**
- * @title Time Helpers Interface
- * @dev Interface of Time Helper functions of the Time Helpers SKALE Manager
- * contract.
+ * @dev Interface of Delegatable Token operations.
  */
-interface ITimeHelpers {
-    function addDays(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addMonths(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function addYears(uint fromTimestamp, uint n) external pure virtual returns (uint);
-    function timestampToDay(uint timestamp) external view virtual returns (uint);
-    function timestampToMonth(uint timestamp) external view virtual returns (uint);
-    function timestampToYear(uint timestamp) external view virtual returns (uint);
+contract TokenLaunchManagerTester is Permissions {
+
+    bytes32 public constant SELLER_ROLE = keccak256("SELLER_ROLE");
+
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+    }
 }

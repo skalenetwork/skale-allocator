@@ -41,8 +41,12 @@ import "./Permissions.sol";
  */
 contract ETOPEscrowCreator is  Permissions {
 
-    function create(address holder) external returns (address) {
+    function create(address holder) external allow("ETOP") returns (address) {
         return address(new ETOPEscrow(address(contractManager), holder));
+    }
+
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
     }
 
 }

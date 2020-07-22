@@ -283,6 +283,13 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
+     * @dev Returns the ETOP Escrow contract by holder.
+     */
+    function getEscrowAddress(address holder) external view returns (address) {
+        return _holderToEscrow[holder];
+    }
+
+    /**
      * @dev Returns the timestamp when vesting cliff ends and periodic vesting
      * begins.
      */

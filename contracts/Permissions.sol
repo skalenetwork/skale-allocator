@@ -34,7 +34,7 @@ import "./ContractManager.sol";
 contract Permissions is AccessControlUpgradeSafe {
     using SafeMath for uint;
     using Address for address;
-    
+
     ContractManager public contractManager;
 
     /**

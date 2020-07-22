@@ -33,9 +33,6 @@ module.exports = {
   },
   networks: {
     buidlerevm: {
-      gas: 0xfffffffffff,
-      blockGasLimit: 0xfffffffffff,
-      port: 8555
     }
   }
 };
