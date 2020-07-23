@@ -325,7 +325,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             .sub(
                 saftParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment, saftParams.vestingPeriod);
+        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, saftParams.vestingPeriod);
     }
 
     /**

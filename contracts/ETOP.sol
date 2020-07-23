@@ -333,7 +333,7 @@ contract ETOP is Permissions, IERC777Recipient {
             .sub(
                 planParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment, planParams.vestingPeriod);
+        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, planParams.vestingPeriod);
     }
 
     /**
