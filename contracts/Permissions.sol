@@ -45,11 +45,6 @@ contract Permissions is AccessControlUpgradeSafe {
         _;
     }
 
-    modifier onlyAdmin() {
-        require(_isAdmin(msg.sender), "Caller is not an admin");
-        _;
-    }
-
     /**
      * @dev allow - throws if called by any account and contract other than the owner
      * or `contractName` contract
@@ -57,25 +52,6 @@ contract Permissions is AccessControlUpgradeSafe {
     modifier allow(string memory contractName) {
         require(
             contractManager.contracts(keccak256(abi.encodePacked(contractName))) == msg.sender || _isOwner(),
-            "Message sender is invalid");
-        _;
-    }
-
-    modifier allowTwo(string memory contractName1, string memory contractName2) {
-        require(
-            contractManager.contracts(keccak256(abi.encodePacked(contractName1))) == msg.sender ||
-            contractManager.contracts(keccak256(abi.encodePacked(contractName2))) == msg.sender ||
-            _isOwner(),
-            "Message sender is invalid");
-        _;
-    }
-
-    modifier allowThree(string memory contractName1, string memory contractName2, string memory contractName3) {
-        require(
-            contractManager.contracts(keccak256(abi.encodePacked(contractName1))) == msg.sender ||
-            contractManager.contracts(keccak256(abi.encodePacked(contractName2))) == msg.sender ||
-            contractManager.contracts(keccak256(abi.encodePacked(contractName3))) == msg.sender ||
-            _isOwner(),
             "Message sender is invalid");
         _;
     }
@@ -88,16 +64,6 @@ contract Permissions is AccessControlUpgradeSafe {
 
     function _isOwner() internal view returns (bool) {
         return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
-    function _isAdmin(address account) internal view returns (bool) {
-        address skaleManagerAddress = contractManager.contracts(keccak256(abi.encodePacked("SkaleManager")));
-        if (skaleManagerAddress != address(0)) {
-            AccessControlUpgradeSafe skaleManager = AccessControlUpgradeSafe(skaleManagerAddress);
-            return skaleManager.hasRole(keccak256("ADMIN_ROLE"), account) || _isOwner();
-        } else {
-            return _isOwner();
-        }
     }
 
     function _setContractManager(address contractManagerAddress) private {
