@@ -631,7 +631,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         let lockedAmount = await SAFT.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         // let timeOfNextPayment = await SAFT.getTimeOfNextUnlock(holder);
-        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);        
+        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);
         // initDate.setUTCDate(initDate.getUTCDay() + vestTime);
         // console.log("Now:", initDate.getTime() / 1000);
         // console.log("Payment:", (await SAFT.getTimeOfNextUnlock(holder)).toString());

@@ -631,7 +631,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         let lockedAmount = await ETOP.getLockedAmount(holder);
         lockedAmount.toNumber().should.be.equal(fullAmount);
         // let timeOfNextPayment = await ETOP.getTimeOfNextUnlock(holder);
-        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);        
+        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);
         // initDate.setUTCDate(initDate.getUTCDay() + vestTime);
         // console.log("Now:", initDate.getTime() / 1000);
         // console.log("Payment:", (await ETOP.getTimeOfNextUnlock(holder)).toString());
