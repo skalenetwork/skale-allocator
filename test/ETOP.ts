@@ -474,7 +474,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
     });
 
-    it("should correctly operate SAFT 5: each 1 day payment", async () => {
+    it("should correctly operate ETOP 5: each 1 day payment", async () => {
         const lockupPeriod = 1;
         const fullPeriod = 2;
         const fullAmount = 2e6;
@@ -609,6 +609,73 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         lockedAmount.toNumber().should.be.equal(0);
         // timeOfNextPayment = await ETOP.getTimeOfNextVest(holder);
         // initDate.setUTCDate(initDate.getUTCDate() + vestTime);
+        (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
+    });
+
+    it("should correctly operate ETOP 5: each 1 year payment", async () => {
+        const lockupPeriod = 12;
+        const fullPeriod = 36;
+        const fullAmount = 3e6;
+        const lockupAmount = 1e6;
+        const vestPeriod = 3;
+        const vestTime = 1;
+        const startDate = await currentTime(web3);
+        const isUnvestedDelegatable = false;
+        const saftRound = 1;
+        const initDate = new Date(startDate * 1000);
+        await ETOP.addETOP(lockupPeriod, fullPeriod, vestPeriod, vestTime, isUnvestedDelegatable, {from: owner});
+        await ETOP.connectHolderToPlan(holder, saftRound, startDate, fullAmount, lockupAmount, {from: owner});
+        // await ETOP.addVestingTerm(holder, startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, isCancelable, {from: owner});
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        let lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedAmount.toNumber().should.be.equal(fullAmount);
+        // let timeOfNextPayment = await ETOP.getTimeOfNextUnlock(holder);
+        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);        
+        // initDate.setUTCDate(initDate.getUTCDay() + vestTime);
+        // console.log("Now:", initDate.getTime() / 1000);
+        // console.log("Payment:", (await ETOP.getTimeOfNextUnlock(holder)).toString());
+        // console.log("");
+        (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
+        // console.log("Passed!!!!!!");
+        await skipTimeToDate(web3, 1, 5);
+        await skipTimeToDate(web3, 1, 6);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
+        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);
+        // console.log("");
+        // console.log("Now:", initDate.getTime() / 1000);
+        // console.log("Payment:", (await ETOP.getTimeOfNextVest(holder)).toString());
+        // console.log("");
+        (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
+        await skipTimeToDate(web3, 1, 5);
+        await skipTimeToDate(web3, 1, 6);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        // console.log("LOckedAMount", lockedAmount.toNumber());
+        // console.log("Locked calculated amount:", lockedCalculatedAmount);
+        lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
+        lockedAmount.toNumber().should.be.equal(fullAmount - 2 * lockupAmount);
+        // timeOfNextPayment = await ETOP.getTimeOfNextVest(holder);
+        // initDate.setUTCFullYear(initDate.getUTCFullYear() + (initDate.getUTCMonth() + 1) / 12, (initDate.getUTCMonth() + 1) % 12);
+        initDate.setUTCFullYear(initDate.getUTCFullYear() + vestTime);
+        // console.log("");
+        // console.log("Now:", initDate.getTime() / 1000);
+        // console.log("Current time:", await currentTime(web3));
+        // console.log("Payment:", (await ETOP.getTimeOfNextVest(holder)).toString());
+        // console.log("");
+        (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
+        await skipTimeToDate(web3, 1, 5);
+        await skipTimeToDate(web3, 1, 6);
+        lockedAmount = await ETOP.getLockedAmount(holder);
+        lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+        lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
+        lockedAmount.toNumber().should.be.equal(fullAmount - 3 * lockupAmount);
+        lockedAmount.toNumber().should.be.equal(0);
+        // timeOfNextPayment = await ETOP.getTimeOfNextVest(holder);
+        // initDate.setUTCDate(initDate.getUTCDate() + vestTime);
+        // initDate.setUTCFullYear(initDate.getUTCFullYear() + (initDate.getUTCMonth() + 1) / 12, (initDate.getUTCMonth() + 1) % 12);
         (await ETOP.getTimeOfNextVest(holder)).toString().should.be.equal((initDate.getTime() / 1000).toString());
     });
 
