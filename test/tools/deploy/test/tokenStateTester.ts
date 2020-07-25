@@ -9,8 +9,9 @@ export async function deployTokenStateTester(contractManager: ContractManagerIns
         const address = await contractManager.getContract(name);
         return TokenState.at(address);
     } catch (e) {
-        const timeHelpers = await TokenState.new();
-        await contractManager.setContractsAddress(name, timeHelpers.address);
-        return timeHelpers;
+        const tokenState = await TokenState.new();
+        await tokenState.initialize(contractManager.address);
+        await contractManager.setContractsAddress(name, tokenState.address);
+        return tokenState;
     }
 }

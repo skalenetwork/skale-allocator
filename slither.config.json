@@ -1,4 +1,4 @@
 {
-    "detectors_to_exclude": "solc-version,timestamp",
+    "detectors_to_exclude": "solc-version,timestamp,calls-loop",
     "filter_paths": "@openzeppelin/contracts-ethereum-package|@nomiclabs/buidler/|thirdparty|Migrations.sol"
 }

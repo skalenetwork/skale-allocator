@@ -394,9 +394,9 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            return 0;
-        }
+        // if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        //     return 0;
+        // }
         uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),

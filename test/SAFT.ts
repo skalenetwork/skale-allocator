@@ -1,4 +1,5 @@
 import { ContractManagerInstance,
+    DelegationControllerTesterInstance,
     SkaleTokenTesterInstance,
     SAFTInstance} from "./../types/truffle-contracts";
 
@@ -12,6 +13,7 @@ import chaiAsPromised from "chai-as-promised";
 import { deployContractManager } from "./tools/deploy/contractManager";
 import { deploySAFT } from "./tools/deploy/saft";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
+import { deployDelegationControllerTester } from "./tools/deploy/test/delegationControllerTester";
 
 chai.should();
 chai.use(chaiAsPromised);
@@ -20,10 +22,12 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     let contractManager: ContractManagerInstance;
     let skaleToken: SkaleTokenTesterInstance;
     let SAFT: SAFTInstance;
+    let delegationController: DelegationControllerTesterInstance;
 
     beforeEach(async () => {
         contractManager = await deployContractManager(owner);
         skaleToken = await deploySkaleTokenTester(contractManager);
+        delegationController = await deployDelegationControllerTester(contractManager);
         SAFT = await deploySAFT(contractManager);
 
         // each test will start from July 1
@@ -231,23 +235,23 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
     });
 
-    // it("should be possible to delegate SAFT tokens", async () => {
-    //     await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-    //     await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
-    //     // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     await SAFT.approveSAFTHolder({from: holder});
-    //     await SAFT.startUnlocking(holder, {from: owner});
-    //     (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
-    //     await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
-    //     await validatorService.enableValidator(1, {from: owner});
-    //     const amount = 15000;
-    //     const delegationPeriod = 3;
-    //     await delegationController.delegate(
-    //         1, amount, delegationPeriod, "D2 is even", {from: holder});
-    //     const delegationId = 0;
-    //     await delegationController.acceptPendingDelegation(delegationId, {from: owner});
-    //     (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
-    // });
+    it("should be possible to delegate SAFT tokens", async () => {
+        await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+        // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
+        await SAFT.approveSAFTHolder({from: holder});
+        await SAFT.startUnlocking(holder, {from: owner});
+        (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
+        // await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
+        // await validatorService.enableValidator(1, {from: owner});
+        const amount = 15000;
+        const delegationPeriod = 3;
+        await delegationController.delegate(
+            1, amount, delegationPeriod, "D2 is even", {from: holder});
+        const delegationId = 0;
+        // await delegationController.acceptPendingDelegation(delegationId, {from: owner});
+        (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(1e6);
+    });
 
     it("should allow to retrieve all tokens if SAFT registered along time ago", async () => {
         const lockupPeriod = 6;
