@@ -3,7 +3,8 @@ import { ContractManagerInstance,
     SkaleTokenTesterInstance,
     // ValidatorServiceInstance,
     ETOPInstance,
-    ETOPEscrowContract} from "./../types/truffle-contracts";
+    ETOPEscrowContract,
+    ETOPEscrowInstance} from "./../types/truffle-contracts";
 
 const ETOPEscrow: ETOPEscrowContract = artifacts.require("./ETOPEscrow");
 
@@ -233,8 +234,6 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await ETOP.startVesting(holder, {from: owner});
         const escrowAddress = await ETOP.getEscrowAddress(holder);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
-        // // await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
-        // // await validatorService.enableValidator(1, {from: owner});
         const escrow = await ETOPEscrow.at(escrowAddress);
         const amount = 15000;
         const delegationPeriod = 3;
@@ -242,6 +241,31 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
             1, amount, delegationPeriod, "D2 is even", {from: holder});
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
         (await skaleToken.getAndUpdateLockedAmount.call(escrowAddress)).toNumber().should.be.equal(amount);
+    });
+
+    describe("when holder delegated ETOP tokens", async () => {
+        let delegationId: number;
+        let escrow: ETOPEscrowInstance;
+        const delegatedAmount = 15000;
+
+        beforeEach(async () => {
+            await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
+            await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+            await ETOP.approveHolder({from: holder});
+            await ETOP.startVesting(holder, {from: owner});
+            const escrowAddress = await ETOP.getEscrowAddress(holder);
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
+            escrow = (await ETOPEscrow.at(escrowAddress)) as ETOPEscrowInstance;
+            const delegationPeriod = 3;
+            await escrow.delegate(
+                1, delegatedAmount, delegationPeriod, "D2 is even", {from: holder});
+            delegationId = 0;
+        });
+
+        it("should be able to undelegate ETOP tokens", async () => {
+            await escrow.requestUndelegation(delegationId, {from: holder});
+            (await skaleToken.getAndUpdateLockedAmount.call(escrow.address)).toNumber().should.be.equal(0);
+        });
     });
 
     it("should allow to retrieve all tokens if ETOP registered along time ago", async () => {
