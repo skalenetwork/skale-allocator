@@ -46,6 +46,14 @@ contract ETOP is Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
+    enum HolderStatus {
+        UNKNOWN,
+        CONFIRMATION_PENDING,
+        CONFIRMED,
+        ACTIVE,
+        TERMINATED
+    }
+
     struct Plan {
         uint fullPeriod;
         uint vestingCliffPeriod; // months
@@ -55,9 +63,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     struct PlanHolder {
-        bool registered;
-        bool approved;
-        bool active;
+        HolderStatus status;
         uint planId;
         uint startVestingTime;
         uint fullAmount;
@@ -104,9 +110,9 @@ contract ETOP is Permissions, IERC777Recipient {
      */
     function approveHolder() external {
         address holder = msg.sender;
-        require(_vestingHolders[holder].registered, "Holder is not registered");
-        require(!_vestingHolders[holder].approved, "Holder is already approved");
-        _vestingHolders[holder].approved = true;
+        require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Holder is not registered");
+        require(_vestingHolders[holder].status == HolderStatus.CONFIRMATION_PENDING, "Holder is already approved");
+        _vestingHolders[holder].status = HolderStatus.CONFIRMED;
     }
 
     /**
@@ -115,13 +121,11 @@ contract ETOP is Permissions, IERC777Recipient {
      *
      * Requirements:
      *
-     * - Holder address must be already registered.
-     * - Holder address must be approved.
+     * - Holder address must be already confirmed.
      */
     function startVesting(address holder) external onlyOwner {
-        require(_vestingHolders[holder].registered, "Holder is not registered");
-        require(_vestingHolders[holder].approved, "Holder is not approved");
-        _vestingHolders[holder].active = true;
+        require(_vestingHolders[holder].status == HolderStatus.CONFIRMED, "Holder address is not confirmed");
+        _vestingHolders[holder].status = HolderStatus.ACTIVE;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
                 _holderToEscrow[holder],
@@ -176,8 +180,8 @@ contract ETOP is Permissions, IERC777Recipient {
      */
     function stopVesting(address holder) external onlyOwner {
         require(
-            !_vestingHolders[holder].active,
-            "Cannot stop vesting for a deactivated holder"
+            _vestingHolders[holder].status == HolderStatus.ACTIVE,
+            "Cannot stop vesting for a non active holder"
         );
         // TODO add deactivate logic!!!
         // _vestedAmount[holder] = calculateVestedAmount(holder);
@@ -207,11 +211,9 @@ contract ETOP is Permissions, IERC777Recipient {
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         // require(startVestingTime <= now, "Incorrect period starts");
         // TODO: Remove to allow both past and future vesting start date
-        require(!_vestingHolders[holder].registered, "Holder is already added");
+        require(_vestingHolders[holder].status == HolderStatus.UNKNOWN, "Holder is already added");
         _vestingHolders[holder] = PlanHolder({
-            registered: true,
-            approved: false,
-            active: false,
+            status: HolderStatus.CONFIRMATION_PENDING,
             planId: planId,
             startVestingTime: startVestingTime,
             fullAmount: fullAmount,
@@ -249,21 +251,22 @@ contract ETOP is Permissions, IERC777Recipient {
      * @dev Confirms whether the holder is active in the ETOP.
      */
     function isActiveVestingTerm(address holder) external view returns (bool) {
-        return _vestingHolders[holder].active;
+        return _vestingHolders[holder].status == HolderStatus.ACTIVE;
     }
 
     /**
      * @dev Confirms whether the holder is approved in an ETOP.
      */
     function isApprovedHolder(address holder) external view returns (bool) {
-        return _vestingHolders[holder].approved;
+        return _vestingHolders[holder].status != HolderStatus.UNKNOWN &&
+            _vestingHolders[holder].status != HolderStatus.CONFIRMATION_PENDING;
     }
 
     /**
      * @dev Confirms whether the holder is registered in an ETOP.
      */
     function isHolderRegistered(address holder) external view returns (bool) {
-        return _vestingHolders[holder].registered;
+        return _vestingHolders[holder].status != HolderStatus.UNKNOWN;
     }
 
     /**
@@ -356,7 +359,7 @@ contract ETOP is Permissions, IERC777Recipient {
      * - Holder address must be registered to an ETOP.
      */
     function getHolderParams(address holder) external view returns (PlanHolder memory) {
-        require(_vestingHolders[holder].registered, "Plan holder is not registered");
+        require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Plan holder is not registered");
         return _vestingHolders[holder];
     }
 

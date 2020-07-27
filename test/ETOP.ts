@@ -17,6 +17,7 @@ import { deployContractManager } from "./tools/deploy/contractManager";
 // import { deployValidatorService } from "../tools/deploy/delegation/validatorService";
 import { deployETOP } from "./tools/deploy/etop";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
+import { HolderStatus } from "./tools/types";
 chai.should();
 chai.use(chaiAsPromised);
 
@@ -65,9 +66,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         plan.regularPaymentTime.should.be.equal('6');
         plan.isUnvestedDelegatable.should.be.equal(false);
         const holderParams = await ETOP.getHolderParams(holder);
-        holderParams.registered.should.be.equal(true);
-        holderParams.approved.should.be.equal(false);
-        holderParams.active.should.be.equal(false);
+        web3.utils.toBN(holderParams.status).toNumber().should.be.equal(HolderStatus.CONFIRMATION_PENDING);
         holderParams.planId.should.be.equal('1');
         holderParams.startVestingTime.should.be.equal(getTimeAtDate(1, 6, 2020).toString());
         holderParams.fullAmount.should.be.equal('1000000');
@@ -114,14 +113,14 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
-        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder is not approved");
+        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder address is not confirmed");
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
         (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
     });
 
     it("should not start vesting without registering ETOP", async () => {
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder is not registered");
+        await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder address is not confirmed");
         (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
         (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
         (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
@@ -139,19 +138,6 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await ETOP.startVesting(holder, {from: owner});
         (await ETOP.isActiveVestingTerm(holder)).should.be.eq(true);
     });
-
-    // it("should stop cancelable vesting before start", async () => {
-    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);
-    //     await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
-    //     (await ETOP.isHolderRegistered(holder)).should.be.eq(true);
-    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(false);
-    //     await ETOP.approveHolder({from: holder});
-    //     (await ETOP.isApprovedHolder(holder)).should.be.eq(true);
-    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
-    //     await ETOP.stopVesting(holder, {from: owner});
-    //     await ETOP.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("ETOP is already canceled");
-    //     (await ETOP.isActiveVestingTerm(holder)).should.be.eq(false);
-    // });
 
     // it("should stop cancelable vesting after start", async () => {
     //     (await ETOP.isHolderRegistered(holder)).should.be.eq(false);

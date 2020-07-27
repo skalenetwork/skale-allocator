@@ -38,7 +38,7 @@ contract TimeHelpersTester is ITimeHelpers {
 
     uint constant private _ZERO_YEAR = 2020;
 
-    function calculateProofOfUseLockEndTime(uint month, uint lockUpPeriodDays) external view returns (uint timestamp) {
+    function calculateProofOfUseLockEndTime(uint month, uint lockUpPeriodDays) external pure returns (uint timestamp) {
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(monthToTimestamp(month), lockUpPeriodDays);
     }
 
@@ -83,7 +83,7 @@ contract TimeHelpersTester is ITimeHelpers {
         return month;
     }
 
-    function monthToTimestamp(uint month) public view virtual returns (uint timestamp) {
+    function monthToTimestamp(uint month) public pure virtual returns (uint timestamp) {
         uint year = _ZERO_YEAR;
         uint _month = month;
         year = year.add(_month.div(12));
