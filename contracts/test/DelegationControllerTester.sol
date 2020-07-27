@@ -81,7 +81,7 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
         Permissions.initialize(contractManagerAddress);
     }
 
-    function _getAndUpdateLockedAmount(address wallet) private returns (uint) {
+    function _getAndUpdateLockedAmount(address wallet) private view returns (uint) {
         return _locked[wallet];
     }
 }
