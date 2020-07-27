@@ -378,9 +378,9 @@ contract ETOP is Permissions, IERC777Recipient {
     /**
      * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
      */
-    function getLockedAmountForDelegation(address wallet) external view returns (uint) {
-        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
-    }
+    // function getLockedAmountForDelegation(address wallet) external view returns (uint) {
+    //     return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
+    // }
 
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
