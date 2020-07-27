@@ -70,6 +70,10 @@ contract CORE is Permissions, IERC777Recipient {
         uint afterLockupAmount;
     }
 
+    event PlanCreated(
+        uint id
+    );
+
     IERC1820Registry private _erc1820;
 
     // array of Plan configs
@@ -168,6 +172,7 @@ contract CORE is Permissions, IERC777Recipient {
             regularPaymentTime: vestingTimes,
             isUnvestedDelegatable: isUnvestedDelegatable
         }));
+        emit PlanCreated(_allPlans.length - 1);
     }
 
     /**
