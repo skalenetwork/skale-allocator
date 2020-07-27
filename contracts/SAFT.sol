@@ -66,6 +66,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint afterLockupAmount;
     }
 
+    event SaftRoundCreated(
+        uint id
+    );
+
     bytes32 public constant ACTIVATE_ROLE = keccak256("ACTIVATE_ROLE");
 
     IERC1820Registry private _erc1820;
@@ -168,6 +172,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             vestingPeriod: TimeLine(vestingPeriod - 1),
             regularPaymentTime: vestingTimes
         }));
+
+        emit SaftRoundCreated(_saftRounds.length - 1);
     }
 
     /**
