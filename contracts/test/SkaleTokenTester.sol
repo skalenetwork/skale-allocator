@@ -73,7 +73,7 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
     }
 
     function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
-        return SAFT(contractManager.getContract("SAFT")).getAndUpdateLockedAmount(wallet);
+        return SAFT(contractManager.getContract("TokenState")).getAndUpdateLockedAmount(wallet);
     }
 
     function _beforeTokenTransfer(

@@ -3,6 +3,7 @@ import { deployFunctionFactory } from "./factory";
 import { deploySkaleTokenTester } from "./test/skaleTokenTester";
 import { deployTimeHelpersTester } from "./test/timeHelpersTester";
 import { deployTokenLaunchManagerTester } from "./test/tokenLaunchManagerTester";
+import { deployDelegationControllerTester } from "./test/delegationControllerTester";
 
 const deploySAFT: (contractManager: ContractManagerInstance) => Promise<SAFTInstance>
     = deployFunctionFactory("SAFT",
@@ -10,6 +11,7 @@ const deploySAFT: (contractManager: ContractManagerInstance) => Promise<SAFTInst
                                 await deploySkaleTokenTester(contractManager);
                                 await deployTimeHelpersTester(contractManager);
                                 await deployTokenLaunchManagerTester(contractManager);
+                                await deployDelegationControllerTester(contractManager);
                             });
 
 export { deploySAFT };

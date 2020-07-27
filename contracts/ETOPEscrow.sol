@@ -181,18 +181,11 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         onlyHolder
     {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
-        require(
-            IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
-            "Not enough balance"
-        );
-        IValidatorService validatorService = IValidatorService(
-            contractManager.getContract("ValidatorService")
-        );
-        require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
+        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");        
         if (!etop.isUnvestedDelegatableTerm(_holder)) {
             require(etop.calculateVestedAmount(_holder) >= amount, "Incorrect amount to delegate");
         }
+        
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -233,13 +226,13 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or ETOP Owner must be `msg.sender`.
      * - ETOP must be active when Holder is `msg.sender`.
      */
-    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
+    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             ETOP etop = ETOP(contractManager.getContract("ETOP"));
-            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");            
             distributor.withdrawBounty(validatorId, to);
-        } else {
+        } else {            
             distributor.withdrawBounty(validatorId, _etopContract);
         }
     }

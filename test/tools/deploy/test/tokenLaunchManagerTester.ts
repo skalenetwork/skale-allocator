@@ -1,16 +1,17 @@
 import { ContractManagerInstance,
     TokenLaunchManagerTesterContract } from "../../../../types/truffle-contracts";
 
-const TimeLaunchManager: TokenLaunchManagerTesterContract = artifacts.require("./TokenLaunchManagerTester");
+const TokenLaunchManager: TokenLaunchManagerTesterContract = artifacts.require("./TokenLaunchManagerTester");
 const name = "TokenLaunchManager";
 
 export async function deployTokenLaunchManagerTester(contractManager: ContractManagerInstance) {
     try {
         const address = await contractManager.getContract(name);
-        return TimeLaunchManager.at(address);
+        return TokenLaunchManager.at(address);
     } catch (e) {
-        const timeHelpers = await TimeLaunchManager.new();
-        await contractManager.setContractsAddress(name, timeHelpers.address);
-        return timeHelpers;
+        const tokenLaunchManager = await TokenLaunchManager.new();
+        tokenLaunchManager.initialize(contractManager.address);
+        await contractManager.setContractsAddress(name, tokenLaunchManager.address);
+        return tokenLaunchManager;
     }
 }

@@ -190,6 +190,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         external
         onlyOwnerAndActivate
     {
+        // TOOD: Fix index error
         require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
@@ -325,7 +326,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             .sub(
                 saftParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment, saftParams.vestingPeriod);
+        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, saftParams.vestingPeriod);
     }
 
     /**
@@ -336,8 +337,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * - SAFT round must already exist.
      */
     function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
-        require(saftRoundId < _saftRounds.length, "SAFT Round does not exist");
-        return _saftRounds[saftRoundId];
+        require(saftRoundId > 0 && saftRoundId <= _saftRounds.length, "SAFT Round does not exist");
+        return _saftRounds[saftRoundId - 1];
     }
 
     /**
@@ -394,9 +395,9 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         uint date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
-            return 0;
-        }
+        // if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
+        //     return 0;
+        // }
         uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
         uint lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),

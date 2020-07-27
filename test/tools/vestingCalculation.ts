@@ -22,6 +22,10 @@ function calculatePartPayment(startDate: number, lockupPeriod: number, fullPerio
     } else {
         numberOfPartPayments = Math.floor((fullPeriod - lockupPeriod) / 12 * vestTime);
     }
+    // console.log("Full period:", fullPeriod);
+    // console.log("Lockup period:", lockupPeriod);
+    // console.log("Vesttime:", vestTime);
+    // console.log("Number of payments:", numberOfPartPayments);
     return Math.floor((fullAmount - lockupAmount) / numberOfPartPayments);
 }
 
@@ -69,6 +73,7 @@ export function calculateLockedAmount(time: number, startDate: number, lockupPer
 
     let lockedAmount = fullAmount - lockupAmount;
     const partPayment = calculatePartPayment(startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
+    // console.log("Part payment:", partPayment);
 
     let indexTime = addTimePointToTimestamp(lockupDate, vestPeriod, vestTime);
     // console.log("Index Time:", indexTime.toUTCString());

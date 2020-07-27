@@ -32,4 +32,12 @@ enum State {
     COMPLETED,
 }
 
+export enum HolderStatus {
+    UNKNOWN,
+    CONFIRMATION_PENDING,
+    CONFIRMED,
+    ACTIVE,
+    TERMINATED
+}
+
 export { Delegation, State };

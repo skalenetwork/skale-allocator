@@ -39,7 +39,7 @@ import "./Permissions.sol";
  * @title ETOP Escrow Creator
  * @dev This contract allows the creation of individual ETOP escrow contracts.
  */
-contract ETOPEscrowCreator is  Permissions {
+contract ETOPEscrowCreator is Permissions {
 
     function create(address holder) external allow("ETOP") returns (address) {
         return address(new ETOPEscrow(address(contractManager), holder));
