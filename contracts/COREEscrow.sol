@@ -43,8 +43,6 @@ contract COREEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
-    address private _coreContract;
-
     uint private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;
@@ -65,7 +63,6 @@ contract COREEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     constructor(address contractManagerAddress, address newHolder) public {
         Permissions.initialize(contractManagerAddress);
-        _coreContract = msg.sender;
         _holder = newHolder;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
@@ -153,7 +150,7 @@ contract COREEscrow is IERC777Recipient, IERC777Sender, Permissions {
         if (escrowBalance > forbiddenToSend) {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
-                    _coreContract,
+                    address(_getCoreContract()),
                     escrowBalance.sub(forbiddenToSend)
                 ),
                 "Error of token send"
@@ -233,7 +230,7 @@ contract COREEscrow is IERC777Recipient, IERC777Sender, Permissions {
             require(core.isActiveVestingTerm(_holder), "CORE holder is not Active");            
             distributor.withdrawBounty(validatorId, to);
         } else {            
-            distributor.withdrawBounty(validatorId, _coreContract);
+            distributor.withdrawBounty(validatorId, address(_getCoreContract()));
         }
     }
 
@@ -244,5 +241,11 @@ contract COREEscrow is IERC777Recipient, IERC777Sender, Permissions {
      */
     function cancelVesting(uint vestedAmount) external allow("CORE") {
         _availableAmountAfterTermination = vestedAmount;
+    }
+
+    // private
+
+    function _getCoreContract() internal view returns (CORE) {
+        return CORE(contractManager.getContract("CORE"));
     }
 }
