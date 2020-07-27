@@ -347,8 +347,8 @@ contract ETOP is Permissions, IERC777Recipient {
      * - ETOP must already exist.
      */
     function getPlan(uint planId) external view returns (Plan memory) {
-        require(planId < _allPlans.length, "Plan Round does not exist");
-        return _allPlans[planId];
+        require(planId > 0 && planId <= _allPlans.length, "Plan Round does not exist");
+        return _allPlans[planId - 1];
     }
 
     /**
