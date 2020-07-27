@@ -226,13 +226,13 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or ETOP Owner must be `msg.sender`.
      * - ETOP must be active when Holder is `msg.sender`.
      */
-    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {
+    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             ETOP etop = ETOP(contractManager.getContract("ETOP"));
-            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
+            require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");            
             distributor.withdrawBounty(validatorId, to);
-        } else {
+        } else {            
             distributor.withdrawBounty(validatorId, _etopContract);
         }
     }

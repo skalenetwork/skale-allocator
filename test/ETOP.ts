@@ -4,7 +4,8 @@ import { ContractManagerInstance,
     // ValidatorServiceInstance,
     ETOPInstance,
     ETOPEscrowContract,
-    ETOPEscrowInstance} from "./../types/truffle-contracts";
+    ETOPEscrowInstance,
+    DistributorMockContract} from "./../types/truffle-contracts";
 
 const ETOPEscrow: ETOPEscrowContract = artifacts.require("./ETOPEscrow");
 
@@ -265,6 +266,26 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         it("should be able to undelegate ETOP tokens", async () => {
             await escrow.requestUndelegation(delegationId, {from: holder});
             (await skaleToken.getAndUpdateLockedAmount.call(escrow.address)).toNumber().should.be.equal(0);
+        });
+
+        it("should allow to withdraw bounties", async () => {
+            const DistributorMock: DistributorMockContract = artifacts.require("./DistributorMock.sol");
+            const distributor = await DistributorMock.new(skaleToken.address);
+            await contractManager.setContractsAddress("Distributor", distributor.address);
+
+            const bounty = 5;
+            const validatorId = 0;
+            await skaleToken.mint(owner, bounty, "0x", "0x");
+            await skaleToken.send(
+                distributor.address,
+                bounty,
+                web3.eth.abi.encodeParameters(
+                    ["uint256", "address"],
+                    [validatorId, escrow.address]
+                )
+            );
+            await escrow.withdrawBounty(validatorId, holder, {from: holder});
+            (await skaleToken.balanceOf(holder)).toNumber().should.be.equal(bounty);
         });
     });
 
