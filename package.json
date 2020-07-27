@@ -1,11 +1,11 @@
 {
-  "name": "@skalenetwork/skale-saft-etop",
+  "name": "@skalenetwork/skale-saft-core",
   "version": "0.0.1",
   "private": true,
-  "description": "Contracts to manage SAFT and ETOP",  
+  "description": "Contracts to manage SAFT and CORE",  
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/skalenetwork/skale-saft-etop.git"
+    "url": "git+https://github.com/skalenetwork/skale-saft-core.git"
   },
   "license": "AGPL-3.0",
   "author": "SKALE Labs",

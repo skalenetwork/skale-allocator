@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ETOP.sol - SKALE SAFT ETOP
+    CORE.sol - SKALE SAFT CORE
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
-    SKALE Manager is free software: you can redistribute it and/or modify
+    SKALE SAFT CORE is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE Manager is distributed in the hope that it will be useful,
+    SKALE SAFT CORE is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE Manager.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE SAFT CORE.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
@@ -26,23 +26,23 @@ import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC182
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./ETOPEscrow.sol";
+import "./COREEscrow.sol";
 import "./Permissions.sol";
-import "./ETOPEscrowCreator.sol";
+import "./COREEscrowCreator.sol";
 
 /**
- * @title ETOP
+ * @title CORE
  * @dev This contract manages SKALE Employee Token Option Plans.
  *
- * An employee may have multiple holdings under an ETOP.
+ * An employee may have multiple holdings under an CORE.
  *
- * An ETOP is defined by an initial token vesting cliff period, followed by
+ * An CORE is defined by an initial token vesting cliff period, followed by
  * periodic vesting.
  *
  * Employees (holders) may be registered into a particular plan, and be assigned
  * individual start states and allocations.
  */
-contract ETOP is Permissions, IERC777Recipient {
+contract CORE is Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
@@ -82,7 +82,7 @@ contract ETOP is Permissions, IERC777Recipient {
     //        holder => Plan holder params
     mapping (address => PlanHolder) private _vestingHolders;
 
-    //        holder => address of ETOP escrow
+    //        holder => address of CORE escrow
     mapping (address => address) private _holderToEscrow;
 
     function tokensReceived(
@@ -101,7 +101,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows `msg.sender` to approve their address as an ETOP holder.
+     * @dev Allows `msg.sender` to approve their address as an CORE holder.
      *
      * Requirements:
      *
@@ -117,7 +117,7 @@ contract ETOP is Permissions, IERC777Recipient {
 
     /**
      * @dev Allows Owner to activate a holder address and transfer locked
-     * tokens to the associated ETOP escrow address.
+     * tokens to the associated CORE escrow address.
      *
      * Requirements:
      *
@@ -136,7 +136,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add an ETOP.
+     * @dev Allows Owner to define and add an CORE.
      *
      * Requirements:
      *
@@ -144,7 +144,7 @@ contract ETOP is Permissions, IERC777Recipient {
      * - Vesting period must be in days, months, or years.
      * - Full period must equal vesting cliff plus entire vesting schedule.
      */
-    function addETOP(
+    function addCORE(
         uint vestingCliffPeriod, // months
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
@@ -171,12 +171,12 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to terminate vesting of an ETOP holder. Performed when
+     * @dev Allows Owner to terminate vesting of an CORE holder. Performed when
      * a holder is terminated.
      *
      * Requirements:
      *
-     * - ETOP holder must be active.
+     * - CORE holder must be active.
      */
     function stopVesting(address holder) external onlyOwner {
         require(
@@ -185,17 +185,17 @@ contract ETOP is Permissions, IERC777Recipient {
         );
         // TODO add deactivate logic!!!
         // _vestedAmount[holder] = calculateVestedAmount(holder);
-        ETOPEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
+        COREEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
 
     /**
-     * @dev Allows Owner to register a holder to an ETOP.
+     * @dev Allows Owner to register a holder to an CORE.
      *
      * Requirements:
      *
-     * - ETOP must already exist.
+     * - CORE must already exist.
      * - The vesting amount must be less than or equal to the full allocation.
-     * - The holder address must not already be included in the ETOP.
+     * - The holder address must not already be included in the CORE.
      */
     function connectHolderToPlan(
         address holder,
@@ -207,7 +207,7 @@ contract ETOP is Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        require(_allPlans.length >= planId && planId > 0, "ETOP does not exist");
+        require(_allPlans.length >= planId && planId > 0, "CORE does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         // require(startVestingTime <= now, "Incorrect period starts");
         // TODO: Remove to allow both past and future vesting start date
@@ -220,18 +220,18 @@ contract ETOP is Permissions, IERC777Recipient {
             afterLockupAmount: lockupAmount
         });
         _holderToEscrow[holder] =
-            ETOPEscrowCreator(contractManager.getContract("ETOPEscrowCreator")).create(holder);
+            COREEscrowCreator(contractManager.getContract("COREEscrowCreator")).create(holder);
     }
 
     /**
-     * @dev Returns vesting start date of the holder's ETOP.
+     * @dev Returns vesting start date of the holder's CORE.
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
     }
 
     /**
-     * @dev Returns the final vesting date of the holder's ETOP.
+     * @dev Returns the final vesting date of the holder's CORE.
      */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -248,14 +248,14 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is active in the ETOP.
+     * @dev Confirms whether the holder is active in the CORE.
      */
     function isActiveVestingTerm(address holder) external view returns (bool) {
         return _vestingHolders[holder].status == HolderStatus.ACTIVE;
     }
 
     /**
-     * @dev Confirms whether the holder is approved in an ETOP.
+     * @dev Confirms whether the holder is approved in an CORE.
      */
     function isApprovedHolder(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN &&
@@ -263,14 +263,14 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is registered in an ETOP.
+     * @dev Confirms whether the holder is registered in an CORE.
      */
     function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN;
     }
 
     /**
-     * @dev Confirms whether the holder's ETOP allows all un-vested tokens to be
+     * @dev Confirms whether the holder's CORE allows all un-vested tokens to be
      * delegated.
      */
     function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
@@ -279,14 +279,14 @@ contract ETOP is Permissions, IERC777Recipient {
 
     /**
      * @dev Returns the locked and unlocked (full) amount of tokens allocated to
-     * the holder address in ETOP.
+     * the holder address in CORE.
      */
     function getFullAmount(address holder) external view returns (uint) {
         return _vestingHolders[holder].fullAmount;
     }
 
     /**
-     * @dev Returns the ETOP Escrow contract by holder.
+     * @dev Returns the CORE Escrow contract by holder.
      */
     function getEscrowAddress(address holder) external view returns (address) {
         return _holderToEscrow[holder];
@@ -340,11 +340,11 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the ETOP parameters.
+     * @dev Returns the CORE parameters.
      *
      * Requirements:
      *
-     * - ETOP must already exist.
+     * - CORE must already exist.
      */
     function getPlan(uint planId) external view returns (Plan memory) {
         require(planId > 0 && planId <= _allPlans.length, "Plan Round does not exist");
@@ -352,11 +352,11 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the ETOP parameters for a holder address.
+     * @dev Returns the CORE parameters for a holder address.
      *
      * Requirements:
      *
-     * - Holder address must be registered to an ETOP.
+     * - Holder address must be registered to an CORE.
      */
     function getHolderParams(address holder) external view returns (PlanHolder memory) {
         require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Plan holder is not registered");
@@ -364,7 +364,7 @@ contract ETOP is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
+     * @dev Returns the locked token amount. TODO: remove, controlled by CORE Escrow
      */
     function getLockedAmount(address wallet) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -376,7 +376,7 @@ contract ETOP is Permissions, IERC777Recipient {
         return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
     /**
-     * @dev Returns the locked token amount. TODO: remove, controlled by ETOP Escrow
+     * @dev Returns the locked token amount. TODO: remove, controlled by CORE Escrow
      */
     // function getLockedAmountForDelegation(address wallet) external view returns (uint) {
     //     return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
