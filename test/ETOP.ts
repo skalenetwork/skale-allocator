@@ -226,26 +226,23 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
     //     // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
     // });
 
-    // it("should be possible to delegate ETOP tokens", async () => {
-    //     await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
-    //     await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
-    //     // await ETOP.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     await ETOP.approveHolder({from: holder});
-    //     await ETOP.startVesting(holder, {from: owner});
-    //     const escrowAddress = await ETOP.getEscrowAddress(holder);
-    //     (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
-    //     // await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
-    //     // await validatorService.enableValidator(1, {from: owner});
-    //     const escrow = await ETOPEscrow.at(escrowAddress);
-    //     const amount = 15000;
-    //     const delegationPeriod = 3;
-    //     await escrow.delegate(
-    //         1, amount, delegationPeriod, "D2 is even", {from: holder});
-    //     const delegationId = 0;
-    //     // await delegationController.acceptPendingDelegation(delegationId, {from: owner});
-    //     console.log("Is everything OK");
-    //     (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
-    // });
+    it("should be possible to delegate ETOP tokens", async () => {
+        await ETOP.addETOP(6, 36, 2, 6, false, {from: owner});
+        await ETOP.connectHolderToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+        await ETOP.approveHolder({from: holder});
+        await ETOP.startVesting(holder, {from: owner});
+        const escrowAddress = await ETOP.getEscrowAddress(holder);
+        (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
+        // // await validatorService.registerValidator("Validator", "D2 is even", 150, 0, {from: owner});
+        // // await validatorService.enableValidator(1, {from: owner});
+        const escrow = await ETOPEscrow.at(escrowAddress);
+        const amount = 15000;
+        const delegationPeriod = 3;
+        await escrow.delegate(
+            1, amount, delegationPeriod, "D2 is even", {from: holder});
+        (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
+        (await skaleToken.getAndUpdateLockedAmount.call(escrowAddress)).toNumber().should.be.equal(amount);
+    });
 
     it("should allow to retrieve all tokens if ETOP registered along time ago", async () => {
         const lockupPeriod = 6;

@@ -1,5 +1,7 @@
 import { ContractManagerInstance, SkaleTokenTesterContract } from "../../../../types/truffle-contracts";
 import { deploySAFT } from "../saft";
+import { deployTokenStateTester } from "./tokenStateTester";
+import { deployDelegationControllerTester } from "./delegationControllerTester";
 
 const SkaleToken: SkaleTokenTesterContract = artifacts.require("./SkaleTokenTester");
 const name = "SkaleToken";
@@ -11,10 +13,9 @@ async function deploy(contractManager: ContractManagerInstance) {
 }
 
 async function deployDependencies(contractManager: ContractManagerInstance) {
+    await deployDelegationControllerTester(contractManager);
     await deploySAFT(contractManager);
-//     await deployTokenState(contractManager);
-//     await deployDelegationController(contractManager);
-//     await deployPunisher(contractManager);
+    await deployTokenStateTester(contractManager);
 }
 
 export async function deploySkaleTokenTester(contractManager: ContractManagerInstance) {

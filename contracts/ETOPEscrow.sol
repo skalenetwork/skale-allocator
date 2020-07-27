@@ -181,18 +181,11 @@ contract ETOPEscrow is IERC777Recipient, IERC777Sender, Permissions {
         onlyHolder
     {
         ETOP etop = ETOP(contractManager.getContract("ETOP"));
-        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");
-        require(
-            IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this)) >= amount,
-            "Not enough balance"
-        );
-        IValidatorService validatorService = IValidatorService(
-            contractManager.getContract("ValidatorService")
-        );
-        require(validatorService.isAuthorizedValidator(validatorId), "Not authorized validator");
+        require(etop.isActiveVestingTerm(_holder), "ETOP holder is not Active");        
         if (!etop.isUnvestedDelegatableTerm(_holder)) {
             require(etop.calculateVestedAmount(_holder) >= amount, "Incorrect amount to delegate");
         }
+        
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );

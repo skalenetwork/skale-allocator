@@ -190,6 +190,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         external
         onlyOwnerAndActivate
     {
+        // TOOD: Fix index error
         require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         require(startVestingTime <= now, "Incorrect period starts");
