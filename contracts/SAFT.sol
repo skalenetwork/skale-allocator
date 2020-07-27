@@ -337,8 +337,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * - SAFT round must already exist.
      */
     function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
-        require(saftRoundId < _saftRounds.length, "SAFT Round does not exist");
-        return _saftRounds[saftRoundId];
+        require(saftRoundId > 0 && saftRoundId <= _saftRounds.length, "SAFT Round does not exist");
+        return _saftRounds[saftRoundId - 1];
     }
 
     /**

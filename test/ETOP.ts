@@ -59,7 +59,7 @@ contract("ETOP", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         ((await ETOP.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
         (await ETOP.isUnvestedDelegatableTerm(holder)).should.be.equal(false);
         ((await ETOP.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
-        const plan = await ETOP.getPlan(0);
+        const plan = await ETOP.getPlan(1);
         plan.fullPeriod.should.be.equal('36');
         plan.vestingCliffPeriod.should.be.equal('6');
         plan.vestingPeriod.should.be.equal('1');

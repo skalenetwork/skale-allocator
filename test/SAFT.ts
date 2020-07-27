@@ -54,7 +54,7 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         ((await SAFT.getLockupPeriodTimestamp(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
         ((await SAFT.getFinishVestingTime(holder)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
         ((await SAFT.getFullAmount(holder)).toNumber()).should.be.equal(1e6);
-        const saftRound = await SAFT.getSAFTRound(0);
+        const saftRound = await SAFT.getSAFTRound(1);
         saftRound.fullPeriod.should.be.equal('36');
         saftRound.lockupPeriod.should.be.equal('6');
         saftRound.vestingPeriod.should.be.equal('1');
