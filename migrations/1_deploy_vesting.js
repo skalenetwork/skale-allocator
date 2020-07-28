@@ -62,8 +62,8 @@ async function deploy(deployer, networkName, accounts) {
         "ContractManager", // must be in first position
 
         "SAFT",
-        "COREEscrowCreator",
-        "CORE"
+        "Core",
+        "CoreEscrow"
     ]    
 
     contractsData = [];
@@ -108,10 +108,10 @@ async function deploy(deployer, networkName, accounts) {
         contract_manager_abi: artifacts.require("./ContractManager").abi,
         saft_address: deployed.get("SAFT").address,
         saft_abi: artifacts.require("./SAFT").abi,
-        vesting_escrow_creator_address: deployed.get("COREEscrowCreator").address,
-        vesting_escrow_creator_abi: artifacts.require("./COREEscrowCreator").abi,
-        core_address: deployed.get("CORE").address,
-        core_abi: artifacts.require("./CORE").abi
+        vesting_escrow_creator_address: deployed.get("CoreEscrowCreator").address,
+        vesting_escrow_creator_abi: artifacts.require("./CoreEscrowCreator").abi,
+        core_address: deployed.get("Core").address,
+        core_abi: artifacts.require("./Core").abi
     };
     for (const contractName of contracts) {
         propertyName = contractName.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();

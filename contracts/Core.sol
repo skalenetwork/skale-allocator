@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    CORE.sol - SKALE SAFT CORE
+    Core.sol - SKALE SAFT Core
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
-    SKALE SAFT CORE is free software: you can redistribute it and/or modify
+    SKALE SAFT Core is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE SAFT CORE is distributed in the hope that it will be useful,
+    SKALE SAFT Core is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE SAFT CORE.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE SAFT Core.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
@@ -25,24 +25,24 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/openzeppelin/IProxyFactory.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./COREEscrow.sol";
+import "./CoreEscrow.sol";
 import "./Permissions.sol";
-import "./COREEscrowCreator.sol";
 
 /**
- * @title CORE
+ * @title Core
  * @dev This contract manages SKALE Employee Token Option Plans.
  *
- * An employee may have multiple holdings under an CORE.
+ * An employee may have multiple holdings under an Core.
  *
- * An CORE is defined by an initial token vesting cliff period, followed by
+ * An Core is defined by an initial token vesting cliff period, followed by
  * periodic vesting.
  *
  * Employees (holders) may be registered into a particular plan, and be assigned
  * individual start states and allocations.
  */
-contract CORE is Permissions, IERC777Recipient {
+contract Core is Permissions, IERC777Recipient {
 
     enum TimeLine {DAY, MONTH, YEAR}
 
@@ -86,8 +86,8 @@ contract CORE is Permissions, IERC777Recipient {
     //        holder => Plan holder params
     mapping (address => PlanHolder) private _vestingHolders;
 
-    //        holder => address of CORE escrow
-    mapping (address => address) private _holderToEscrow;
+    //        holder => address of Core escrow
+    mapping (address => CoreEscrow) private _holderToEscrow;
 
     function tokensReceived(
         address operator,
@@ -105,7 +105,7 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows `msg.sender` to approve their address as an CORE holder.
+     * @dev Allows `msg.sender` to approve their address as an Core holder.
      *
      * Requirements:
      *
@@ -121,7 +121,7 @@ contract CORE is Permissions, IERC777Recipient {
 
     /**
      * @dev Allows Owner to activate a holder address and transfer locked
-     * tokens to the associated CORE escrow address.
+     * tokens to the associated Core escrow address.
      *
      * Requirements:
      *
@@ -132,7 +132,7 @@ contract CORE is Permissions, IERC777Recipient {
         _vestingHolders[holder].status = HolderStatus.ACTIVE;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
-                _holderToEscrow[holder],
+                address(_holderToEscrow[holder]),
                 _vestingHolders[holder].fullAmount
             ),
             "Error of token sending"
@@ -140,7 +140,7 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add an CORE.
+     * @dev Allows Owner to define and add an Core.
      *
      * Requirements:
      *
@@ -148,7 +148,7 @@ contract CORE is Permissions, IERC777Recipient {
      * - Vesting period must be in days, months, or years.
      * - Full period must equal vesting cliff plus entire vesting schedule.
      */
-    function addCORE(
+    function addCore(
         uint vestingCliffPeriod, // months
         uint fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
@@ -176,12 +176,12 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to terminate vesting of an CORE holder. Performed when
+     * @dev Allows Owner to terminate vesting of an Core holder. Performed when
      * a holder is terminated.
      *
      * Requirements:
      *
-     * - CORE holder must be active.
+     * - Core holder must be active.
      */
     function stopVesting(address holder) external onlyOwner {
         require(
@@ -190,17 +190,17 @@ contract CORE is Permissions, IERC777Recipient {
         );
         // TODO add deactivate logic!!!
         // _vestedAmount[holder] = calculateVestedAmount(holder);
-        COREEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
+        CoreEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
 
     /**
-     * @dev Allows Owner to register a holder to an CORE.
+     * @dev Allows Owner to register a holder to an Core.
      *
      * Requirements:
      *
-     * - CORE must already exist.
+     * - Core must already exist.
      * - The vesting amount must be less than or equal to the full allocation.
-     * - The holder address must not already be included in the CORE.
+     * - The holder address must not already be included in the Core.
      */
     function connectHolderToPlan(
         address holder,
@@ -212,7 +212,7 @@ contract CORE is Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        require(_allPlans.length >= planId && planId > 0, "CORE does not exist");
+        require(_allPlans.length >= planId && planId > 0, "Core does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         // require(startVestingTime <= now, "Incorrect period starts");
         // TODO: Remove to allow both past and future vesting start date
@@ -224,19 +224,18 @@ contract CORE is Permissions, IERC777Recipient {
             fullAmount: fullAmount,
             afterLockupAmount: lockupAmount
         });
-        _holderToEscrow[holder] =
-            COREEscrowCreator(contractManager.getContract("COREEscrowCreator")).create(holder);
+        _holderToEscrow[holder] = _deployEscrow(holder);
     }
 
     /**
-     * @dev Returns vesting start date of the holder's CORE.
+     * @dev Returns vesting start date of the holder's Core.
      */
     function getStartVestingTime(address holder) external view returns (uint) {
         return _vestingHolders[holder].startVestingTime;
     }
 
     /**
-     * @dev Returns the final vesting date of the holder's CORE.
+     * @dev Returns the final vesting date of the holder's Core.
      */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -253,14 +252,14 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is active in the CORE.
+     * @dev Confirms whether the holder is active in the Core.
      */
     function isActiveVestingTerm(address holder) external view returns (bool) {
         return _vestingHolders[holder].status == HolderStatus.ACTIVE;
     }
 
     /**
-     * @dev Confirms whether the holder is approved in an CORE.
+     * @dev Confirms whether the holder is approved in an Core.
      */
     function isApprovedHolder(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN &&
@@ -268,14 +267,14 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is registered in an CORE.
+     * @dev Confirms whether the holder is registered in an Core.
      */
     function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN;
     }
 
     /**
-     * @dev Confirms whether the holder's CORE allows all un-vested tokens to be
+     * @dev Confirms whether the holder's Core allows all un-vested tokens to be
      * delegated.
      */
     function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
@@ -284,17 +283,17 @@ contract CORE is Permissions, IERC777Recipient {
 
     /**
      * @dev Returns the locked and unlocked (full) amount of tokens allocated to
-     * the holder address in CORE.
+     * the holder address in Core.
      */
     function getFullAmount(address holder) external view returns (uint) {
         return _vestingHolders[holder].fullAmount;
     }
 
     /**
-     * @dev Returns the CORE Escrow contract by holder.
+     * @dev Returns the Core Escrow contract by holder.
      */
     function getEscrowAddress(address holder) external view returns (address) {
-        return _holderToEscrow[holder];
+        return address(_holderToEscrow[holder]);
     }
 
     /**
@@ -345,11 +344,11 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the CORE parameters.
+     * @dev Returns the Core parameters.
      *
      * Requirements:
      *
-     * - CORE must already exist.
+     * - Core must already exist.
      */
     function getPlan(uint planId) external view returns (Plan memory) {
         require(planId > 0 && planId <= _allPlans.length, "Plan Round does not exist");
@@ -357,11 +356,11 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the CORE parameters for a holder address.
+     * @dev Returns the Core parameters for a holder address.
      *
      * Requirements:
      *
-     * - Holder address must be registered to an CORE.
+     * - Holder address must be registered to an Core.
      */
     function getHolderParams(address holder) external view returns (PlanHolder memory) {
         require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Plan holder is not registered");
@@ -369,7 +368,7 @@ contract CORE is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the locked token amount. TODO: remove, controlled by CORE Escrow
+     * @dev Returns the locked token amount. TODO: remove, controlled by Core Escrow
      */
     function getLockedAmount(address wallet) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
@@ -381,7 +380,7 @@ contract CORE is Permissions, IERC777Recipient {
         return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
     }
     /**
-     * @dev Returns the locked token amount. TODO: remove, controlled by CORE Escrow
+     * @dev Returns the locked token amount. TODO: remove, controlled by Core Escrow
      */
     // function getLockedAmountForDelegation(address wallet) external view returns (uint) {
     //     return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
@@ -502,5 +501,26 @@ contract CORE is Permissions, IERC777Recipient {
         } else {
             return timeHelpers.addYears(timestamp, timePoints);
         }
+    }
+
+    function _deployEscrow(address holder) private returns (CoreEscrow) {
+        // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
+        IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
+        CoreEscrow coreEscrow = CoreEscrow(contractManager.getContract("CoreEscrow"));
+        // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
+        address proxyAdmin = contractManager.getContract("ProxyAdmin");
+
+        return CoreEscrow(
+            proxyFactory.deploy(
+                0,
+                address(coreEscrow),
+                proxyAdmin,
+                abi.encodeWithSelector(
+                    CoreEscrow.initialize.selector,
+                    address(contractManager),
+                    holder
+                )
+            )
+        );
     }
 }

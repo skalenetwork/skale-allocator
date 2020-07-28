@@ -2,7 +2,7 @@
   "name": "@skalenetwork/skale-saft-core",
   "version": "0.0.1",
   "private": true,
-  "description": "Contracts to manage SAFT and CORE",  
+  "description": "Contracts to manage SAFT and Core",  
   "repository": {
     "type": "git",
     "url": "git+https://github.com/skalenetwork/skale-saft-core.git"
