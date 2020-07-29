@@ -23,7 +23,5 @@ pragma solidity 0.6.10;
 
 // TODO: Remove it when @openzeppelin/upgrades will be compatible with solidity 0.6
 interface IProxyAdmin {
-    function upgrade(address proxy, address implementation) external;
     function getProxyImplementation(address proxy) external view returns (address);
-    function owner() external view returns (address);
 }

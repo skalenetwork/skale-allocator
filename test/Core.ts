@@ -41,6 +41,7 @@ contract("Core", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await contractManager.setContractsAddress("ProxyAdmin", proxyFactory.address);
         const coreEscrow: CoreEscrowInstance = await CoreEscrow.new();
         await contractManager.setContractsAddress("CoreEscrow", coreEscrow.address);
+        await proxyFactory.setImplementation(coreEscrow.address);
 
         skaleToken = await deploySkaleTokenTester(contractManager);
         // validatorService = await deployValidatorService(contractManager);

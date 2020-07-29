@@ -22,22 +22,23 @@
 pragma solidity 0.6.10;
 
 import "../interfaces/openzeppelin/IProxyFactory.sol";
+import "../interfaces/openzeppelin/IProxyAdmin.sol";
 
 
 contract ProxyMock {
-    address public target;
+    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    constructor(address _implementation, bytes memory _data) public {
-        target = _implementation;
+    constructor(address implementation, bytes memory _data) public {
+        _setImplementation(implementation);
         if(_data.length > 0) {
             // solhint-disable-next-line avoid-low-level-calls
-            (bool success,) = _implementation.delegatecall(_data);
+            (bool success,) = implementation.delegatecall(_data);
             require(success);
         }
     }
 
     fallback () payable external {
-        _delegate(target);
+        _delegate(_implementation());
     }
 
     function _delegate(address implementation) internal {
@@ -61,10 +62,34 @@ contract ProxyMock {
         default { return(0, returndatasize()) }
         }
     }
+
+    function _implementation() internal view returns (address impl) {
+        bytes32 slot = _IMPLEMENTATION_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            impl := sload(slot)
+        }
+    }
+    
+    function _setImplementation(address newImplementation) internal {
+        bytes32 slot = _IMPLEMENTATION_SLOT;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            sstore(slot, newImplementation)
+        }
+    }
 }
 
-contract ProxyFactoryMock is IProxyFactory {
+contract ProxyFactoryMock is IProxyFactory, IProxyAdmin {
+    address public implementation;
     function deploy(uint256, address _logic, address, bytes memory _data) external override returns (address) {
         return address(new ProxyMock(_logic, _data));
     }
+    function setImplementation(address _implementation) external {
+        implementation = _implementation;
+    }
+    function getProxyImplementation(address) external view override returns (address) {
+        return implementation;
+    }    
 }
