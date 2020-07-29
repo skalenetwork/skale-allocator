@@ -16,6 +16,11 @@ let erc1820Sender = erc1820Params.senderAddress;
 let erc1820Bytecode = erc1820Params.bytecode;
 let erc1820Amount = "80000000000000000";
 
+function execute(command) {
+    const execSync = require('child_process').execSync  
+    execSync(command);
+}
+
 async function deploy(deployer, networkName, accounts) {
     if (configFile.networks[networkName].host !== "" && configFile.networks[networkName].host !== undefined && configFile.networks[networkName].port !== "" && configFile.networks[networkName].port !== undefined) {
         let web3 = new Web3(new Web3.providers.HttpProvider("http://" + configFile.networks[networkName].host + ":" + configFile.networks[networkName].port));
@@ -56,14 +61,20 @@ async function deploy(deployer, networkName, accounts) {
     console.log("Starting SkaleManager system deploying...");
     
     const deployAccount = accounts[0];
-    const options = await ConfigManager.initNetworkConfiguration({ network: networkName, from: deployAccount });
+    const options = await ConfigManager.initNetworkConfiguration(
+        {
+            network: networkName,
+            from: deployAccount,
+            deployProxyFactory: true
+        }
+    );
 
-    const contracts = [
+    let contracts = [
         "ContractManager", // must be in first position
 
         "SAFT",
-        "COREEscrowCreator",
-        "CORE"
+        "Core",
+        "CoreEscrow"
     ]    
 
     contractsData = [];
@@ -74,7 +85,9 @@ async function deploy(deployer, networkName, accounts) {
     add({ contractsData: contractsData });
 
     // Push implementation contracts to the network
-    await push(options);
+    // TODO: Use push function
+    // await push(options);  
+    execute("npx oz push --deploy-proxy-factory --network " + networkName);
 
     // deploy upgradable contracts
 
@@ -86,11 +99,26 @@ async function deploy(deployer, networkName, accounts) {
             contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
             contractManager = contract;
             console.log("contractManager address:", contract.address);        
+        } else if (contractName == "ContractManager") {
+            contract = await create(Object.assign({ contractAlias: contractName }, options));
         } else {
             contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
         }
         deployed.set(contractName, contract);
-    }    
+    }
+    
+    console.log("Load oz cli contracts");
+    
+    let networkTitle = await web3.eth.net.getNetworkType();
+    if (networkTitle == "private") {
+        networkTitle = "dev-" + await web3.eth.net.getId();
+    }
+    const networkFilename = ".openzeppelin/" + networkTitle + ".json";
+    const networkFile = require("../" + networkFilename);
+    
+    deployed.set("ProxyAdmin", { "address": networkFile.proxyAdmin.address });
+    deployed.set("ProxyFactory", { "address": networkFile.proxyFactory.address });
+    contracts = contracts.concat(["ProxyAdmin", "ProxyFactory"]);
 
     console.log("Register contracts");
     
@@ -103,20 +131,13 @@ async function deploy(deployer, networkName, accounts) {
     
     console.log('Deploy done, writing results...');
 
-    let jsonObject = {
-        contract_manager_address: deployed.get("ContractManager").address,
-        contract_manager_abi: artifacts.require("./ContractManager").abi,
-        saft_address: deployed.get("SAFT").address,
-        saft_abi: artifacts.require("./SAFT").abi,
-        vesting_escrow_creator_address: deployed.get("COREEscrowCreator").address,
-        vesting_escrow_creator_abi: artifacts.require("./COREEscrowCreator").abi,
-        core_address: deployed.get("CORE").address,
-        core_abi: artifacts.require("./CORE").abi
-    };
+    let jsonObject = { };
     for (const contractName of contracts) {
         propertyName = contractName.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();
         jsonObject[propertyName + "_address"] = deployed.get(contractName).address;
-        jsonObject[propertyName + "_abi"] = artifacts.require("./" + contractName).abi;
+        if (!["ProxyAdmin", "ProxyFactory"].includes(contractName)) {
+            jsonObject[propertyName + "_abi"] = artifacts.require("./" + contractName).abi;
+        }
     }
 
     await fsPromises.writeFile(`data/${networkName}.json`, JSON.stringify(jsonObject));

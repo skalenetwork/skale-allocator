@@ -3,8 +3,8 @@
   "contracts": {
     "ContractManager": "ContractManager",
     "SAFT": "SAFT",
-    "COREEscrowCreator": "COREEscrowCreator",
-    "CORE": "CORE"
+    "Core": "Core",
+    "CoreEscrow": "CoreEscrow"
   },
   "dependencies": {},
   "name": "@skalenetwork/skale-saft-core",

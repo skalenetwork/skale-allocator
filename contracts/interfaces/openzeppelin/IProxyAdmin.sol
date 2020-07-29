@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ITokenState.sol - SKALE SAFT Core
-    Copyright (C) 2019-Present SKALE Labs
-    @author Artem Payvin
+    IProxyAdmin.sol - SKALE SAFT Core
+    Copyright (C) 2020-Present SKALE Labs
+    @author Dmytro Stebaiev
 
     SKALE SAFT Core is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,7 @@
 
 pragma solidity 0.6.10;
 
-/**
- * @dev Interface of Token State contract.
- */
-interface ITokenState {
-
-    function getAndUpdateLockedAmount(address holder) external returns (uint);
-    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint);
+// TODO: Remove it when @openzeppelin/upgrades will be compatible with solidity 0.6
+interface IProxyAdmin {
+    function getProxyImplementation(address proxy) external view returns (address);
 }
