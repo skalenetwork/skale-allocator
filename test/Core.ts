@@ -5,7 +5,9 @@ import { ContractManagerInstance,
     CoreInstance,
     CoreEscrowContract,
     CoreEscrowInstance,
-    DistributorMockContract} from "./../types/truffle-contracts";
+    DistributorMockContract,
+    ProxyFactoryMockContract,
+    ProxyFactoryMockInstance } from "../types/truffle-contracts";
 
 const CoreEscrow: CoreEscrowContract = artifacts.require("./CoreEscrow");
 
@@ -32,6 +34,14 @@ contract("Core", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     beforeEach(async () => {
         contractManager = await deployContractManager(owner);
+
+        const ProxyFactoryMock: ProxyFactoryMockContract = artifacts.require("./ProxyFactoryMock");
+        const proxyFactory: ProxyFactoryMockInstance = await ProxyFactoryMock.new();
+        await contractManager.setContractsAddress("ProxyFactory", proxyFactory.address);
+        await contractManager.setContractsAddress("ProxyAdmin", proxyFactory.address);
+        const coreEscrow: CoreEscrowInstance = await CoreEscrow.new();
+        await contractManager.setContractsAddress("CoreEscrow", coreEscrow.address);
+
         skaleToken = await deploySkaleTokenTester(contractManager);
         // validatorService = await deployValidatorService(contractManager);
         // delegationController = await deployDelegationController(contractManager);
