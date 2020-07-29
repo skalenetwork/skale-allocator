@@ -16,6 +16,11 @@ let erc1820Sender = erc1820Params.senderAddress;
 let erc1820Bytecode = erc1820Params.bytecode;
 let erc1820Amount = "80000000000000000";
 
+function execute(command) {
+    const execSync = require('child_process').execSync  
+    execSync(command);
+}
+
 async function deploy(deployer, networkName, accounts) {
     if (configFile.networks[networkName].host !== "" && configFile.networks[networkName].host !== undefined && configFile.networks[networkName].port !== "" && configFile.networks[networkName].port !== undefined) {
         let web3 = new Web3(new Web3.providers.HttpProvider("http://" + configFile.networks[networkName].host + ":" + configFile.networks[networkName].port));
@@ -80,7 +85,9 @@ async function deploy(deployer, networkName, accounts) {
     add({ contractsData: contractsData });
 
     // Push implementation contracts to the network
-    await push(options);
+    // TODO: Use push function
+    // await push(options);  
+    execute("npx oz push --deploy-proxy-factory --network " + networkName);
 
     // deploy upgradable contracts
 

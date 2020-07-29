@@ -26,6 +26,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC182
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/openzeppelin/IProxyFactory.sol";
+import "./interfaces/openzeppelin/IProxyAdmin.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./CoreEscrow.sol";
 import "./Permissions.sol";
@@ -508,13 +509,13 @@ contract Core is Permissions, IERC777Recipient {
         IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
         CoreEscrow coreEscrow = CoreEscrow(contractManager.getContract("CoreEscrow"));
         // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
-        address proxyAdmin = contractManager.getContract("ProxyAdmin");
+        IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
 
         return CoreEscrow(
             proxyFactory.deploy(
                 0,
-                address(coreEscrow),
-                proxyAdmin,
+                proxyAdmin.getProxyImplementation(address(coreEscrow)),
+                address(proxyAdmin),
                 abi.encodeWithSelector(
                     CoreEscrow.initialize.selector,
                     address(contractManager),
