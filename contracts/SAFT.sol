@@ -222,7 +222,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      */
     function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
         IConstantsHolder constantsHolder = IConstantsHolder(contractManager.getContract("ConstantsHolder"));
-        if (now < constantsHolder.launchTimestamp() || now < _vestingHolders[wallet].startVestingTime) {
+        if (now < constantsHolder.launchTimestamp() ||
+            now < _vestingHolders[wallet].startVestingTime ||
+            !_vestingHolders[wallet].active)
+        {
             return _vestingHolders[wallet].fullAmount;
         }
         return getLockedAmount(wallet);

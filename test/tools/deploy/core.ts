@@ -4,6 +4,7 @@ import { deploySkaleTokenTester } from "./test/skaleTokenTester";
 import { deployTimeHelpersTester } from "./test/timeHelpersTester";
 import { deployTokenStateTester } from "./test/tokenStateTester";
 import { deployDelegationControllerTester } from "./test/delegationControllerTester";
+import { deployConstantsHolderMock } from "./test/constantsHolderMock";
 
 const deployCore: (contractManager: ContractManagerInstance) => Promise<CoreInstance>
     = deployFunctionFactory("Core",
@@ -12,6 +13,7 @@ const deployCore: (contractManager: ContractManagerInstance) => Promise<CoreInst
                                 await deployTimeHelpersTester(contractManager);
                                 await deployTokenStateTester(contractManager);
                                 await deployDelegationControllerTester(contractManager);
+                                await deployConstantsHolderMock(contractManager);
                             });
 
 export { deployCore };

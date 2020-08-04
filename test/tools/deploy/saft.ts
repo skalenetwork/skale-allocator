@@ -4,6 +4,7 @@ import { deploySkaleTokenTester } from "./test/skaleTokenTester";
 import { deployTimeHelpersTester } from "./test/timeHelpersTester";
 import { deployTokenLaunchManagerTester } from "./test/tokenLaunchManagerTester";
 import { deployDelegationControllerTester } from "./test/delegationControllerTester";
+import { deployConstantsHolderMock } from "./test/constantsHolderMock";
 
 const deploySAFT: (contractManager: ContractManagerInstance) => Promise<SAFTInstance>
     = deployFunctionFactory("SAFT",
@@ -12,6 +13,7 @@ const deploySAFT: (contractManager: ContractManagerInstance) => Promise<SAFTInst
                                 await deployTimeHelpersTester(contractManager);
                                 await deployTokenLaunchManagerTester(contractManager);
                                 await deployDelegationControllerTester(contractManager);
+                                await deployConstantsHolderMock(contractManager);
                             });
 
 export { deploySAFT };

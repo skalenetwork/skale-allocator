@@ -226,12 +226,12 @@ contract("SAFT", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
     });
 
-    it("should not connect holder to SAFT Round if period starts incorrect", async () => {
+    it("should connect holder to SAFT Round if period starts incorrect", async () => {
         const time = await currentTime(web3);
         const currentDate = new Date(time * 1000);
         const nextYear = currentDate.getFullYear() + 1;
         await SAFT.addSAFTRound(6, 36, 2, 6, {from: owner});
-        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
+        await SAFT.connectHolderToSAFT(holder, 1, getTimeAtDate(1, 6, nextYear), 1e6, 1e5, {from: owner});
         // await SAFT.addVestingTerm(holder, getTimeAtDate(1, 6, nextYear), 6, 36, 1e6, 1e5, 6, false, {from: owner}).should.be.eventually.rejectedWith("Incorrect period starts");
     });
 
