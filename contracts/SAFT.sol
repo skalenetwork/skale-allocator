@@ -28,6 +28,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "./interfaces/delegation/ILocker.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./Permissions.sol";
+import "./interfaces/IConstantsHolder.sol";
 
 /**
  * @title SAFT
@@ -199,7 +200,6 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         // TOOD: Fix index error
         require(_saftRounds.length >= saftRoundId && saftRoundId > 0, "SAFT round does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
-        require(startVestingTime <= now, "Incorrect period starts");
         require(!_vestingHolders[holder].registered, "SAFT holder is already added");
         _vestingHolders[holder] = SaftHolder({
             registered: true,
@@ -221,8 +221,12 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Updates and returns the current locked amount of tokens.
      */
     function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
-        if (! _vestingHolders[wallet].active) {
-            return 0;
+        IConstantsHolder constantsHolder = IConstantsHolder(contractManager.getContract("ConstantsHolder"));
+        if (now < constantsHolder.launchTimestamp() ||
+            now < _vestingHolders[wallet].startVestingTime ||
+            !_vestingHolders[wallet].active)
+        {
+            return _vestingHolders[wallet].fullAmount;
         }
         return getLockedAmount(wallet);
     }
@@ -231,6 +235,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Updates and returns the slashed amount of tokens.
      */
     function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
+        // IConstantsHolder constantsHolder = IConstantsHolder(contractManager.getContract("ConstantsHolder"));
+        // if (now < constantsHolder.launchTimestamp() || now < _vestingHolders[wallet].startVestingTime) {
+        //     return _vestingHolders[wallet].fullAmount;
+        // }
         // network_launch_timestamp
         return 0;
     }

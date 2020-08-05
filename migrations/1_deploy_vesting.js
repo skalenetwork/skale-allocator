@@ -21,11 +21,24 @@ function execute(command) {
     execSync(command);
 }
 
+if (process.env.PRODUCTION === "true") {
+    production = true;
+    if(!fs.existsSync("../scripts/manager.json")) {
+        console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
+        process.exit();
+    }
+} else if (process.env.PRODUCTION === "false") {
+    production = false;
+} else {
+    console.log("Recheck Production variable in .env");
+    console.log("Set Production as false");
+    production = false;
+}
+
 async function deploy(deployer, networkName, accounts) {
     if (configFile.networks[networkName].host !== "" && configFile.networks[networkName].host !== undefined && configFile.networks[networkName].port !== "" && configFile.networks[networkName].port !== undefined) {
         let web3 = new Web3(new Web3.providers.HttpProvider("http://" + configFile.networks[networkName].host + ":" + configFile.networks[networkName].port));
         if (await web3.eth.getCode(erc1820Contract) == "0x") {
-            console.log("OK");
             console.log("Deploying ERC1820 contract!")
             await web3.eth.sendTransaction({ from: configFile.networks[networkName].from, to: erc1820Sender, value: erc1820Amount});
             console.log("Account " + erc1820Sender + " replenished with " + erc1820Amount + " wei");
@@ -58,7 +71,7 @@ async function deploy(deployer, networkName, accounts) {
         }
     }        
 
-    console.log("Starting SkaleManager system deploying...");
+    console.log("Starting SAFT & CORE contracts deploying...");
     
     const deployAccount = accounts[0];
     const options = await ConfigManager.initNetworkConfiguration(
@@ -79,7 +92,9 @@ async function deploy(deployer, networkName, accounts) {
 
     contractsData = [];
     for (const contract of contracts) {
-        contractsData.push({name: contract, alias: contract});
+        if (!(production && contract === "ContractManager")) {
+            contractsData.push({name: contract, alias: contract});
+        }
     }    
 
     add({ contractsData: contractsData });
@@ -96,11 +111,17 @@ async function deploy(deployer, networkName, accounts) {
     for (const contractName of contracts) {
         let contract;
         if (contractName == "ContractManager") {
-            contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
-            contractManager = contract;
-            console.log("contractManager address:", contract.address);        
-        } else if (contractName == "ContractManager") {
-            contract = await create(Object.assign({ contractAlias: contractName }, options));
+            if (!production) {
+                contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
+                contractManager = contract;
+                console.log("contractManager address:", contract.address);
+            } else {
+                let manager = require("../scripts/manager.json");
+                contract = new web3.eth.Contract(manager['contract_manager_abi'], manager['contract_manager_address']);
+                contract.address = contract._address;
+                contractManager = contract;
+                console.log("contractManager address:", contractManager.address);
+            }
         } else {
             contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
         }
@@ -123,10 +144,12 @@ async function deploy(deployer, networkName, accounts) {
     console.log("Register contracts");
     
     for (const contract of contracts) {
-        const address = deployed.get(contract).address;
-        await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
-            console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
-        });
+        if (contract !== "ContractManager") {
+            const address = deployed.get(contract).address;
+            await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
+                console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
+            });
+        }
     }
     
     console.log('Deploy done, writing results...');
