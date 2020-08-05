@@ -234,11 +234,11 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     /**
      * @dev Updates and returns the slashed amount of tokens.
      */
-    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
-        IConstantsHolder constantsHolder = IConstantsHolder(contractManager.getContract("ConstantsHolder"));
-        if (now < constantsHolder.launchTimestamp() || now < _vestingHolders[wallet].startVestingTime) {
-            return _vestingHolders[wallet].fullAmount;
-        }
+    function getAndUpdateForbiddenForDelegationAmount(address) external override returns (uint) {
+        // IConstantsHolder constantsHolder = IConstantsHolder(contractManager.getContract("ConstantsHolder"));
+        // if (now < constantsHolder.launchTimestamp() || now < _vestingHolders[wallet].startVestingTime) {
+        //     return _vestingHolders[wallet].fullAmount;
+        // }
         // network_launch_timestamp
         return 0;
     }
