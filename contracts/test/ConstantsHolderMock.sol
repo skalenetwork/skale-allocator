@@ -31,9 +31,9 @@ import "../Permissions.sol";
  */
 contract ConstantsHolderMock is Permissions {
 
-    uint public launchTimestamp;
+    uint256 public launchTimestamp;
 
-    function setLaunchTimestamp(uint timestamp) external onlyOwner {
+    function setLaunchTimestamp(uint256 timestamp) external onlyOwner {
         require(now < launchTimestamp, "Can't set network launch timestamp because network is already launched");
         launchTimestamp = timestamp;
     }

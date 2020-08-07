@@ -26,5 +26,5 @@ pragma solidity 0.6.10;
  */
 interface IDistributor {
 
-    function withdrawBounty(uint validatorId, address to) external;
+    function withdrawBounty(uint256 validatorId, address to) external;
 }

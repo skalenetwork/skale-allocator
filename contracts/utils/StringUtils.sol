@@ -33,8 +33,8 @@ library StringUtils {
 
         string memory ab = new string(_ba.length.add(_bb.length));
         bytes memory strBytes = bytes(ab);
-        uint k = 0;
-        uint i = 0;
+        uint256 k = 0;
+        uint256 i = 0;
         for (i = 0; i < _ba.length; i++) {
             strBytes[k++] = _ba[i];
         }
