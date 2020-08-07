@@ -217,6 +217,8 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * @dev Allows Holder and Owner to withdraw earned bounty. Only Owner can
      * withdraw bounty to Core contract after Core holder is deactivated.
      *
+     * Withdraws are only possible after 90 day initial network lock.
+     *
      * Requirements:
      *
      * - Holder or Core Owner must be `msg.sender`.
