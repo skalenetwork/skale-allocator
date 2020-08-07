@@ -98,8 +98,8 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Holder to retrieve tokens from the Escrow to the Core
-     * Escrow contract.
+     * @dev Allows Holder to retrieve vested tokens from the Escrow contract.
+     * Slashed tokens are non-transferable.
      */
     function retrieve() external onlyHolder {
         Core core = Core(contractManager.getContract("Core"));
