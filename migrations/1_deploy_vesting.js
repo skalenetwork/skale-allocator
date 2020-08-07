@@ -151,6 +151,12 @@ async function deploy(deployer, networkName, accounts) {
             });
         }
     }
+
+    if (production) {
+        let manager = require("../scripts/manager.json");
+        contract = new web3.eth.Contract(manager['token_state_abi'], manager['token_state_address']);
+        await contract.methods.addLocker("SAFT".send({from: deployAccount}));
+    }
     
     console.log('Deploy done, writing results...');
 
@@ -162,6 +168,8 @@ async function deploy(deployer, networkName, accounts) {
             jsonObject[propertyName + "_abi"] = artifacts.require("./" + contractName).abi;
         }
     }
+
+
 
     await fsPromises.writeFile(`data/${networkName}.json`, JSON.stringify(jsonObject));
     console.log(`Done, check ${networkName}.json file in data folder.`);
