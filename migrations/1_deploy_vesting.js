@@ -155,7 +155,7 @@ async function deploy(deployer, networkName, accounts) {
     if (production) {
         let manager = require("../scripts/manager.json");
         contract = new web3.eth.Contract(manager['token_state_abi'], manager['token_state_address']);
-        await contract.methods.addLocker("SAFT".send({from: deployAccount}));
+        await contract.methods.addLocker("SAFT").send({from: deployAccount});
     }
     
     console.log('Deploy done, writing results...');
