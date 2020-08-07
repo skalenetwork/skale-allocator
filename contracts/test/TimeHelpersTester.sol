@@ -38,7 +38,14 @@ contract TimeHelpersTester is ITimeHelpers {
 
     uint256 constant private _ZERO_YEAR = 2020;
 
-    function calculateProofOfUseLockEndTime(uint256 month, uint256 lockUpPeriodDays) external pure returns (uint256 timestamp) {
+    function calculateProofOfUseLockEndTime(
+        uint256 month,
+        uint256 lockUpPeriodDays
+    ) 
+        external 
+        pure 
+        returns (uint256 timestamp) 
+    {
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(monthToTimestamp(month), lockUpPeriodDays);
     }
 
