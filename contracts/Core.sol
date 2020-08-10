@@ -33,11 +33,11 @@ import "./Permissions.sol";
 
 /**
  * @title Core
- * @dev This contract manages SKALE Employee Token Option Plans.
+ * @dev This contract manages SKALE Core contracts.
  *
- * An employee may have multiple holdings under an Core.
+ * An employee may have multiple holdings under a Core.
  *
- * An Core is defined by an initial token vesting cliff period, followed by
+ * A Core is defined by an initial token vesting cliff period, followed by
  * periodic vesting.
  *
  * Employees (holders) may be registered into a particular plan, and be assigned
@@ -106,7 +106,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows `msg.sender` to approve their address as an Core holder.
+     * @dev Allows `msg.sender` to approve their address as a Core holder.
      *
      * Requirements:
      *
@@ -122,7 +122,7 @@ contract Core is Permissions, IERC777Recipient {
 
     /**
      * @dev Allows Owner to activate a holder address and transfer locked
-     * tokens to the associated Core escrow address.
+     * tokens from the Core contract to the associated Core escrow address.
      *
      * Requirements:
      *
@@ -141,7 +141,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add an Core.
+     * @dev Allows Owner to define and add a Core.
      *
      * Requirements:
      *
@@ -177,7 +177,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to terminate vesting of an Core holder. Performed when
+     * @dev Allows Owner to terminate vesting of a Core escrow. Performed when
      * a holder is terminated.
      *
      * Requirements:
@@ -195,7 +195,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to register a holder to an Core.
+     * @dev Allows Owner to register a holder to a Core plan.
      *
      * Requirements:
      *
@@ -260,7 +260,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is approved in an Core.
+     * @dev Confirms whether the holder is approved in a Core.
      */
     function isApprovedHolder(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN &&
@@ -268,7 +268,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Confirms whether the holder is registered in an Core.
+     * @dev Confirms whether the holder is registered in a Core.
      */
     function isHolderRegistered(address holder) external view returns (bool) {
         return _vestingHolders[holder].status != HolderStatus.UNKNOWN;
@@ -345,7 +345,7 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the Core parameters.
+     * @dev Returns the Core plan parameters.
      *
      * Requirements:
      *
