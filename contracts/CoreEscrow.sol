@@ -36,8 +36,7 @@ import "./interfaces/delegation/IValidatorService.sol";
 
 /**
  * @title Core Escrow
- * @dev This contract manages Core escrow operations for the SKALE Employee
- * Token Open Plan.
+ * @dev This contract manages Core escrow operations for the SKALE Core system.
  */
 contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
@@ -99,8 +98,8 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Holder to retrieve locked tokens from SKALE Token to the Core
-     * Escrow contract.
+     * @dev Allows Holder to retrieve vested tokens from the Escrow contract.
+     * Slashed tokens are non-transferable.
      */
     function retrieve() external onlyHolder {
         Core core = Core(contractManager.getContract("Core"));
@@ -217,6 +216,8 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
     /**
      * @dev Allows Holder and Owner to withdraw earned bounty. Only Owner can
      * withdraw bounty to Core contract after Core holder is deactivated.
+     *
+     * Withdraws are only possible after 90 day initial network lock.
      *
      * Requirements:
      *
