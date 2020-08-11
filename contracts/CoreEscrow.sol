@@ -42,7 +42,7 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
 
     address private _holder;
 
-    uint private _availableAmountAfterTermination;
+    uint256 private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;
 
@@ -105,15 +105,15 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
         Core core = Core(contractManager.getContract("Core"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         // require(core.isActiveVestingTerm(_holder), "Core term is not Active");
-        uint vestedAmount = 0;
+        uint256 vestedAmount = 0;
         if (core.isActiveVestingTerm(_holder)) {
             vestedAmount = core.calculateVestedAmount(_holder);
         } else {
             vestedAmount = _availableAmountAfterTermination;
         }
-        uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        uint fullAmount = core.getFullAmount(_holder);
-        uint forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
+        uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
+        uint256 fullAmount = core.getFullAmount(_holder);
+        uint256 forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
         if (vestedAmount > fullAmount.sub(escrowBalance)) {
             if (vestedAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
             require(
@@ -144,8 +144,8 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
         require(!core.isActiveVestingTerm(_holder), "Core holder is not Active");
-        uint escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        uint forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
+        uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
+        uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
@@ -168,9 +168,9 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * list.
      */
     function delegate(
-        uint validatorId,
-        uint amount,
-        uint delegationPeriod,
+        uint256 validatorId,
+        uint256 amount,
+        uint256 delegationPeriod,
         string calldata info
     )
         external
@@ -198,7 +198,7 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or Core Owner must be `msg.sender`.
      * - Core holder must be active when Holder is `msg.sender`.
      */
-    function requestUndelegation(uint delegationId) external onlyHolderAndOwner {
+    function requestUndelegation(uint256 delegationId) external onlyHolderAndOwner {
         Core core = Core(contractManager.getContract("Core"));
         require(
             _msgSender() == _holder && core.isActiveVestingTerm(_holder) || _msgSender() == core.vestingManager(),
@@ -224,7 +224,7 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or Core Owner must be `msg.sender`.
      * - Core must be active when Holder is `msg.sender`.
      */
-    function withdrawBounty(uint validatorId, address to) external onlyHolderAndOwner {        
+    function withdrawBounty(uint256 validatorId, address to) external onlyHolderAndOwner {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             Core core = Core(contractManager.getContract("Core"));
@@ -240,7 +240,7 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      * vesting is performed upon termination.
      * TODO: missing moving Core holder to deactivated state?
      */
-    function cancelVesting(uint vestedAmount) external allow("Core") {
+    function cancelVesting(uint256 vestedAmount) external allow("Core") {
         _availableAmountAfterTermination = vestedAmount;
     }
 

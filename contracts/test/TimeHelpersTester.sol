@@ -36,21 +36,28 @@ import "../interfaces/ITimeHelpers.sol";
 contract TimeHelpersTester is ITimeHelpers {
     using SafeMath for uint;
 
-    uint constant private _ZERO_YEAR = 2020;
+    uint256 constant private _ZERO_YEAR = 2020;
 
-    function calculateProofOfUseLockEndTime(uint month, uint lockUpPeriodDays) external pure returns (uint timestamp) {
+    function calculateProofOfUseLockEndTime(
+        uint256 month,
+        uint256 lockUpPeriodDays
+    ) 
+        external 
+        pure 
+        returns (uint256 timestamp) 
+    {
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(monthToTimestamp(month), lockUpPeriodDays);
     }
 
-    function addDays(uint fromTimestamp, uint n) external pure override returns (uint) {
+    function addDays(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
         return BokkyPooBahsDateTimeLibrary.addDays(fromTimestamp, n);
     }
 
-    function addMonths(uint fromTimestamp, uint n) external pure override returns (uint) {
+    function addMonths(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
         return BokkyPooBahsDateTimeLibrary.addMonths(fromTimestamp, n);
     }
 
-    function addYears(uint fromTimestamp, uint n) external pure override returns (uint) {
+    function addYears(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
         return BokkyPooBahsDateTimeLibrary.addYears(fromTimestamp, n);
     }
 
@@ -58,24 +65,24 @@ contract TimeHelpersTester is ITimeHelpers {
         return timestampToMonth(now);
     }
 
-    function timestampToDay(uint timestamp) external view override returns (uint) {
-        uint wholeDays = timestamp / BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY;
-        uint zeroDay = BokkyPooBahsDateTimeLibrary.timestampFromDate(_ZERO_YEAR, 1, 1) /
+    function timestampToDay(uint256 timestamp) external view override returns (uint) {
+        uint256 wholeDays = timestamp / BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY;
+        uint256 zeroDay = BokkyPooBahsDateTimeLibrary.timestampFromDate(_ZERO_YEAR, 1, 1) /
             BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY;
         require(wholeDays >= zeroDay, "Timestamp is too far in the past");
         return wholeDays - zeroDay;
     }
 
-    function timestampToYear(uint timestamp) external view override returns (uint) {
-        uint year;
+    function timestampToYear(uint256 timestamp) external view override returns (uint) {
+        uint256 year;
         (year, , ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         require(year >= _ZERO_YEAR, "Timestamp is too far in the past");
         return year - _ZERO_YEAR;
     }
 
-    function timestampToMonth(uint timestamp) public view override returns (uint) {
-        uint year;
-        uint month;
+    function timestampToMonth(uint256 timestamp) public view override returns (uint) {
+        uint256 year;
+        uint256 month;
         (year, month, ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         require(year >= _ZERO_YEAR, "Timestamp is too far in the past");
         month = month.sub(1).add(year.sub(_ZERO_YEAR).mul(12));
@@ -83,9 +90,9 @@ contract TimeHelpersTester is ITimeHelpers {
         return month;
     }
 
-    function monthToTimestamp(uint month) public pure virtual returns (uint timestamp) {
-        uint year = _ZERO_YEAR;
-        uint _month = month;
+    function monthToTimestamp(uint256 month) public pure virtual returns (uint256 timestamp) {
+        uint256 year = _ZERO_YEAR;
+        uint256 _month = month;
         year = year.add(_month.div(12));
         _month = _month.mod(12);
         _month = _month.add(1);

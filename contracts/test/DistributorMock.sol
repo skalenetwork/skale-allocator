@@ -35,15 +35,15 @@ contract DistributorMock is IDistributor, IERC777Recipient {
     IERC20 public skaleToken;
 
     //        wallet =>   validatorId => tokens
-    mapping (address => mapping (uint => uint)) public approved;
+    mapping (address => mapping (uint256 => uint)) public approved;
 
     constructor (address skaleTokenAddress) public {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
-    function withdrawBounty(uint validatorId, address to) external override {
-        uint bounty = approved[msg.sender][validatorId];        
+    function withdrawBounty(uint256 validatorId, address to) external override {
+        uint256 bounty = approved[msg.sender][validatorId];        
         delete approved[msg.sender][validatorId];
         require(skaleToken.transfer(to, bounty), "Failed to transfer tokens");
     }
@@ -60,13 +60,13 @@ contract DistributorMock is IDistributor, IERC777Recipient {
     {
         require(to == address(this), "Receiver is incorrect");
         require(userData.length == 32 * 2, "Data length is incorrect");
-        (uint validatorId, address wallet) = abi.decode(userData, (uint, address));
+        (uint256 validatorId, address wallet) = abi.decode(userData, (uint, address));
         _payBounty(wallet, validatorId, amount);
     }
 
     // private
 
-    function _payBounty(address wallet, uint validatorId, uint amount) private {
+    function _payBounty(address wallet, uint256 validatorId, uint256 amount) private {
         approved[wallet][validatorId] += amount;
     }
 }

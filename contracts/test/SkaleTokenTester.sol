@@ -29,7 +29,7 @@ import "../SAFT.sol";
 
 contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
 
-    uint public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
+    uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
     constructor(
         address contractManagerAddress,
@@ -45,7 +45,7 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
 
     function mint(
         address account,
-        uint amount,
+        uint256 amount,
         bytes memory userData,
         bytes memory operatorData
     )
@@ -83,7 +83,7 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         uint256 tokenId)
         internal override
     {
-        uint locked = getAndUpdateLockedAmount(from);
+        uint256 locked = getAndUpdateLockedAmount(from);
         if (locked > 0) {
             require(balanceOf(from) >= locked.add(tokenId), "Token should be unlocked for transferring");
         }

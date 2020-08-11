@@ -26,5 +26,5 @@ pragma solidity 0.6.10;
  */
 interface IValidatorService {
 
-    function isAuthorizedValidator(uint validatorId) external view returns (bool);
+    function isAuthorizedValidator(uint256 validatorId) external view returns (bool);
 }

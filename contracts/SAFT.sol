@@ -51,24 +51,24 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     enum TimeLine {DAY, MONTH, YEAR}
 
     struct SAFTRound {
-        uint fullPeriod;
-        uint lockupPeriod; // months
+        uint256 fullPeriod;
+        uint256 lockupPeriod; // months
         TimeLine vestingPeriod;
-        uint regularPaymentTime; // amount of days/months/years
+        uint256 regularPaymentTime; // amount of days/months/years
     }
 
     struct SaftHolder {
         bool registered;
         bool approved;
         bool active;
-        uint saftRoundId;
-        uint startVestingTime;
-        uint fullAmount;
-        uint afterLockupAmount;
+        uint256 saftRoundId;
+        uint256 startVestingTime;
+        uint256 fullAmount;
+        uint256 afterLockupAmount;
     }
 
     event SaftRoundCreated(
-        uint id
+        uint256 id
     );
 
     bytes32 public constant ACTIVATE_ROLE = keccak256("ACTIVATE_ROLE");
@@ -152,10 +152,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * - The full period must equal the lock period plus the unlock schedule.
      */
     function addSAFTRound(
-        uint lockupPeriod, // months
-        uint fullPeriod, // months
+        uint256 lockupPeriod, // months
+        uint256 fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
-        uint vestingTimes // months or days or years
+        uint256 vestingTimes // months or days or years
     )
         external
         onlyOwner
@@ -189,10 +189,10 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      */
     function connectHolderToSAFT(
         address holder,
-        uint saftRoundId,
-        uint startVestingTime, // timestamp
-        uint fullAmount,
-        uint lockupAmount
+        uint256 saftRoundId,
+        uint256 startVestingTime, // timestamp
+        uint256 fullAmount,
+        uint256 lockupAmount
     )
         external
         onlyOwnerAndActivate
@@ -312,31 +312,31 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      */
     function getTimeOfNextUnlock(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         SaftHolder memory saftHolder = _vestingHolders[holder];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        uint lockupDate = timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
+        uint256 lockupDate = timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod);
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
-        uint lockupTime = _getTimePointInCorrectPeriod(
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint256 lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
             saftParams.vestingPeriod
         );
-        uint finishTime = _getTimePointInCorrectPeriod(
+        uint256 finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
             saftParams.vestingPeriod
         );
-        uint numberOfDonePayments = dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
-        uint numberOfAllPayments = finishTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        uint256 numberOfDonePayments = dateTime.sub(lockupTime).div(saftParams.regularPaymentTime);
+        uint256 numberOfAllPayments = finishTime.sub(lockupTime).div(saftParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
                 saftHolder.startVestingTime,
                 saftParams.fullPeriod
             );
         }
-        uint nextPayment = finishTime
+        uint256 nextPayment = finishTime
             .sub(
                 saftParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
@@ -350,7 +350,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      *
      * - SAFT round must already exist.
      */
-    function getSAFTRound(uint saftRoundId) external view returns (SAFTRound memory) {
+    function getSAFTRound(uint256 saftRoundId) external view returns (SAFTRound memory) {
         require(saftRoundId > 0 && saftRoundId <= _saftRounds.length, "SAFT Round does not exist");
         return _saftRounds[saftRoundId - 1];
     }
@@ -384,9 +384,9 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the amount of unlocked tokens.
      */
-    function calculateUnlockedAmount(address wallet) public view returns (uint unlockedAmount) {
+    function calculateUnlockedAmount(address wallet) public view returns (uint256 unlockedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
         unlockedAmount = 0;
@@ -395,7 +395,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
             if (date >= timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod)) {
                 unlockedAmount = saftHolder.fullAmount;
             } else {
-                uint partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
+                uint256 partPayment = _getPartPayment(wallet, saftHolder.fullAmount, saftHolder.afterLockupAmount);
                 unlockedAmount = unlockedAmount.add(partPayment.mul(_getNumberOfCompletedUnlocks(wallet)));
             }
         }
@@ -406,14 +406,14 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      */
     function _getNumberOfCompletedUnlocks(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
         // if (date < timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod)) {
         //     return 0;
         // }
-        uint dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
-        uint lockupTime = _getTimePointInCorrectPeriod(
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, saftParams.vestingPeriod);
+        uint256 lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
             saftParams.vestingPeriod
         );
@@ -427,11 +427,11 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         SaftHolder memory saftHolder = _vestingHolders[wallet];
         SAFTRound memory saftParams = _saftRounds[saftHolder.saftRoundId - 1];
-        uint finishTime = _getTimePointInCorrectPeriod(
+        uint256 finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.fullPeriod),
             saftParams.vestingPeriod
         );
-        uint afterLockupTime = _getTimePointInCorrectPeriod(
+        uint256 afterLockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(saftHolder.startVestingTime, saftParams.lockupPeriod),
             saftParams.vestingPeriod
         );
@@ -444,8 +444,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      */
     function _getPartPayment(
         address wallet,
-        uint fullAmount,
-        uint afterLockupPeriodAmount
+        uint256 fullAmount,
+        uint256 afterLockupPeriodAmount
     )
         internal
         view
@@ -458,7 +458,7 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Returns timestamp when adding timepoints (days/months/years) to
      * timestamp.
      */
-    function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
+    function _getTimePointInCorrectPeriod(uint256 timestamp, TimeLine vestingPeriod) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         if (vestingPeriod == TimeLine.DAY) {
             return timeHelpers.timestampToDay(timestamp);
@@ -473,8 +473,8 @@ contract SAFT is ILocker, Permissions, IERC777Recipient {
      * @dev Returns timepoints (days/months/years) from a given timestamp.
      */
     function _addMonthsAndTimePoint(
-        uint timestamp,
-        uint timePoints,
+        uint256 timestamp,
+        uint256 timePoints,
         TimeLine vestingPeriod
     )
         private

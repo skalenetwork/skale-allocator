@@ -56,23 +56,23 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     struct Plan {
-        uint fullPeriod;
-        uint vestingCliffPeriod; // months
+        uint256 fullPeriod;
+        uint256 vestingCliffPeriod; // months
         TimeLine vestingPeriod;
-        uint regularPaymentTime; // amount of days/months/years
+        uint256 regularPaymentTime; // amount of days/months/years
         bool isUnvestedDelegatable;
     }
 
     struct PlanHolder {
         HolderStatus status;
-        uint planId;
-        uint startVestingTime;
-        uint fullAmount;
-        uint afterLockupAmount;
+        uint256 planId;
+        uint256 startVestingTime;
+        uint256 fullAmount;
+        uint256 afterLockupAmount;
     }
 
     event PlanCreated(
-        uint id
+        uint256 id
     );
 
     IERC1820Registry private _erc1820;
@@ -150,10 +150,10 @@ contract Core is Permissions, IERC777Recipient {
      * - Full period must equal vesting cliff plus entire vesting schedule.
      */
     function addCore(
-        uint vestingCliffPeriod, // months
-        uint fullPeriod, // months
+        uint256 vestingCliffPeriod, // months
+        uint256 fullPeriod, // months
         uint8 vestingPeriod, // 1 - day 2 - month 3 - year
-        uint vestingTimes, // months or days or years
+        uint256 vestingTimes, // months or days or years
         bool isUnvestedDelegatable // can holder delegate all un-vested tokens
     )
         external
@@ -205,10 +205,10 @@ contract Core is Permissions, IERC777Recipient {
      */
     function connectHolderToPlan(
         address holder,
-        uint planId,
-        uint startVestingTime, // timestamp
-        uint fullAmount,
-        uint lockupAmount
+        uint256 planId,
+        uint256 startVestingTime, // timestamp
+        uint256 fullAmount,
+        uint256 lockupAmount
     )
         external
         onlyOwner
@@ -313,31 +313,31 @@ contract Core is Permissions, IERC777Recipient {
      */
     function getTimeOfNextVest(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         PlanHolder memory planHolder = _vestingHolders[holder];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        uint lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
+        uint256 lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
-        uint lockupTime = _getTimePointInCorrectPeriod(
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint256 lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
-        uint finishTime = _getTimePointInCorrectPeriod(
+        uint256 finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
             planParams.vestingPeriod
         );
-        uint numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
-        uint numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        uint256 numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        uint256 numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.regularPaymentTime);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
                 planHolder.startVestingTime,
                 planParams.fullPeriod
             );
         }
-        uint nextPayment = finishTime
+        uint256 nextPayment = finishTime
             .sub(
                 planParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
@@ -351,7 +351,7 @@ contract Core is Permissions, IERC777Recipient {
      *
      * - Core must already exist.
      */
-    function getPlan(uint planId) external view returns (Plan memory) {
+    function getPlan(uint256 planId) external view returns (Plan memory) {
         require(planId > 0 && planId <= _allPlans.length, "Plan Round does not exist");
         return _allPlans[planId - 1];
     }
@@ -397,9 +397,9 @@ contract Core is Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the vested token amount.
      */
-    function calculateVestedAmount(address wallet) public view returns (uint vestedAmount) {
+    function calculateVestedAmount(address wallet) public view returns (uint256 vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
         vestedAmount = 0;
@@ -408,7 +408,7 @@ contract Core is Permissions, IERC777Recipient {
             if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
                 vestedAmount = planHolder.fullAmount;
             } else {
-                uint partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
+                uint256 partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
                 vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfCompletedVestingEvents(wallet)));
             }
         }
@@ -419,14 +419,14 @@ contract Core is Permissions, IERC777Recipient {
      */
     function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint date = now;
+        uint256 date = now;
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
         if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
             return 0;
         }
-        uint dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
-        uint lockupTime = _getTimePointInCorrectPeriod(
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint256 lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
@@ -440,11 +440,11 @@ contract Core is Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         PlanHolder memory planHolder = _vestingHolders[wallet];
         Plan memory planParams = _allPlans[planHolder.planId - 1];
-        uint finishTime = _getTimePointInCorrectPeriod(
+        uint256 finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
             planParams.vestingPeriod
         );
-        uint afterLockupTime = _getTimePointInCorrectPeriod(
+        uint256 afterLockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
             planParams.vestingPeriod
         );
@@ -457,8 +457,8 @@ contract Core is Permissions, IERC777Recipient {
      */
     function _getPartPayment(
         address wallet,
-        uint fullAmount,
-        uint afterLockupPeriodAmount
+        uint256 fullAmount,
+        uint256 afterLockupPeriodAmount
     )
         internal
         view
@@ -471,7 +471,7 @@ contract Core is Permissions, IERC777Recipient {
      * @dev Returns timestamp when adding timepoints (days/months/years) to
      * timestamp.
      */
-    function _getTimePointInCorrectPeriod(uint timestamp, TimeLine vestingPeriod) private view returns (uint) {
+    function _getTimePointInCorrectPeriod(uint256 timestamp, TimeLine vestingPeriod) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         if (vestingPeriod == TimeLine.DAY) {
             return timeHelpers.timestampToDay(timestamp);
@@ -486,8 +486,8 @@ contract Core is Permissions, IERC777Recipient {
      * @dev Returns timepoints (days/months/years) from a given timestamp.
      */
     function _addMonthsAndTimePoint(
-        uint timestamp,
-        uint timePoints,
+        uint256 timestamp,
+        uint256 timePoints,
         TimeLine vestingPeriod
     )
         private

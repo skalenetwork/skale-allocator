@@ -27,12 +27,12 @@ pragma solidity 0.6.10;
 interface IDelegationController {
 
     function delegate(
-        uint validatorId,
-        uint amount,
-        uint delegationPeriod,
+        uint256 validatorId,
+        uint256 amount,
+        uint256 delegationPeriod,
         string calldata info
     )
         external;
 
-    function requestUndelegation(uint delegationId) external;
+    function requestUndelegation(uint256 delegationId) external;
 }

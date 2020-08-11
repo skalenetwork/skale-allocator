@@ -31,16 +31,16 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
 
     struct Delegation {
         address holder;
-        uint amount;
+        uint256 amount;
     }
 
     mapping (address => uint) private _locked;
     Delegation[] private _delegations;
 
     function delegate(
-        uint ,
-        uint amount,
-        uint ,
+        uint256 ,
+        uint256 amount,
+        uint256 ,
         string calldata
     )
         external
@@ -53,12 +53,12 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
             amount: amount
         }));
         _locked[msg.sender] += amount;
-        uint holderBalance = skaleToken.balanceOf(msg.sender);
-        uint forbiddenForDelegation = tokenState.getAndUpdateForbiddenForDelegationAmount(msg.sender);
+        uint256 holderBalance = skaleToken.balanceOf(msg.sender);
+        uint256 forbiddenForDelegation = tokenState.getAndUpdateForbiddenForDelegationAmount(msg.sender);
         require(holderBalance >= forbiddenForDelegation, "Token holder does not have enough tokens to delegate");
     }
 
-    function requestUndelegation(uint delegationId) external override {
+    function requestUndelegation(uint256 delegationId) external override {
         address holder = _delegations[delegationId].holder;
         _locked[holder] -= _delegations[delegationId].amount;
     }
