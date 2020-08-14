@@ -27,8 +27,10 @@ if (process.env.PRODUCTION === "true") {
         console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
         process.exit(1);
     }
+    console.log("Deploy in PRODUCTION mode");
 } else if (process.env.PRODUCTION === "false") {
     production = false;
+    console.log("Deploy in TEST mode");
 } else {
     console.log("Recheck Production variable in .env");
     console.log("Set Production as false");
