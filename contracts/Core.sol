@@ -513,7 +513,7 @@ contract Core is Permissions, IERC777Recipient {
 
         return CoreEscrow(
             proxyFactory.deploy(
-                0,
+                uint256(bytes32(bytes20(holder))),
                 proxyAdmin.getProxyImplementation(address(coreEscrow)),
                 address(proxyAdmin),
                 abi.encodeWithSelector(
