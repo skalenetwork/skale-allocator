@@ -25,7 +25,7 @@ if (process.env.PRODUCTION === "true") {
     production = true;
     if(!fs.existsSync("../scripts/manager.json")) {
         console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
-        process.exit();
+        process.exit(1);
     }
 } else if (process.env.PRODUCTION === "false") {
     production = false;
