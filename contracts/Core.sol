@@ -361,7 +361,7 @@ contract Core is Permissions, IERC777Recipient {
      *
      * Requirements:
      *
-     * - Holder address must be registered to an Core.
+     * - Holder address must be registered to a Core.
      */
     function getHolderParams(address holder) external view returns (PlanHolder memory) {
         require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Plan holder is not registered");
