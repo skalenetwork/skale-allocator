@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    Core.sol - SKALE SAFT Core
+    Allocator.sol - SKALE SAFT Core
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
@@ -28,26 +28,17 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "./interfaces/openzeppelin/IProxyFactory.sol";
 import "./interfaces/openzeppelin/IProxyAdmin.sol";
 import "./interfaces/ITimeHelpers.sol";
-import "./CoreEscrow.sol";
+import "./Escrow.sol";
 import "./Permissions.sol";
 
 /**
- * @title Core
- * @dev This contract manages SKALE Core contracts.
- *
- * An employee may have multiple holdings under a Core.
- *
- * A Core is defined by an initial token vesting cliff period, followed by
- * periodic vesting.
- *
- * Employees (holders) may be registered into a particular plan, and be assigned
- * individual start states and allocations.
+ * @title Allocator
  */
-contract Core is Permissions, IERC777Recipient {
+contract Allocator is Permissions, IERC777Recipient {
 
-    enum TimeLine {DAY, MONTH, YEAR}
+    enum TimeUnit {DAY, MONTH, YEAR}
 
-    enum HolderStatus {
+    enum SubjectStatus {
         UNKNOWN,
         CONFIRMATION_PENDING,
         CONFIRMED,
@@ -56,19 +47,20 @@ contract Core is Permissions, IERC777Recipient {
     }
 
     struct Plan {
-        uint256 fullPeriod;
-        uint256 vestingCliffPeriod; // months
-        TimeLine vestingPeriod;
-        uint256 regularPaymentTime; // amount of days/months/years
-        bool isUnvestedDelegatable;
+        uint256 totalVestingDuration; // months
+        uint256 vestingCliff; // months
+        TimeUnit vestingStepTimeUnit;
+        uint256 vestingStep; // amount of days/months/years
+        bool isDelegationAllowed;
+        bool isTerminatable;
     }
 
-    struct PlanHolder {
-        HolderStatus status;
+    struct Subject {
+        SubjectStatus status;
         uint256 planId;
-        uint256 startVestingTime;
+        uint256 startMonth;
         uint256 fullAmount;
-        uint256 afterLockupAmount;
+        uint256 amountAfterLockup;
     }
 
     event PlanCreated(
@@ -78,17 +70,15 @@ contract Core is Permissions, IERC777Recipient {
     IERC1820Registry private _erc1820;
 
     // array of Plan configs
-    Plan[] private _allPlans;
+    Plan[] private _plans;
 
-    address public vestingManager;
-
-    // mapping (address => uint) private _vestedAmount;
+    address public vestingManager;    
 
     //        holder => Plan holder params
-    mapping (address => PlanHolder) private _vestingHolders;
+    mapping (address => Subject) private _subjects;
 
-    //        holder => address of Core escrow
-    mapping (address => CoreEscrow) private _holderToEscrow;
+    //        holder => address of Escrow
+    mapping (address => Escrow) private _subjectToEscrow;
 
     function tokensReceived(
         address operator,
@@ -113,11 +103,11 @@ contract Core is Permissions, IERC777Recipient {
      * - Holder address must be already registered.
      * - Holder address must not already be approved.
      */
-    function approveHolder() external {
+    function approveAddress() external {
         address holder = msg.sender;
-        require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Holder is not registered");
-        require(_vestingHolders[holder].status == HolderStatus.CONFIRMATION_PENDING, "Holder is already approved");
-        _vestingHolders[holder].status = HolderStatus.CONFIRMED;
+        require(_subjects[holder].status != SubjectStatus.UNKNOWN, "Holder is not registered");
+        require(_subjects[holder].status == SubjectStatus.CONFIRMATION_PENDING, "Holder is already approved");
+        _subjects[holder].status = SubjectStatus.CONFIRMED;
     }
 
     /**
@@ -129,12 +119,12 @@ contract Core is Permissions, IERC777Recipient {
      * - Holder address must be already confirmed.
      */
     function startVesting(address holder) external onlyOwner {
-        require(_vestingHolders[holder].status == HolderStatus.CONFIRMED, "Holder address is not confirmed");
-        _vestingHolders[holder].status = HolderStatus.ACTIVE;
+        require(_subjects[holder].status == SubjectStatus.CONFIRMED, "Holder address is not confirmed");
+        _subjects[holder].status = SubjectStatus.ACTIVE;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
-                address(_holderToEscrow[holder]),
-                _vestingHolders[holder].fullAmount
+                address(_subjectToEscrow[holder]),
+                _subjects[holder].fullAmount
             ),
             "Error of token sending"
         );
@@ -149,31 +139,33 @@ contract Core is Permissions, IERC777Recipient {
      * - Vesting period must be in days, months, or years.
      * - Full period must equal vesting cliff plus entire vesting schedule.
      */
-    function addCore(
-        uint256 vestingCliffPeriod, // months
-        uint256 fullPeriod, // months
-        uint8 vestingPeriod, // 1 - day 2 - month 3 - year
+    function addPlan(
+        uint256 vestingCliff, // months
+        uint256 totalVestingDuration, // months
+        uint8 vestingStepTimeUnit, // 1 - day 2 - month 3 - year
         uint256 vestingTimes, // months or days or years
-        bool isUnvestedDelegatable // can holder delegate all un-vested tokens
+        bool isDelegationAllowed, // can holder delegate all un-vested tokens
+        bool isTerminatable
     )
         external
         onlyOwner
     {
-        require(fullPeriod >= vestingCliffPeriod, "Cliff period exceeds full period");
-        require(vestingPeriod >= 1 && vestingPeriod <= 3, "Incorrect vesting period");
+        require(totalVestingDuration >= vestingCliff, "Cliff period exceeds full period");
+        require(vestingStepTimeUnit >= 1 && vestingStepTimeUnit <= 3, "Incorrect vesting period");
         require(
-            (fullPeriod - vestingCliffPeriod) == vestingTimes ||
-            ((fullPeriod - vestingCliffPeriod) / vestingTimes) * vestingTimes == fullPeriod - vestingCliffPeriod,
+            (totalVestingDuration - vestingCliff) == vestingTimes ||
+            ((totalVestingDuration - vestingCliff) / vestingTimes) * vestingTimes == totalVestingDuration - vestingCliff,
             "Incorrect vesting times"
         );
-        _allPlans.push(Plan({
-            fullPeriod: fullPeriod,
-            vestingCliffPeriod: vestingCliffPeriod,
-            vestingPeriod: TimeLine(vestingPeriod - 1),
-            regularPaymentTime: vestingTimes,
-            isUnvestedDelegatable: isUnvestedDelegatable
+        _plans.push(Plan({
+            totalVestingDuration: totalVestingDuration,
+            vestingCliff: vestingCliff,
+            vestingStepTimeUnit: TimeUnit(vestingStepTimeUnit - 1),
+            vestingStep: vestingTimes,
+            isDelegationAllowed: isDelegationAllowed,
+            isTerminatable: isTerminatable
         }));
-        emit PlanCreated(_allPlans.length - 1);
+        emit PlanCreated(_plans.length - 1);
     }
 
     /**
@@ -186,12 +178,16 @@ contract Core is Permissions, IERC777Recipient {
      */
     function stopVesting(address holder) external onlyOwner {
         require(
-            _vestingHolders[holder].status == HolderStatus.ACTIVE,
+            _subjects[holder].status == SubjectStatus.ACTIVE,
             "Cannot stop vesting for a non active holder"
+        );
+        require(
+            _plans[_subjects[holder].planId].isTerminatable,
+            "Can't stop vesting for subject with this plan"
         );
         // TODO add deactivate logic!!!
         // _vestedAmount[holder] = calculateVestedAmount(holder);
-        CoreEscrow(_holderToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
+        Escrow(_subjectToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
 
     /**
@@ -203,36 +199,36 @@ contract Core is Permissions, IERC777Recipient {
      * - The vesting amount must be less than or equal to the full allocation.
      * - The holder address must not already be included in the Core.
      */
-    function connectHolderToPlan(
+    function connectSubjectToPlan(
         address holder,
         uint256 planId,
-        uint256 startVestingTime, // timestamp
+        uint256 startMonth, // timestamp
         uint256 fullAmount,
         uint256 lockupAmount
     )
         external
         onlyOwner
     {
-        require(_allPlans.length >= planId && planId > 0, "Core does not exist");
+        require(_plans.length >= planId && planId > 0, "Core does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
-        // require(startVestingTime <= now, "Incorrect period starts");
+        // require(startMonth <= now, "Incorrect period starts");
         // TODO: Remove to allow both past and future vesting start date
-        require(_vestingHolders[holder].status == HolderStatus.UNKNOWN, "Holder is already added");
-        _vestingHolders[holder] = PlanHolder({
-            status: HolderStatus.CONFIRMATION_PENDING,
+        require(_subjects[holder].status == SubjectStatus.UNKNOWN, "Holder is already added");
+        _subjects[holder] = Subject({
+            status: SubjectStatus.CONFIRMATION_PENDING,
             planId: planId,
-            startVestingTime: startVestingTime,
+            startMonth: startMonth,
             fullAmount: fullAmount,
-            afterLockupAmount: lockupAmount
+            amountAfterLockup: lockupAmount
         });
-        _holderToEscrow[holder] = _deployEscrow(holder);
+        _subjectToEscrow[holder] = _deployEscrow(holder);
     }
 
     /**
      * @dev Returns vesting start date of the holder's Core.
      */
     function getStartVestingTime(address holder) external view returns (uint) {
-        return _vestingHolders[holder].startVestingTime;
+        return _subjects[holder].startMonth;
     }
 
     /**
@@ -240,46 +236,46 @@ contract Core is Permissions, IERC777Recipient {
      */
     function getFinishVestingTime(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory planHolder = _vestingHolders[holder];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
-        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod);
+        Subject memory planHolder = _subjects[holder];
+        Plan memory planParams = _plans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startMonth, planParams.totalVestingDuration);
     }
 
     /**
      * @dev Returns the vesting cliff period in months.
      */
     function getVestingCliffInMonth(address holder) external view returns (uint) {
-        return _allPlans[_vestingHolders[holder].planId - 1].vestingCliffPeriod;
+        return _plans[_subjects[holder].planId - 1].vestingCliff;
     }
 
     /**
      * @dev Confirms whether the holder is active in the Core.
      */
-    function isActiveVestingTerm(address holder) external view returns (bool) {
-        return _vestingHolders[holder].status == HolderStatus.ACTIVE;
+    function isVestingActive(address holder) external view returns (bool) {
+        return _subjects[holder].status == SubjectStatus.ACTIVE;
     }
 
     /**
      * @dev Confirms whether the holder is approved in a Core.
      */
-    function isApprovedHolder(address holder) external view returns (bool) {
-        return _vestingHolders[holder].status != HolderStatus.UNKNOWN &&
-            _vestingHolders[holder].status != HolderStatus.CONFIRMATION_PENDING;
+    function isSubjectAddressApproved(address holder) external view returns (bool) {
+        return _subjects[holder].status != SubjectStatus.UNKNOWN &&
+            _subjects[holder].status != SubjectStatus.CONFIRMATION_PENDING;
     }
 
     /**
      * @dev Confirms whether the holder is registered in a Core.
      */
-    function isHolderRegistered(address holder) external view returns (bool) {
-        return _vestingHolders[holder].status != HolderStatus.UNKNOWN;
+    function isSubjectRegistered(address holder) external view returns (bool) {
+        return _subjects[holder].status != SubjectStatus.UNKNOWN;
     }
 
     /**
      * @dev Confirms whether the holder's Core allows all un-vested tokens to be
      * delegated.
      */
-    function isUnvestedDelegatableTerm(address holder) external view returns (bool) {
-        return _allPlans[_vestingHolders[holder].planId - 1].isUnvestedDelegatable;
+    function isDelegationAllowed(address holder) external view returns (bool) {
+        return _plans[_subjects[holder].planId - 1].isDelegationAllowed;
     }
 
     /**
@@ -287,14 +283,14 @@ contract Core is Permissions, IERC777Recipient {
      * the holder address in Core.
      */
     function getFullAmount(address holder) external view returns (uint) {
-        return _vestingHolders[holder].fullAmount;
+        return _subjects[holder].fullAmount;
     }
 
     /**
      * @dev Returns the Core Escrow contract by holder.
      */
     function getEscrowAddress(address holder) external view returns (address) {
-        return address(_holderToEscrow[holder]);
+        return address(_subjectToEscrow[holder]);
     }
 
     /**
@@ -303,9 +299,9 @@ contract Core is Permissions, IERC777Recipient {
      */
     function getLockupPeriodTimestamp(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory planHolder = _vestingHolders[holder];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
-        return timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
+        Subject memory planHolder = _subjects[holder];
+        Plan memory planParams = _plans[planHolder.planId - 1];
+        return timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff);
     }
 
     /**
@@ -314,34 +310,34 @@ contract Core is Permissions, IERC777Recipient {
     function getTimeOfNextVest(address holder) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 date = now;
-        PlanHolder memory planHolder = _vestingHolders[holder];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
-        uint256 lockupDate = timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod);
+        Subject memory planHolder = _subjects[holder];
+        Plan memory planParams = _plans[planHolder.planId - 1];
+        uint256 lockupDate = timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff);
         if (date < lockupDate) {
             return lockupDate;
         }
-        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingStepTimeUnit);
         uint256 lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
-            planParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff),
+            planParams.vestingStepTimeUnit
         );
         uint256 finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
-            planParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startMonth, planParams.totalVestingDuration),
+            planParams.vestingStepTimeUnit
         );
-        uint256 numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
-        uint256 numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        uint256 numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.vestingStep);
+        uint256 numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.vestingStep);
         if (numberOfAllPayments <= numberOfDonePayments + 1) {
             return timeHelpers.addMonths(
-                planHolder.startVestingTime,
-                planParams.fullPeriod
+                planHolder.startMonth,
+                planParams.totalVestingDuration
             );
         }
         uint256 nextPayment = finishTime
             .sub(
-                planParams.regularPaymentTime.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
+                planParams.vestingStep.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, planParams.vestingPeriod);
+        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, planParams.vestingStepTimeUnit);
     }
 
     /**
@@ -352,8 +348,8 @@ contract Core is Permissions, IERC777Recipient {
      * - Core must already exist.
      */
     function getPlan(uint256 planId) external view returns (Plan memory) {
-        require(planId > 0 && planId <= _allPlans.length, "Plan Round does not exist");
-        return _allPlans[planId - 1];
+        require(planId > 0 && planId <= _plans.length, "Plan Round does not exist");
+        return _plans[planId - 1];
     }
 
     /**
@@ -363,9 +359,9 @@ contract Core is Permissions, IERC777Recipient {
      *
      * - Holder address must be registered to an Core.
      */
-    function getHolderParams(address holder) external view returns (PlanHolder memory) {
-        require(_vestingHolders[holder].status != HolderStatus.UNKNOWN, "Plan holder is not registered");
-        return _vestingHolders[holder];
+    function getHolderParams(address holder) external view returns (Subject memory) {
+        require(_subjects[holder].status != SubjectStatus.UNKNOWN, "Plan holder is not registered");
+        return _subjects[holder];
     }
 
     /**
@@ -373,18 +369,18 @@ contract Core is Permissions, IERC777Recipient {
      */
     function getLockedAmount(address wallet) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory planHolder = _vestingHolders[wallet];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
-        if (now < timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
-            return _vestingHolders[wallet].fullAmount;
+        Subject memory planHolder = _subjects[wallet];
+        Plan memory planParams = _plans[planHolder.planId - 1];
+        if (now < timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff)) {
+            return _subjects[wallet].fullAmount;
         }
-        return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
+        return _subjects[wallet].fullAmount - calculateVestedAmount(wallet);
     }
     /**
      * @dev Returns the locked token amount. TODO: remove, controlled by Core Escrow
      */
     // function getLockedAmountForDelegation(address wallet) external view returns (uint) {
-    //     return _vestingHolders[wallet].fullAmount - calculateVestedAmount(wallet);
+    //     return _subjects[wallet].fullAmount - calculateVestedAmount(wallet);
     // }
 
     function initialize(address contractManagerAddress) public override initializer {
@@ -400,15 +396,15 @@ contract Core is Permissions, IERC777Recipient {
     function calculateVestedAmount(address wallet) public view returns (uint256 vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 date = now;
-        PlanHolder memory planHolder = _vestingHolders[wallet];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        Subject memory planHolder = _subjects[wallet];
+        Plan memory planParams = _plans[planHolder.planId - 1];
         vestedAmount = 0;
-        if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
-            vestedAmount = planHolder.afterLockupAmount;
-            if (date >= timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod)) {
+        if (date >= timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff)) {
+            vestedAmount = planHolder.amountAfterLockup;
+            if (date >= timeHelpers.addMonths(planHolder.startMonth, planParams.totalVestingDuration)) {
                 vestedAmount = planHolder.fullAmount;
             } else {
-                uint256 partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.afterLockupAmount);
+                uint256 partPayment = _getPartPayment(wallet, planHolder.fullAmount, planHolder.amountAfterLockup);
                 vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfCompletedVestingEvents(wallet)));
             }
         }
@@ -420,17 +416,17 @@ contract Core is Permissions, IERC777Recipient {
     function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 date = now;
-        PlanHolder memory planHolder = _vestingHolders[wallet];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
-        if (date < timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod)) {
+        Subject memory planHolder = _subjects[wallet];
+        Plan memory planParams = _plans[planHolder.planId - 1];
+        if (date < timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff)) {
             return 0;
         }
-        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingPeriod);
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingStepTimeUnit);
         uint256 lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
-            planParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff),
+            planParams.vestingStepTimeUnit
         );
-        return dateTime.sub(lockupTime).div(planParams.regularPaymentTime);
+        return dateTime.sub(lockupTime).div(planParams.vestingStep);
     }
 
     /**
@@ -438,17 +434,17 @@ contract Core is Permissions, IERC777Recipient {
      */
     function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        PlanHolder memory planHolder = _vestingHolders[wallet];
-        Plan memory planParams = _allPlans[planHolder.planId - 1];
+        Subject memory planHolder = _subjects[wallet];
+        Plan memory planParams = _plans[planHolder.planId - 1];
         uint256 finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.fullPeriod),
-            planParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startMonth, planParams.totalVestingDuration),
+            planParams.vestingStepTimeUnit
         );
         uint256 afterLockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(planHolder.startVestingTime, planParams.vestingCliffPeriod),
-            planParams.vestingPeriod
+            timeHelpers.addMonths(planHolder.startMonth, planParams.vestingCliff),
+            planParams.vestingStepTimeUnit
         );
-        return finishTime.sub(afterLockupTime).div(planParams.regularPaymentTime);
+        return finishTime.sub(afterLockupTime).div(planParams.vestingStep);
     }
 
     /**
@@ -471,11 +467,11 @@ contract Core is Permissions, IERC777Recipient {
      * @dev Returns timestamp when adding timepoints (days/months/years) to
      * timestamp.
      */
-    function _getTimePointInCorrectPeriod(uint256 timestamp, TimeLine vestingPeriod) private view returns (uint) {
+    function _getTimePointInCorrectPeriod(uint256 timestamp, TimeUnit vestingStepTimeUnit) private view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingPeriod == TimeLine.DAY) {
+        if (vestingStepTimeUnit == TimeUnit.DAY) {
             return timeHelpers.timestampToDay(timestamp);
-        } else if (vestingPeriod == TimeLine.MONTH) {
+        } else if (vestingStepTimeUnit == TimeUnit.MONTH) {
             return timeHelpers.timestampToMonth(timestamp);
         } else {
             return timeHelpers.timestampToYear(timestamp);
@@ -488,36 +484,36 @@ contract Core is Permissions, IERC777Recipient {
     function _addMonthsAndTimePoint(
         uint256 timestamp,
         uint256 timePoints,
-        TimeLine vestingPeriod
+        TimeUnit vestingStepTimeUnit
     )
         private
         view
         returns (uint)
     {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingPeriod == TimeLine.DAY) {
+        if (vestingStepTimeUnit == TimeUnit.DAY) {
             return timeHelpers.addDays(timestamp, timePoints);
-        } else if (vestingPeriod == TimeLine.MONTH) {
+        } else if (vestingStepTimeUnit == TimeUnit.MONTH) {
             return timeHelpers.addMonths(timestamp, timePoints);
         } else {
             return timeHelpers.addYears(timestamp, timePoints);
         }
     }
 
-    function _deployEscrow(address holder) private returns (CoreEscrow) {
+    function _deployEscrow(address holder) private returns (Escrow) {
         // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
-        CoreEscrow coreEscrow = CoreEscrow(contractManager.getContract("CoreEscrow"));
+        Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
 
-        return CoreEscrow(
+        return Escrow(
             proxyFactory.deploy(
-                0,
-                proxyAdmin.getProxyImplementation(address(coreEscrow)),
+                uint256(bytes32(bytes20(holder))),
+                proxyAdmin.getProxyImplementation(address(allocator)),
                 address(proxyAdmin),
                 abi.encodeWithSelector(
-                    CoreEscrow.initialize.selector,
+                    Escrow.initialize.selector,
                     address(contractManager),
                     holder
                 )
