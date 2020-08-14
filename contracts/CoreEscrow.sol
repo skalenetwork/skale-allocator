@@ -137,13 +137,13 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
      *
      * Requirements:
      *
-     * - Core must be active.
+     * - Core must not be active.
      */
     function retrieveAfterTermination() external onlyOwner {
         Core core = Core(contractManager.getContract("Core"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
-        require(!core.isActiveVestingTerm(_holder), "Core holder is not Active");
+        require(!core.isActiveVestingTerm(_holder), "Core holder is still Active");
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -236,7 +236,7 @@ contract CoreEscrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Core contract to cancel vesting of an Core holder. Cancel
+     * @dev Allows Core contract to cancel vesting of a Core holder. Cancel
      * vesting is performed upon termination.
      * TODO: missing moving Core holder to deactivated state?
      */
