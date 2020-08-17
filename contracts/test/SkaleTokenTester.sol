@@ -71,8 +71,8 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
-        revert("Not implemented");
+    function getAndUpdateLockedAmount(address) public override returns (uint) {
+        return 0;
     }
 
     function _beforeTokenTransfer(

@@ -144,7 +144,7 @@ contract Allocator is Permissions, IERC777Recipient {
         uint256 totalVestingDuration, // months
         uint8 vestingStepTimeUnit, // 1 - day 2 - month 3 - year
         uint256 vestingTimes, // months or days or years
-        bool isDelegationAllowed, // can holder delegate all un-vested tokens
+        bool canDelegate, // can holder delegate all un-vested tokens
         bool isTerminatable
     )
         external
@@ -154,7 +154,8 @@ contract Allocator is Permissions, IERC777Recipient {
         require(vestingStepTimeUnit >= 1 && vestingStepTimeUnit <= 3, "Incorrect vesting period");
         require(
             (totalVestingDuration - vestingCliff) == vestingTimes ||
-            ((totalVestingDuration - vestingCliff) / vestingTimes) * vestingTimes == totalVestingDuration - vestingCliff,
+            ((totalVestingDuration - vestingCliff) / vestingTimes) * vestingTimes
+                == totalVestingDuration - vestingCliff,
             "Incorrect vesting times"
         );
         _plans.push(Plan({
@@ -162,7 +163,7 @@ contract Allocator is Permissions, IERC777Recipient {
             vestingCliff: vestingCliff,
             vestingStepTimeUnit: TimeUnit(vestingStepTimeUnit - 1),
             vestingStep: vestingTimes,
-            isDelegationAllowed: isDelegationAllowed,
+            isDelegationAllowed: canDelegate,
             isTerminatable: isTerminatable
         }));
         emit PlanCreated(_plans.length - 1);
@@ -209,7 +210,7 @@ contract Allocator is Permissions, IERC777Recipient {
         external
         onlyOwner
     {
-        require(_plans.length >= planId && planId > 0, "Core does not exist");
+        require(_plans.length >= planId && planId > 0, "Plan does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
         // require(startMonth <= now, "Incorrect period starts");
         // TODO: Remove to allow both past and future vesting start date
@@ -227,7 +228,7 @@ contract Allocator is Permissions, IERC777Recipient {
     /**
      * @dev Returns vesting start date of the holder's Core.
      */
-    function getStartVestingTime(address holder) external view returns (uint) {
+    function getStartMonth(address holder) external view returns (uint) {
         return _subjects[holder].startMonth;
     }
 
