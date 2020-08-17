@@ -25,6 +25,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/ERC777.s
 
 import "../Permissions.sol";
 import "../interfaces/delegation/IDelegatableToken.sol";
+import "../interfaces/delegation/ITokenState.sol";
 
 contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
 
@@ -71,8 +72,9 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address) public override returns (uint) {
-        return 0;
+    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        return tokenState.getAndUpdateLockedAmount(wallet);
     }
 
     function _beforeTokenTransfer(

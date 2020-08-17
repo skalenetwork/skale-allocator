@@ -36,7 +36,6 @@ contract TokenStateTester is Permissions, ITokenState {
             forbidden = forbidden.add(locker.getAndUpdateForbiddenForDelegationAmount(holder));
         }
         return forbidden;
-        // return SAFT(contractManager.getContract("SAFT")).getAndUpdateForbiddenForDelegationAmount(wallet);
     }
 
     function getAndUpdateLockedAmount(address holder) external override returns (uint) {
@@ -46,13 +45,11 @@ contract TokenStateTester is Permissions, ITokenState {
             locked = locked.add(locker.getAndUpdateLockedAmount(holder));
         }
         return locked;
-        // return SAFT(contractManager.getContract("SAFT")).getAndUpdateLockedAmount(wallet);
     }
 
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
         addLocker("DelegationController");
-        addLocker("SAFT");
     }
 
     /**

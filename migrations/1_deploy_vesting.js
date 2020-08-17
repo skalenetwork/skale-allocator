@@ -71,7 +71,7 @@ async function deploy(deployer, networkName, accounts) {
         }
     }        
 
-    console.log("Starting SAFT & CORE contracts deploying...");
+    console.log("Starting Allocator deploying...");
     
     const deployAccount = accounts[0];
     const options = await ConfigManager.initNetworkConfiguration(
@@ -84,10 +84,9 @@ async function deploy(deployer, networkName, accounts) {
 
     let contracts = [
         "ContractManager", // must be in first position
-
-        "SAFT",
-        "Core",
-        "CoreEscrow"
+        
+        "Allocator",
+        "Escrow"
     ]    
 
     contractsData = [];
@@ -150,12 +149,6 @@ async function deploy(deployer, networkName, accounts) {
                 console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
             });
         }
-    }
-
-    if (production) {
-        let manager = require("../scripts/manager.json");
-        contract = new web3.eth.Contract(manager['token_state_abi'], manager['token_state_address']);
-        await contract.methods.addLocker("SAFT").send({from: deployAccount});
     }
     
     console.log('Deploy done, writing results...');

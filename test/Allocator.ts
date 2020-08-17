@@ -7,7 +7,7 @@ import { ContractManagerInstance,
     ProxyFactoryMockContract,
     ProxyFactoryMockInstance } from "../types/truffle-contracts";
 
-const Escrow: EscrowContract = artifacts.require("./CoreEscrow");
+const Escrow: EscrowContract = artifacts.require("./Escrow");
 
 import { calculateLockedAmount } from "./tools/vestingCalculation";
 import { currentTime, getTimeAtDate, skipTimeToDate } from "./tools/time";
@@ -28,14 +28,6 @@ contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
 
     beforeEach(async () => {
         contractManager = await deployContractManager(owner);
-
-        const ProxyFactoryMock: ProxyFactoryMockContract = artifacts.require("./ProxyFactoryMock");
-        const proxyFactory: ProxyFactoryMockInstance = await ProxyFactoryMock.new();
-        await contractManager.setContractsAddress("ProxyFactory", proxyFactory.address);
-        await contractManager.setContractsAddress("ProxyAdmin", proxyFactory.address);
-        const escrow: EscrowInstance = await Escrow.new();
-        await contractManager.setContractsAddress("Escrow", escrow.address);
-        await proxyFactory.setImplementation(escrow.address);
 
         skaleToken = await deploySkaleTokenTester(contractManager);
         allocator = await deployAllocator(contractManager);
@@ -238,7 +230,7 @@ contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await allocator.startVesting(holder, {from: owner});
         const escrowAddress = await allocator.getEscrowAddress(holder);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
-        const escrow = await Escrow.at(escrowAddress);
+        const escrow: EscrowInstance = await Escrow.at(escrowAddress);
         const amount = 15000;
         const delegationPeriod = 3;
         await escrow.delegate(
