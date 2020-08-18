@@ -24,7 +24,7 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 
-import "./utils/StringUtils.sol";
+import "../utils/StringUtils.sol";
 
 
 /**

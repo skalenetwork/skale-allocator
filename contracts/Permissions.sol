@@ -24,7 +24,7 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
 
-import "./ContractManager.sol";
+import "./interfaces/IContractManager.sol";
 
 
 /**
@@ -35,7 +35,7 @@ contract Permissions is AccessControlUpgradeSafe {
     using SafeMath for uint;
     using Address for address;
 
-    ContractManager public contractManager;
+    IContractManager public contractManager;
 
     /**
      * @dev Throws if called by any account other than the owner.
@@ -51,7 +51,7 @@ contract Permissions is AccessControlUpgradeSafe {
      */
     modifier allow(string memory contractName) {
         require(
-            contractManager.contracts(keccak256(abi.encodePacked(contractName))) == msg.sender || _isOwner(),
+            contractManager.getContract(contractName) == msg.sender || _isOwner(),
             "Message sender is invalid");
         _;
     }
@@ -69,6 +69,6 @@ contract Permissions is AccessControlUpgradeSafe {
     function _setContractManager(address contractManagerAddress) private {
         require(contractManagerAddress != address(0), "ContractManager address is not set");
         require(contractManagerAddress.isContract(), "Address is not contract");
-        contractManager = ContractManager(contractManagerAddress);
+        contractManager = IContractManager(contractManagerAddress);
     }
 }
