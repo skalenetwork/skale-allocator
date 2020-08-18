@@ -36,18 +36,18 @@ import "./interfaces/delegation/IValidatorService.sol";
 
 /**
  * @title Escrow
- * @dev This contract manages funds locked by allocator.
+ * @dev This contract manages funds locked by the Allocator contract.
  */
 contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
 
-    address private _subject;
+    address private _beneficiary;
 
     uint256 private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;
 
-    modifier onlySubject() {
-        require(_msgSender() == _subject, "Message sender is not a plan subject");
+    modifier onlyBeneficiary() {
+        require(_msgSender() == _beneficiary, "Message sender is not a plan beneficiary");
         _;
     }
 
@@ -55,24 +55,24 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(
             allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
-            "Message sender is not a vestring manager"
+            "Message sender is not a vesting manager"
         );
         _;
     }
 
-    modifier onlySubjectAndVestingManager() {
+    modifier onlyBeneficiaryAndVestingManager() {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(
-            (_msgSender() == _subject && allocator.isVestingActive(_subject)) ||
+            (_msgSender() == _beneficiary && allocator.isVestingActive(_beneficiary)) ||
             allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
             "Message sender is not authorized"
         );
         _;
     }   
 
-    function initialize(address contractManagerAddress, address subject) external initializer {
+    function initialize(address contractManagerAddress, address beneficiary) external initializer {
         Permissions.initialize(contractManagerAddress);
-        _subject = subject;
+        _beneficiary = beneficiary;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
@@ -104,30 +104,31 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         external override
         allow("SkaleToken")
     {
-        require(to == _subject || to == address(_getAllocatorContract()), "Not authorized transfer");
+        require(to == _beneficiary || to == address(_getAllocatorContract()), "Not authorized transfer");
     }
 
     /**
-     * @dev Allosubject to retrieve vested tokens from the Escrow contract.
-     * Slashed tokens are non-transferable.
+     * @dev Allows Beneficiary to retrieve vested tokens from the Escrow contract.
+     * 
+     * IMPORTANT: Slashed tokens are non-transferable.
      */
-    function retrieve() external onlySubject {
+    function retrieve() external onlyBeneficiary {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         uint256 vestedAmount = 0;
-        if (allocator.isVestingActive(_subject)) {
-            vestedAmount = allocator.calculateVestedAmount(_subject);
+        if (allocator.isVestingActive(_beneficiary)) {
+            vestedAmount = allocator.calculateVestedAmount(_beneficiary);
         } else {
             vestedAmount = _availableAmountAfterTermination;
         }
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
-        uint256 fullAmount = allocator.getFullAmount(_subject);
+        uint256 fullAmount = allocator.getFullAmount(_beneficiary);
         uint256 forbiddenToSend = tokenState.getAndUpdateForbiddenForDelegationAmount(address(this));
         if (vestedAmount > fullAmount.sub(escrowBalance)) {
             if (vestedAmount.sub(fullAmount.sub(escrowBalance)) > forbiddenToSend)
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
-                    _subject,
+                    _beneficiary,
                     vestedAmount
                         .sub(
                             fullAmount
@@ -141,18 +142,20 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Allocator Owner to retrieve remaining transferrable escrow balance
-     * after Allocatsubject termination. Slashed tokens are non-transferable.
-     *
+     * @dev Allows Vesting Manager to retrieve remaining transferrable escrow balance
+     * after beneficiary's termination. 
+     * 
+     * IMPORTANT: Slashed tokens are non-transferable.
+     * 
      * Requirements:
-     *
+     * 
      * - Allocator must be active.
      */
     function retrieveAfterTermination() external onlyVestingManager {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
-        require(!allocator.isVestingActive(_subject), "Vesting is active");
+        require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -167,13 +170,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Allocatsubject to propose a delegation to a validator.
-     *
+     * @dev Allows Beneficiary to propose a delegation to a validator.
+     * 
      * Requirements:
-     *
-     * - Allocatsubject must be active.
-     *subject has sufficient delegatable tokens.
-     * - If trusted list is enabled, validator must be a member of this trusted
+     * 
+     * - Beneficiary must be active.
+     * - Beneficiary must have sufficient delegatable tokens.
+     * - If trusted list is enabled, validator must be a member of the trusted
      * list.
      */
     function delegate(
@@ -183,12 +186,12 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         string calldata info
     )
         external
-        onlySubject
+        onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        require(allocator.isVestingActive(_subject), "Allocatsubject is not Active");        
-        if (!allocator.isDelegationAllowed(_subject)) {
-            require(allocator.calculateVestedAmount(_subject) >= amount, "Incorrect amount to delegate");
+        require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");        
+        if (!allocator.isDelegationAllowed(_beneficiary)) {
+            require(allocator.calculateVestedAmount(_beneficiary) >= amount, "Incorrect amount to delegate");
         }
         
         IDelegationController delegationController = IDelegationController(
@@ -198,16 +201,15 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allosubject and Owner to request undelegation. Only Owner can
-     * request undelegation after Allocatsubject is deactivated (upsubject
-     * termination).
-     *
+     * @dev Allows Beneficiary and Vesting Owner to request undelegation. Only 
+     * Vesting Owner can request undelegation after beneficiary is deactivated 
+     * (after beneficiary termination).
+     * 
      * Requirements:
-     *
-     *subject or Allocator Owner must be `msg.sender`.
-     * - Allocatsubject must be active whsubject is `msg.sender`.
+     * 
+     * - Beneficiary and Vesting Owner must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external onlySubjectAndVestingManager {
+    function requestUndelegation(uint256 delegationId) external onlyBeneficiaryAndVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -215,21 +217,22 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allosubject and Owner to withdraw earned bounty. Only Owner can
-     * withdraw bounty to Allocator contract after Allocatsubject is deactivated.
-     *
-     * Withdraws are only possible after 90 day initial network lock.
-     *
+     * @dev Allows Beneficiary and Vesting Owner to withdraw earned bounty. Only
+     * Vesting Owner can withdraw bounty to Allocator contract after beneficiary
+     * is deactivated.
+     * 
+     * IMPORTANT: Withdraws are only possible after 90 day initial network lock.
+     * 
      * Requirements:
-     *
-     *subject or Allocator Owner must be `msg.sender`.
-     * - Allocator must be active whsubject is `msg.sender`.
+     * 
+     * - Beneficiary or Vesting Owner must be `msg.sender`.
+     * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external onlySubjectAndVestingManager {        
+    function withdrawBounty(uint256 validatorId, address to) external onlyBeneficiaryAndVestingManager {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
-        if (_msgSender() == _subject) {
+        if (_msgSender() == _beneficiary) {
             Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-            require(allocator.isVestingActive(_subject), "Allocatsubject is not Active");            
+            require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");            
             distributor.withdrawBounty(validatorId, to);
         } else {            
             distributor.withdrawBounty(validatorId, address(_getAllocatorContract()));
@@ -237,9 +240,10 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Allocator contract to cancel vesting of an Allocatsubject. Cancel
+     * @dev Allows Allocator contract to cancel vesting of a Beneficiary. Cancel
      * vesting is performed upon termination.
-     * TODO: missing moving Allocatsubject to deactivated state?
+     * 
+     * TODO: missing moving beneficiary to deactivated state?
      */
     function cancelVesting(uint256 vestedAmount) external allow("Allocator") {
         _availableAmountAfterTermination = vestedAmount;

@@ -48,11 +48,11 @@ contract ContractManager is OwnableUpgradeSafe {
 
     /**
      * @dev Allows Owner to add contract to mapping of actual contract addresses
-     *
-     * Emits ContractUpgraded event.
-     *
+     * 
+     * Emits a {ContractUpgraded} event.
+     * 
      * Requirements:
-     *
+     * 
      * - Contract address is non-zero.
      * - Contract address is not already added.
      * - Contract contains code.
@@ -72,9 +72,9 @@ contract ContractManager is OwnableUpgradeSafe {
 
     /**
      * @dev Returns the contract address of a given contract name.
-     *
+     * 
      * Requirements:
-     *
+     * 
      * - Contract mapping must exist.
      */
     function getContract(string calldata name) external view returns (address contractAddress) {
