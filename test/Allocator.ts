@@ -10,7 +10,7 @@ import { ContractManagerInstance,
 const Escrow: EscrowContract = artifacts.require("./Escrow");
 
 import { calculateLockedAmount } from "./tools/vestingCalculation";
-import { currentTime, getTimeAtDate, skipTimeToDate } from "./tools/time";
+import { currentTime, getTimeAtDate, skipTimeToDate, skipTime } from "./tools/time";
 
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -21,7 +21,7 @@ import { HolderStatus } from "./tools/types";
 chai.should();
 chai.use(chaiAsPromised);
 
-contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
+contract("Allocator", ([owner, vestringManager, holder, holder1, holder2, holder3, hacker]) => {
     let contractManager: ContractManagerInstance;
     let skaleToken: SkaleTokenTesterInstance;
     let allocator: AllocatorInstance;
@@ -35,6 +35,7 @@ contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         // each test will start from July 1
         await skipTimeToDate(web3, 1, 6);
         await skaleToken.mint(allocator.address, 1e9, "0x", "0x");
+        await allocator.grantRole(await allocator.VESTING_MANAGER_ROLE(), vestringManager);
     });
 
     it("should register Core holder", async () => {
@@ -110,14 +111,14 @@ contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         await allocator.connectSubjectToPlan(holder, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isSubjectRegistered(holder)).should.be.eq(true);
         (await allocator.isSubjectAddressApproved(holder)).should.be.eq(false);
-        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder address is not confirmed");
+        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder has inappropriate status");
         (await allocator.isSubjectAddressApproved(holder)).should.be.eq(false);
         (await allocator.isVestingActive(holder)).should.be.eq(false);
     });
 
     it("should not start vesting without registering Core", async () => {
         (await allocator.isSubjectRegistered(holder)).should.be.eq(false);
-        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder address is not confirmed");
+        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder has inappropriate status");
         (await allocator.isSubjectRegistered(holder)).should.be.eq(false);
         (await allocator.isSubjectAddressApproved(holder)).should.be.eq(false);
         (await allocator.isVestingActive(holder)).should.be.eq(false);
@@ -136,48 +137,101 @@ contract("Allocator", ([owner, holder, holder1, holder2, holder3, hacker]) => {
         (await allocator.isVestingActive(holder)).should.be.eq(true);
     });
 
-    // it("should stop cancelable vesting after start", async () => {
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(false);
-    //     await Core.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, true, {from: owner});
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(true);
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(false);
-    //     await Core.approveAddress({from: holder});
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(true);
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    //     await Core.startVesting(holder, {from: owner});
-    //     (await Core.isVestingActive(holder)).should.be.eq(true);
-    //     await Core.stopVesting(holder, {from: owner});
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    //     await Core.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Core is already canceled");
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    // });
+    it("should stop cancelable vesting after start", async () => {
+        await allocator.isSubjectRegistered(holder).should.be.eventually.false;
 
-    // it("should stop not-cancelable vesting before start", async () => {
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(false);
-    //     await Core.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(true);
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(false);
-    //     await Core.approveAddress({from: holder});
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(true);
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    //     await Core.stopVesting(holder, {from: owner});
-    //     await Core.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Core is already canceled");
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    // });
+        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
 
-    // it("should not stop not-cancelable vesting before start", async () => {
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(false);
-    //     await Core.addVestingTerm(holder, getTimeAtDate(1, 6, 2020), 6, 36, 1e6, 1e5, 6, false, {from: owner});
-    //     (await Core.isSubjectRegistered(holder)).should.be.eq(true);
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(false);
-    //     await Core.approveAddress({from: holder});
-    //     (await Core.isSubjectAddressApproved(holder)).should.be.eq(true);
-    //     (await Core.isVestingActive(holder)).should.be.eq(false);
-    //     await Core.startVesting(holder, {from: owner});
-    //     (await Core.isVestingActive(holder)).should.be.eq(true);
-    //     await Core.stopVesting(holder, {from: owner}).should.be.eventually.rejectedWith("You could not stop vesting for holder");
-    //     (await Core.isVestingActive(holder)).should.be.eq(true);
-    // });
+        const currentTimestamp = await currentTime(web3);
+        const month = 31 * 24 * 60 * 60;
+        const vestingStartTimestamp = currentTimestamp + month;
+        const totalTokens = 1e6;
+        const tokensAfterLockup = 1e5;
+
+        await allocator.connectSubjectToPlan(holder, 1, vestingStartTimestamp, totalTokens, tokensAfterLockup, {from: owner});
+        await allocator.isSubjectRegistered(holder).should.be.eventually.true;
+        await allocator.isSubjectAddressApproved(holder).should.be.eventually.false;
+
+        await allocator.approveAddress({from: holder});
+        await allocator.isSubjectAddressApproved(holder).should.be.eventually.true;
+        await allocator.isVestingActive(holder).should.be.eventually.false;
+
+        await allocator.startVesting(holder, {from: owner});
+        await allocator.isVestingActive(holder).should.be.eventually.true;
+
+        skipTime(web3, vestingStartTimestamp + 12 * month - currentTimestamp);
+        // 12 month after plan start
+        // 6  month after lockup end
+        const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
+
+        await allocator.stopVesting(holder, {from: owner});
+        await allocator.isVestingActive(holder).should.be.eventually.false;
+
+        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder has inappropriate status");
+        await allocator.isVestingActive(holder).should.be.eventually.false;
+
+        const escrow: EscrowInstance = await Escrow.at(await allocator.getEscrowAddress(holder));
+
+        (await skaleToken.balanceOf(holder)).toNumber()
+            .should.be.equal(0);
+        await escrow.retrieve({from: holder});
+        (await skaleToken.balanceOf(holder)).toNumber()
+            .should.be.equal(vested);
+
+        await escrow.retrieveAfterTermination({from: vestringManager});
+        (await skaleToken.balanceOf(escrow.address)).toNumber()
+            .should.be.equal(0);
+        (await skaleToken.balanceOf(allocator.address)).toNumber()
+            .should.be.equal(1e9 - vested);
+    });
+
+    it("should not stop uncancelable vesting after start", async () => {
+        await allocator.isSubjectRegistered(holder).should.be.eventually.false;
+
+        await allocator.addPlan(6, 36, 2, 6, false, false, {from: owner});
+
+        const currentTimestamp = await currentTime(web3);
+        const month = 31 * 24 * 60 * 60;
+        const vestingStartTimestamp = currentTimestamp + month;
+        const totalTokens = 1e6;
+        const tokensAfterLockup = 1e5;
+
+        await allocator.connectSubjectToPlan(holder, 1, vestingStartTimestamp, totalTokens, tokensAfterLockup, {from: owner});
+        await allocator.isSubjectRegistered(holder).should.be.eventually.true;
+        await allocator.isSubjectAddressApproved(holder).should.be.eventually.false;
+
+        await allocator.approveAddress({from: holder});
+        await allocator.isSubjectAddressApproved(holder).should.be.eventually.true;
+        await allocator.isVestingActive(holder).should.be.eventually.false;
+
+        await allocator.startVesting(holder, {from: owner});
+        await allocator.isVestingActive(holder).should.be.eventually.true;
+
+        skipTime(web3, vestingStartTimestamp + 12 * month - currentTimestamp);
+        // 12 month after plan start
+        // 6  month after lockup end
+        const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
+
+        await allocator.stopVesting(holder, {from: owner})
+            .should.be.eventually.rejectedWith("Can't stop vesting for subject with this plan");
+        await allocator.isVestingActive(holder).should.be.eventually.true;
+
+        await allocator.startVesting(holder, {from: owner}).should.be.eventually.rejectedWith("Holder has inappropriate status");
+        await allocator.isVestingActive(holder).should.be.eventually.true;
+
+        const escrow: EscrowInstance = await Escrow.at(await allocator.getEscrowAddress(holder));
+
+        (await skaleToken.balanceOf(holder)).toNumber()
+            .should.be.equal(0);
+        await escrow.retrieve({from: holder});
+        (await skaleToken.balanceOf(holder)).toNumber()
+            .should.be.equal(vested);
+
+        await escrow.retrieveAfterTermination({from: vestringManager})
+            .should.be.eventually.rejectedWith("Vesting is active");
+        (await skaleToken.balanceOf(escrow.address)).toNumber()
+            .should.be.equal(1e6 - vested);
+    });
 
     it("should not register Core Plan if sender is not owner", async () => {
         await allocator.addPlan(6, 36, 2, 6, false, true, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");

@@ -51,10 +51,20 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _;
     }
 
-    modifier onlyHolderAndOwner() {
+    modifier onlyVestingManager() {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(
-            _msgSender() == _holder && allocator.isVestingActive(_holder) || _msgSender() == allocator.vestingManager(),
+            allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
+            "Message sender is not a vestring manager"
+        );
+        _;
+    }
+
+    modifier onlyHolderAndVestingManager() {
+        Allocator allocator = Allocator(contractManager.getContract("Allocator"));
+        require(
+            (_msgSender() == _holder && allocator.isVestingActive(_holder)) ||
+            allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
             "Message sender is not authorized"
         );
         _;
@@ -94,7 +104,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         external override
         allow("SkaleToken")
     {
-        require(to == _holder || hasRole(DEFAULT_ADMIN_ROLE, to), "Not authorized transfer");
+        require(to == _holder || to == address(_getAllocatorContract()), "Not authorized transfer");
     }
 
     /**
@@ -138,11 +148,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      *
      * - Allocator must be active.
      */
-    function retrieveAfterTermination() external onlyOwner {
+    function retrieveAfterTermination() external onlyVestingManager {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
-        require(!allocator.isVestingActive(_holder), "Allocator holder is not Active");
+        require(!allocator.isVestingActive(_holder), "Vesting is active");
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -197,15 +207,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or Allocator Owner must be `msg.sender`.
      * - Allocator holder must be active when Holder is `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external onlyHolderAndOwner {
-        Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        require(
-            _msgSender() == _holder && allocator.isVestingActive(_holder) || _msgSender() == allocator.vestingManager(),
-            "Message sender is not authorized"
-        );
-        if (_msgSender() == _holder) {
-            require(allocator.isVestingActive(_holder), "Allocator holder is not Active");
-        }
+    function requestUndelegation(uint256 delegationId) external onlyHolderAndVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -223,7 +225,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Holder or Allocator Owner must be `msg.sender`.
      * - Allocator must be active when Holder is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external onlyHolderAndOwner {        
+    function withdrawBounty(uint256 validatorId, address to) external onlyHolderAndVestingManager {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         if (_msgSender() == _holder) {
             Allocator allocator = Allocator(contractManager.getContract("Allocator"));

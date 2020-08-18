@@ -72,7 +72,7 @@ contract Allocator is Permissions, IERC777Recipient {
     // array of Plan configs
     Plan[] private _plans;
 
-    address public vestingManager;    
+    bytes32 public constant VESTING_MANAGER_ROLE = keccak256("VESTING_MANAGER_ROLE");
 
     //        holder => Plan holder params
     mapping (address => Subject) private _subjects;
@@ -119,7 +119,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * - Holder address must be already confirmed.
      */
     function startVesting(address holder) external onlyOwner {
-        require(_subjects[holder].status == SubjectStatus.CONFIRMED, "Holder address is not confirmed");
+        require(_subjects[holder].status == SubjectStatus.CONFIRMED, "Holder has inappropriate status");
         _subjects[holder].status = SubjectStatus.ACTIVE;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
@@ -183,11 +183,10 @@ contract Allocator is Permissions, IERC777Recipient {
             "Cannot stop vesting for a non active holder"
         );
         require(
-            _plans[_subjects[holder].planId].isTerminatable,
+            _plans[_subjects[holder].planId - 1].isTerminatable,
             "Can't stop vesting for subject with this plan"
         );
-        // TODO add deactivate logic!!!
-        // _vestedAmount[holder] = calculateVestedAmount(holder);
+        _subjects[holder].status = SubjectStatus.TERMINATED;
         Escrow(_subjectToEscrow[holder]).cancelVesting(calculateVestedAmount(holder));
     }
 
@@ -386,7 +385,6 @@ contract Allocator is Permissions, IERC777Recipient {
 
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
-        vestingManager = msg.sender;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
