@@ -23,7 +23,7 @@ pragma solidity 0.6.10;
 
 import "../Permissions.sol";
 import "../interfaces/delegation/IDelegationController.sol";
-import "../interfaces/delegation/ILocker.sol";
+import "./interfaces/ILocker.sol";
 import "./TokenStateTester.sol";
 import "./SkaleTokenTester.sol";
 

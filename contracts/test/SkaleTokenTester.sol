@@ -24,10 +24,9 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/ERC777.sol";
 
 import "../Permissions.sol";
-import "../interfaces/delegation/IDelegatableToken.sol";
 import "../interfaces/delegation/ITokenState.sol";
 
-contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
+contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
@@ -64,15 +63,15 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address) external override returns (uint) {
+    function getAndUpdateDelegatedAmount(address) pure external returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address) external override returns (uint) {
+    function getAndUpdateSlashedAmount(address) pure external returns (uint) {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) public returns (uint) {
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
         return tokenState.getAndUpdateLockedAmount(wallet);
     }
