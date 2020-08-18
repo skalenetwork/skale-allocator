@@ -26,13 +26,14 @@ import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC182
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/delegation/ILocker.sol";
-import "./Allocator.sol";
-import "./Permissions.sol";
+
 import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/delegation/IDistributor.sol";
 import "./interfaces/delegation/ITokenState.sol";
-import "./interfaces/delegation/IValidatorService.sol";
+
+import "./Allocator.sol";
+import "./Permissions.sol";
+
 
 /**
  * @title Escrow

@@ -23,7 +23,7 @@ pragma solidity 0.6.10;
 
 import "../Permissions.sol";
 import "../interfaces/delegation/ITokenState.sol";
-import "../interfaces/delegation/ILocker.sol";
+import "./interfaces/ILocker.sol";
 
 contract TokenStateTester is Permissions, ITokenState {
 

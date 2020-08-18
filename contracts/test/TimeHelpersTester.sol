@@ -23,7 +23,7 @@ pragma solidity 0.6.10;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
-import "../thirdparty/BokkyPooBahsDateTimeLibrary.sol";
+import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";
 
 import "../interfaces/ITimeHelpers.sol";
 
