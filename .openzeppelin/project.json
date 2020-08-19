@@ -2,12 +2,11 @@
   "manifestVersion": "2.2",
   "contracts": {
     "ContractManager": "ContractManager",
-    "SAFT": "SAFT",
-    "Core": "Core",
-    "CoreEscrow": "CoreEscrow"
+    "Allocator": "Allocator",
+    "Escrow": "Escrow"
   },
   "dependencies": {},
-  "name": "@skalenetwork/skale-saft-core",
+  "name": "@skalenetwork/skale-allocator",
   "version": "0.0.1",
   "compiler": {
     "compilerSettings": {

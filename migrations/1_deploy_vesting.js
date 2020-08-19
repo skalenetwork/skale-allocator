@@ -21,22 +21,6 @@ function execute(command) {
     execSync(command);
 }
 
-if (process.env.PRODUCTION === "true") {
-    production = true;
-    if(!fs.existsSync("../scripts/manager.json")) {
-        console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
-        process.exit(1);
-    }
-    console.log("Deploy in PRODUCTION mode");
-} else if (process.env.PRODUCTION === "false") {
-    production = false;
-    console.log("Deploy in TEST mode");
-} else {
-    console.log("Recheck Production variable in .env");
-    console.log("Set Production as false");
-    production = false;
-}
-
 async function deploy(deployer, networkName, accounts) {
     if (configFile.networks[networkName].host !== "" && configFile.networks[networkName].host !== undefined && configFile.networks[networkName].port !== "" && configFile.networks[networkName].port !== undefined) {
         let web3 = new Web3(new Web3.providers.HttpProvider("http://" + configFile.networks[networkName].host + ":" + configFile.networks[networkName].port));
@@ -73,7 +57,12 @@ async function deploy(deployer, networkName, accounts) {
         }
     }        
 
-    console.log("Starting SAFT & CORE contracts deploying...");
+    console.log("Starting Allocator deploying...");
+
+    if(!fs.existsSync("../scripts/manager.json")) {
+        console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
+        process.exit();
+    }
     
     const deployAccount = accounts[0];
     const options = await ConfigManager.initNetworkConfiguration(
@@ -85,18 +74,13 @@ async function deploy(deployer, networkName, accounts) {
     );
 
     let contracts = [
-        "ContractManager", // must be in first position
-
-        "SAFT",
-        "Core",
-        "CoreEscrow"
+        "Allocator",
+        "Escrow"
     ]    
 
     contractsData = [];
     for (const contract of contracts) {
-        if (!(production && contract === "ContractManager")) {
-            contractsData.push({name: contract, alias: contract});
-        }
+        contractsData.push({name: contract, alias: contract});
     }    
 
     add({ contractsData: contractsData });
@@ -111,22 +95,7 @@ async function deploy(deployer, networkName, accounts) {
     const deployed = new Map();
     let contractManager;
     for (const contractName of contracts) {
-        let contract;
-        if (contractName == "ContractManager") {
-            if (!production) {
-                contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [] }, options));
-                contractManager = contract;
-                console.log("contractManager address:", contract.address);
-            } else {
-                let manager = require("../scripts/manager.json");
-                contract = new web3.eth.Contract(manager['contract_manager_abi'], manager['contract_manager_address']);
-                contract.address = contract._address;
-                contractManager = contract;
-                console.log("contractManager address:", contractManager.address);
-            }
-        } else {
-            contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
-        }
+        let contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
         deployed.set(contractName, contract);
     }
     
@@ -144,20 +113,17 @@ async function deploy(deployer, networkName, accounts) {
     contracts = contracts.concat(["ProxyAdmin", "ProxyFactory"]);
 
     console.log("Register contracts");
+
+    let managerConfig = require("../scripts/manager.json");
+    contractManager = new web3.eth.Contract(managerConfig['contract_manager_abi'], managerConfig['contract_manager_address']);
+    contractManager.address = contractManager._address;
+    console.log("contractManager address:", contractManager.address);
     
     for (const contract of contracts) {
-        if (contract !== "ContractManager") {
-            const address = deployed.get(contract).address;
-            await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
-                console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
-            });
-        }
-    }
-
-    if (production) {
-        let manager = require("../scripts/manager.json");
-        contract = new web3.eth.Contract(manager['token_state_abi'], manager['token_state_address']);
-        await contract.methods.addLocker("SAFT").send({from: deployAccount});
+        const address = deployed.get(contract).address;
+        await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
+            console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
+        });
     }
     
     console.log('Deploy done, writing results...');
@@ -170,8 +136,6 @@ async function deploy(deployer, networkName, accounts) {
             jsonObject[propertyName + "_abi"] = artifacts.require("./" + contractName).abi;
         }
     }
-
-
 
     await fsPromises.writeFile(`data/${networkName}.json`, JSON.stringify(jsonObject));
     console.log(`Done, check ${networkName}.json file in data folder.`);

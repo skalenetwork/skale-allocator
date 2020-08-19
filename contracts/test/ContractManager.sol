@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    ContractManager.sol - SKALE SAFT Core
+    ContractManager.sol - SKALE Allocator
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
 
-    SKALE SAFT Core is free software: you can redistribute it and/or modify
+    SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE SAFT Core is distributed in the hope that it will be useful,
+    SKALE Allocator is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE SAFT Core.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
@@ -48,11 +48,11 @@ contract ContractManager is OwnableUpgradeSafe {
 
     /**
      * @dev Allows Owner to add contract to mapping of actual contract addresses
-     *
-     * Emits ContractUpgraded event.
-     *
+     * 
+     * Emits a {ContractUpgraded} event.
+     * 
      * Requirements:
-     *
+     * 
      * - Contract address is non-zero.
      * - Contract address is not already added.
      * - Contract contains code.
@@ -72,9 +72,9 @@ contract ContractManager is OwnableUpgradeSafe {
 
     /**
      * @dev Returns the contract address of a given contract name.
-     *
+     * 
      * Requirements:
-     *
+     * 
      * - Contract mapping must exist.
      */
     function getContract(string calldata name) external view returns (address contractAddress) {

@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    SkaleTokenInternalTester.sol - SKALE SAFT Core
+    SkaleTokenInternalTester.sol - SKALE Allocator
     Copyright (C) 2018-Present SKALE Labs
     @author Dmytro Stebaiev
 
-    SKALE SAFT Core is free software: you can redistribute it and/or modify
+    SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE SAFT Core is distributed in the hope that it will be useful,
+    SKALE Allocator is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE SAFT Core.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
@@ -24,10 +24,9 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/ERC777.sol";
 
 import "../Permissions.sol";
-import "../interfaces/delegation/IDelegatableToken.sol";
-import "../SAFT.sol";
+import "../interfaces/delegation/ITokenState.sol";
 
-contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
+contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
@@ -64,16 +63,17 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions, IDelegatableToken {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address) external override returns (uint) {
+    function getAndUpdateDelegatedAmount(address) pure external returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address) external override returns (uint) {
+    function getAndUpdateSlashedAmount(address) pure external returns (uint) {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
-        return SAFT(contractManager.getContract("TokenState")).getAndUpdateLockedAmount(wallet);
+    function getAndUpdateLockedAmount(address wallet) public returns (uint) {
+        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        return tokenState.getAndUpdateLockedAmount(wallet);
     }
 
     function _beforeTokenTransfer(

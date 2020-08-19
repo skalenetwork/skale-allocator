@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    SkaleTokenInternalTester.sol - SKALE SAFT Core
+    SkaleTokenInternalTester.sol - SKALE Allocator
     Copyright (C) 2018-Present SKALE Labs
     @author Dmytro Stebaiev
 
-    SKALE SAFT Core is free software: you can redistribute it and/or modify
+    SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE SAFT Core is distributed in the hope that it will be useful,
+    SKALE Allocator is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE SAFT Core.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
 
 import "../Permissions.sol";
 import "../interfaces/delegation/ITokenState.sol";
-import "../interfaces/delegation/ILocker.sol";
+import "./interfaces/ILocker.sol";
 
 contract TokenStateTester is Permissions, ITokenState {
 
@@ -36,7 +36,6 @@ contract TokenStateTester is Permissions, ITokenState {
             forbidden = forbidden.add(locker.getAndUpdateForbiddenForDelegationAmount(holder));
         }
         return forbidden;
-        // return SAFT(contractManager.getContract("SAFT")).getAndUpdateForbiddenForDelegationAmount(wallet);
     }
 
     function getAndUpdateLockedAmount(address holder) external override returns (uint) {
@@ -46,13 +45,11 @@ contract TokenStateTester is Permissions, ITokenState {
             locked = locked.add(locker.getAndUpdateLockedAmount(holder));
         }
         return locked;
-        // return SAFT(contractManager.getContract("SAFT")).getAndUpdateLockedAmount(wallet);
     }
 
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
         addLocker("DelegationController");
-        addLocker("SAFT");
     }
 
     /**

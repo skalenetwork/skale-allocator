@@ -32,7 +32,7 @@ enum State {
     COMPLETED,
 }
 
-export enum HolderStatus {
+export enum BeneficiaryStatus {
     UNKNOWN,
     CONFIRMATION_PENDING,
     CONFIRMED,
