@@ -106,7 +106,10 @@ contract Allocator is Permissions, IERC777Recipient {
     function approveAddress() external {
         address beneficiary = msg.sender;
         require(_beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN, "Beneficiary is not registered");
-        require(_beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMATION_PENDING, "Beneficiary is already approved");
+        require(
+            _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMATION_PENDING,
+            "Beneficiary is already approved"
+        );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.CONFIRMED;
     }
 
@@ -119,7 +122,10 @@ contract Allocator is Permissions, IERC777Recipient {
      * - Beneficiary address must be already confirmed.
      */
     function startVesting(address beneficiary) external onlyOwner {
-        require(_beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMED, "Beneficiary has inappropriate status");
+        require(
+            _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMED,
+            "Beneficiary has inappropriate status"
+        );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.ACTIVE;
         require(
             IERC20(contractManager.getContract("SkaleToken")).transfer(
@@ -399,7 +405,11 @@ contract Allocator is Permissions, IERC777Recipient {
             if (date >= timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration)) {
                 vestedAmount = beneficiaryPlan.fullAmount;
             } else {
-                uint256 partPayment = _getPartPayment(wallet, beneficiaryPlan.fullAmount, beneficiaryPlan.amountAfterLockup);
+                uint256 partPayment = _getPartPayment(
+                    wallet,
+                    beneficiaryPlan.fullAmount,
+                    beneficiaryPlan.amountAfterLockup
+                );
                 vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfCompletedVestingEvents(wallet)));
             }
         }
