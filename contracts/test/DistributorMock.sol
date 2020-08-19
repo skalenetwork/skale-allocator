@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    DistributorMock.sol - SKALE SAFT Core
+    DistributorMock.sol - SKALE Allocator
     Copyright (C) 2018-Present SKALE Labs
     @author Dmytro Stebaiev
 
-    SKALE SAFT Core is free software: you can redistribute it and/or modify
+    SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    SKALE SAFT Core is distributed in the hope that it will be useful,
+    SKALE Allocator is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with SKALE SAFT Core.  If not, see <https://www.gnu.org/licenses/>.
+    along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 pragma solidity 0.6.10;
@@ -35,15 +35,15 @@ contract DistributorMock is IDistributor, IERC777Recipient {
     IERC20 public skaleToken;
 
     //        wallet =>   validatorId => tokens
-    mapping (address => mapping (uint => uint)) public approved;
+    mapping (address => mapping (uint256 => uint)) public approved;
 
     constructor (address skaleTokenAddress) public {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
-    function withdrawBounty(uint validatorId, address to) external override {
-        uint bounty = approved[msg.sender][validatorId];        
+    function withdrawBounty(uint256 validatorId, address to) external override {
+        uint256 bounty = approved[msg.sender][validatorId];        
         delete approved[msg.sender][validatorId];
         require(skaleToken.transfer(to, bounty), "Failed to transfer tokens");
     }
@@ -60,13 +60,13 @@ contract DistributorMock is IDistributor, IERC777Recipient {
     {
         require(to == address(this), "Receiver is incorrect");
         require(userData.length == 32 * 2, "Data length is incorrect");
-        (uint validatorId, address wallet) = abi.decode(userData, (uint, address));
+        (uint256 validatorId, address wallet) = abi.decode(userData, (uint, address));
         _payBounty(wallet, validatorId, amount);
     }
 
     // private
 
-    function _payBounty(address wallet, uint validatorId, uint amount) private {
+    function _payBounty(address wallet, uint256 validatorId, uint256 amount) private {
         approved[wallet][validatorId] += amount;
     }
 }

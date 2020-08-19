@@ -1,11 +1,11 @@
 {
-  "name": "@skalenetwork/skale-saft-core",
+  "name": "@skalenetwork/skale-allocator",
   "version": "0.0.1",
   "private": true,
-  "description": "Contracts to manage SAFT and Core",  
+  "description": "Contracts to manage tokens allocation",  
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/skalenetwork/skale-saft-core.git"
+    "url": "git+https://github.com/skalenetwork/skale-allocator.git"
   },
   "license": "AGPL-3.0",
   "author": "SKALE Labs",
@@ -62,7 +62,7 @@
     "@types/web3": "^1.0.19",
     "codecov": "^3.7.2",
     "dotenv": "^8.2.0",
-    "elliptic": "^6.5.2",
+    "elliptic": "^6.5.3",
     "ganache-cli": "^6.9.1",
     "solhint": "^3.0.0",
     "solidity-coverage": "^0.7.5",
