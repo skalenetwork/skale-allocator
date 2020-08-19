@@ -4,8 +4,7 @@ import { ContractManagerInstance,
     EscrowContract,
     EscrowInstance,
     DistributorMockContract,
-    ProxyFactoryMockContract,
-    ProxyFactoryMockInstance } from "../types/truffle-contracts";
+    TimeHelpersTesterInstance} from "../types/truffle-contracts";
 
 const Escrow: EscrowContract = artifacts.require("./Escrow");
 
@@ -18,6 +17,7 @@ import { deployContractManager } from "./tools/deploy/contractManager";
 import { deployAllocator } from "./tools/deploy/allocator";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
 import { BeneficiaryStatus } from "./tools/types";
+import { deployTimeHelpersTester } from "./tools/deploy/test/timeHelpersTester";
 chai.should();
 chai.use(chaiAsPromised);
 
@@ -25,12 +25,14 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     let contractManager: ContractManagerInstance;
     let skaleToken: SkaleTokenTesterInstance;
     let allocator: AllocatorInstance;
+    let timeHelpers: TimeHelpersTesterInstance;
 
     beforeEach(async () => {
         contractManager = await deployContractManager(owner);
 
         skaleToken = await deploySkaleTokenTester(contractManager);
         allocator = await deployAllocator(contractManager);
+        timeHelpers = await deployTimeHelpersTester(contractManager);
 
         // each test will start from July 1
         await skipTimeToDate(web3, 1, 6);
@@ -60,8 +62,8 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const plan = await allocator.getPlan(1);
         plan.totalVestingDuration.should.be.equal('36');
         plan.vestingCliff.should.be.equal('6');
-        plan.vestingStepTimeUnit.should.be.equal('1');
-        plan.vestingStep.should.be.equal('6');
+        plan.vestingIntervalTimeUnit.should.be.equal('1');
+        plan.vestingInterval.should.be.equal('6');
         plan.isDelegationAllowed.should.be.equal(false);
         const beneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary);
         web3.utils.toBN(beneficiaryParams.status).toNumber().should.be.equal(BeneficiaryStatus.CONFIRMATION_PENDING);
@@ -1068,6 +1070,62 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             lockedAmount.toNumber().should.be.equal(0);
 
             (plan0unlocked24 - plan0unlocked30).should.be.equal(plan0unlocked30 - plan0unlocked36);
+        });
+    });
+
+    describe("should calculate next vest time correctly", async () => {
+        it("from Dec 30, year based vesting", async () => {
+            await allocator.addPlan(0, 2 * 12, 3, 1, false, false, {from: owner});
+            const plan = 1;
+
+            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
+
+            // start from Dec
+            await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, 5, 0, {from: owner});
+
+            // skip to Jan 1st
+            await skipTimeToDate(web3, 1, 0);
+
+            (await allocator.getTimeOfNextVest(beneficiary)).toNumber()
+                .should.be.equal((new Date(currentYear + 1 + "-12-01T00:00:00.000+00:00")).getTime() / 1000);
+        });
+
+        it("from Dec 30, month based vesting", async () => {
+            await allocator.addPlan(0, 2 * 12, 2, 1, false, false, {from: owner});
+            const plan = 1;
+
+            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
+
+            // start from Dec
+            await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, 5, 0, {from: owner});
+
+            // skip to Jan 1st
+            await skipTimeToDate(web3, 1, 0);
+
+            (await allocator.getTimeOfNextVest(beneficiary)).toNumber()
+                .should.be.equal((new Date(currentYear + 1 + "-02-01T00:00:00.000+00:00")).getTime() / 1000);
+        });
+
+        it("from Dec 30, day based vesting", async () => {
+            await allocator.addPlan(0, 2 * 12, 1, 1, false, false, {from: owner});
+            const plan = 1;
+
+            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
+
+            // start from Dec
+            await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, 5, 0, {from: owner});
+
+            // skip to Jan 1st
+            await skipTimeToDate(web3, 1, 0);
+
+            (await allocator.getTimeOfNextVest(beneficiary)).toNumber()
+                .should.be.equal((new Date(currentYear + 1 + "-01-02T00:00:00.000+00:00")).getTime() / 1000);
         });
     });
 });

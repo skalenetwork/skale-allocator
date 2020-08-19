@@ -36,6 +36,9 @@ import "./Permissions.sol";
  */
 contract Allocator is Permissions, IERC777Recipient {
 
+    uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
+    uint256 constant private _MONTHS_PER_YEAR = 12;
+
     enum TimeUnit {DAY, MONTH, YEAR}
 
     enum BeneficiaryStatus {
@@ -49,8 +52,8 @@ contract Allocator is Permissions, IERC777Recipient {
     struct Plan {
         uint256 totalVestingDuration; // months
         uint256 vestingCliff; // months
-        TimeUnit vestingStepTimeUnit;
-        uint256 vestingStep; // amount of days/months/years
+        TimeUnit vestingIntervalTimeUnit;
+        uint256 vestingInterval; // amount of days/months/years
         bool isDelegationAllowed;
         bool isTerminatable;
     }
@@ -148,27 +151,26 @@ contract Allocator is Permissions, IERC777Recipient {
     function addPlan(
         uint256 vestingCliff, // months
         uint256 totalVestingDuration, // months
-        uint8 vestingStepTimeUnit, // 1 - day 2 - month 3 - year
-        uint256 vestingTimes, // months or days or years
+        uint8 vestingIntervalTimeUnit, // 1 - day 2 - month 3 - year
+        uint256 vestingInterval, // months or days or years
         bool canDelegate, // can beneficiary delegate all un-vested tokens
         bool isTerminatable
     )
         external
         onlyOwner
     {
-        require(totalVestingDuration >= vestingCliff, "Cliff period exceeds full period");
-        require(vestingStepTimeUnit >= 1 && vestingStepTimeUnit <= 3, "Incorrect vesting period");
+        require(totalVestingDuration >= vestingCliff, "Cliff period exceeds total vesting duration");
+        require(vestingIntervalTimeUnit >= 1 && vestingIntervalTimeUnit <= 3, "Incorrect vesting time unit");
+        uint vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
         require(
-            (totalVestingDuration - vestingCliff) == vestingTimes ||
-            ((totalVestingDuration - vestingCliff) / vestingTimes) * vestingTimes
-                == totalVestingDuration - vestingCliff,
-            "Incorrect vesting times"
+            vestingDurationAfterCliff / vestingInterval * vestingInterval == vestingDurationAfterCliff,
+            "Vesting duration can't be divided into equal intervals"
         );
         _plans.push(Plan({
             totalVestingDuration: totalVestingDuration,
             vestingCliff: vestingCliff,
-            vestingStepTimeUnit: TimeUnit(vestingStepTimeUnit - 1),
-            vestingStep: vestingTimes,
+            vestingIntervalTimeUnit: TimeUnit(vestingIntervalTimeUnit - 1),
+            vestingInterval: vestingInterval,
             isDelegationAllowed: canDelegate,
             isTerminatable: isTerminatable
         }));
@@ -311,39 +313,47 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Returns the time of the next vesting period.
+     * @dev Returns the time of the next vesting event.
      */
     function getTimeOfNextVest(address beneficiary) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint256 date = now;
+        
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        uint256 lockupDate = timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff);
-        if (date < lockupDate) {
-            return lockupDate;
-        }
-        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingStepTimeUnit);
-        uint256 lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff),
-            planParams.vestingStepTimeUnit
+
+        uint256 lockupEndTimestamp = timeHelpers.monthToTimestamp(
+            beneficiaryPlan.startMonth.add(planParams.vestingCliff)
         );
-        uint256 finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration),
-            planParams.vestingStepTimeUnit
-        );
-        uint256 numberOfDonePayments = dateTime.sub(lockupTime).div(planParams.vestingStep);
-        uint256 numberOfAllPayments = finishTime.sub(lockupTime).div(planParams.vestingStep);
-        if (numberOfAllPayments <= numberOfDonePayments + 1) {
-            return timeHelpers.addMonths(
-                beneficiaryPlan.startMonth,
-                planParams.totalVestingDuration
-            );
+        if (now < lockupEndTimestamp) {
+            return lockupEndTimestamp;
         }
-        uint256 nextPayment = finishTime
-            .sub(
-                planParams.vestingStep.mul(numberOfAllPayments.sub(numberOfDonePayments + 1))
+        require(
+            now < timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)),
+            "Vesting is over"
+        );
+        require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");
+
+        uint256 currentMonth = timeHelpers.getCurrentMonth();
+        if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
+            // TODO: it may be simplified if TimeHelpers contract in skale-manager is updated
+            uint256 currentMonthBeginningTimestamp = timeHelpers.monthToTimestamp(currentMonth);
+            // return next day midnight
+            return currentMonthBeginningTimestamp.add(
+                now.sub(currentMonthBeginningTimestamp).div(_SECONDS_PER_DAY).add(1).mul(_SECONDS_PER_DAY)
             );
-        return _addMonthsAndTimePoint(lockupDate, nextPayment - lockupTime, planParams.vestingStepTimeUnit);
+        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
+            // return beginning of next month
+            return timeHelpers.monthToTimestamp(currentMonth.add(1));
+        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
+            uint256 cliffEndMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
+            return timeHelpers.monthToTimestamp(
+                cliffEndMonth.add(
+                    currentMonth.sub(cliffEndMonth).div(_MONTHS_PER_YEAR).add(1).mul(_MONTHS_PER_YEAR)
+                )
+            );
+        } else {
+            revert("Vesting interval timeunit is incorrect");
+        }
     }
 
     /**
@@ -426,12 +436,12 @@ contract Allocator is Permissions, IERC777Recipient {
         if (date < timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff)) {
             return 0;
         }
-        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingStepTimeUnit);
+        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingIntervalTimeUnit);
         uint256 lockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff),
-            planParams.vestingStepTimeUnit
+            planParams.vestingIntervalTimeUnit
         );
-        return dateTime.sub(lockupTime).div(planParams.vestingStep);
+        return dateTime.sub(lockupTime).div(planParams.vestingInterval);
     }
 
     /**
@@ -443,13 +453,13 @@ contract Allocator is Permissions, IERC777Recipient {
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         uint256 finishTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration),
-            planParams.vestingStepTimeUnit
+            planParams.vestingIntervalTimeUnit
         );
         uint256 afterLockupTime = _getTimePointInCorrectPeriod(
             timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff),
-            planParams.vestingStepTimeUnit
+            planParams.vestingIntervalTimeUnit
         );
-        return finishTime.sub(afterLockupTime).div(planParams.vestingStep);
+        return finishTime.sub(afterLockupTime).div(planParams.vestingInterval);
     }
 
     /**
@@ -472,11 +482,19 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns timestamp when adding timepoints (days/months/years) to
      * timestamp.
      */
-    function _getTimePointInCorrectPeriod(uint256 timestamp, TimeUnit vestingStepTimeUnit) private view returns (uint) {
+    function _getTimePointInCorrectPeriod(
+        uint256 timestamp,
+        TimeUnit vestingIntervalTimeUnit
+    )
+        private
+        view
+        returns (uint)
+    {
+        revert("Check if it is wrong");
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingStepTimeUnit == TimeUnit.DAY) {
+        if (vestingIntervalTimeUnit == TimeUnit.DAY) {
             return timeHelpers.timestampToDay(timestamp);
-        } else if (vestingStepTimeUnit == TimeUnit.MONTH) {
+        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
             return timeHelpers.timestampToMonth(timestamp);
         } else {
             return timeHelpers.timestampToYear(timestamp);
@@ -489,16 +507,16 @@ contract Allocator is Permissions, IERC777Recipient {
     function _addMonthsAndTimePoint(
         uint256 timestamp,
         uint256 timePoints,
-        TimeUnit vestingStepTimeUnit
+        TimeUnit vestingIntervalTimeUnit
     )
         private
         view
         returns (uint)
     {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingStepTimeUnit == TimeUnit.DAY) {
+        if (vestingIntervalTimeUnit == TimeUnit.DAY) {
             return timeHelpers.addDays(timestamp, timePoints);
-        } else if (vestingStepTimeUnit == TimeUnit.MONTH) {
+        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
             return timeHelpers.addMonths(timestamp, timePoints);
         } else {
             return timeHelpers.addYears(timestamp, timePoints);

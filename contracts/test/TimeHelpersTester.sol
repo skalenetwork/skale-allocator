@@ -38,17 +38,6 @@ contract TimeHelpersTester is ITimeHelpers {
 
     uint256 constant private _ZERO_YEAR = 2020;
 
-    function calculateProofOfUseLockEndTime(
-        uint256 month,
-        uint256 lockUpPeriodDays
-    ) 
-        external 
-        pure 
-        returns (uint256 timestamp) 
-    {
-        timestamp = BokkyPooBahsDateTimeLibrary.addDays(monthToTimestamp(month), lockUpPeriodDays);
-    }
-
     function addDays(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
         return BokkyPooBahsDateTimeLibrary.addDays(fromTimestamp, n);
     }
@@ -61,7 +50,7 @@ contract TimeHelpersTester is ITimeHelpers {
         return BokkyPooBahsDateTimeLibrary.addYears(fromTimestamp, n);
     }
 
-    function getCurrentMonth() external view virtual returns (uint) {
+    function getCurrentMonth() external view override returns (uint) {
         return timestampToMonth(now);
     }
 
@@ -90,7 +79,7 @@ contract TimeHelpersTester is ITimeHelpers {
         return month;
     }
 
-    function monthToTimestamp(uint256 month) public pure virtual returns (uint256 timestamp) {
+    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
         uint256 year = _ZERO_YEAR;
         uint256 _month = month;
         year = year.add(_month.div(12));
