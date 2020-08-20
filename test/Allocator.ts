@@ -1075,7 +1075,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     describe("should calculate next vest time correctly", async () => {
         it("from Dec 30, year based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 3, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, 2, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
@@ -1093,7 +1093,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         });
 
         it("from Dec 30, month based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 2, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, 1, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
@@ -1111,7 +1111,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         });
 
         it("from Dec 30, day based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 1, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, 0, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
