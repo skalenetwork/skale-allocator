@@ -254,12 +254,12 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         await allocator.connectBeneficiaryToPlan(beneficiary, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Beneficiary is already added");
     });
 
-    it("should not register Plan if periods incorrect", async () => {
-        await allocator.addPlan(37, 36, TimeUnit.MONTH, 6, false, true, {from: owner}).should.be.eventually.rejectedWith("Cliff period exceeds full period");
+    it("should not register Plan if cliff is too big", async () => {
+        await allocator.addPlan(37, 36, TimeUnit.MONTH, 6, false, true, {from: owner}).should.be.eventually.rejectedWith("Cliff period exceeds total vesting duration");
     });
 
-    it("should not register Plan if vesting times incorrect", async () => {
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 7, false, true, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
+    it("should not register Plan if vesting interval is incorrect", async () => {
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 7, false, true, {from: owner}).should.be.eventually.rejectedWith("Vesting duration can't be divided into equal intervals");
     });
 
     it("should not connect beneficiary to Plan if amounts incorrect", async () => {
