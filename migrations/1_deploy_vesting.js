@@ -137,6 +137,9 @@ async function deploy(deployer, networkName, accounts) {
         }
     }
 
+    jsonObject['contract_manager_abi'] = managerConfig['contract_manager_abi'];
+    jsonObject['contract_manager_address'] = managerConfig['contract_manager_address'];
+
     await fsPromises.writeFile(`data/${networkName}.json`, JSON.stringify(jsonObject));
     console.log(`Done, check ${networkName}.json file in data folder.`);
 }
