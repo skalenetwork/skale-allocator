@@ -59,7 +59,7 @@ async function deploy(deployer, networkName, accounts) {
 
     console.log("Starting Allocator deploying...");
 
-    if(!fs.existsSync("../scripts/manager.json")) {
+    if(!fs.existsSync(__dirname +  "/../scripts/manager.json")) {
         console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
         process.exit();
     }
