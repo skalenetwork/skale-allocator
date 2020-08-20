@@ -16,7 +16,7 @@ import chaiAsPromised from "chai-as-promised";
 import { deployContractManager } from "./tools/deploy/contractManager";
 import { deployAllocator } from "./tools/deploy/allocator";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
-import { BeneficiaryStatus } from "./tools/types";
+import { BeneficiaryStatus, TimeUnit } from "./tools/types";
 import { deployTimeHelpersTester } from "./tools/deploy/test/timeHelpersTester";
 chai.should();
 chai.use(chaiAsPromised);
@@ -755,60 +755,60 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const totalVestingDuration = 36;
         const fullAmount = 6e6;
         const lockupAmount = 1e6;
-        const vestTime = 6;
-        const vestPeriod = 2; // month
+        const vestingInterval = 6;
+        const vestingTimeUnit = TimeUnit.MONTH;
         const isDelegationAllowed = false;
-        const plan = 1;
+        const planId = 1;
 
         const lockupPeriod1 = 12;
         const totalVestingDuration1 = 15;
         const fullAmount1 = 1e6;
         const lockupAmount1 = 5e5;
-        const vestTime1 = 3;
-        const vestPeriod1 = 2; // month
+        const vestingInterval1 = 3;
+        const vestingIntervalTimeUnit1 = TimeUnit.MONTH;
         const isDelegationAllowed1 = false;
-        const plan1 = 2;
+        const planId1 = 2;
 
         const lockupPeriod2 = 9;
         const totalVestingDuration2 = 15;
         const fullAmount2 = 1e6;
         const lockupAmount2 = 5e5;
-        const vestTime2 = 6;
-        const vestPeriod2 = 2; // month
+        const vestingInterval2 = 6;
+        const vestingIntervalTimeUnit2 = TimeUnit.MONTH;
         const isDelegationAllowed2 = false;
-        const plan2 = 3;
+        const planId2 = 3;
 
         const lockupPeriod3 = 12;
         const totalVestingDuration3 = 36;
         const fullAmount3 = 36e6;
         const lockupAmount3 = 12e6;
-        const vestTime3 = 1;
-        const vestPeriod3 = 2; // month
+        const vestingInterval3 = 1;
+        const vestingIntervalTimeUnit3 = TimeUnit.MONTH;
         const isDelegationAllowed3 = false;
-        const plan3 = 4;
+        const planId3 = 4;
 
         let startDate: number;
 
         beforeEach(async () => {
             startDate = await currentTime(web3);
             // Plan example 0
-            await allocator.addPlan(lockupPeriod, totalVestingDuration, vestPeriod, vestTime, isDelegationAllowed, true, {from: owner});
-            await allocator.connectBeneficiaryToPlan(beneficiary, plan, startDate, fullAmount, lockupAmount, {from: owner});
+            await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
+            await allocator.connectBeneficiaryToPlan(beneficiary, planId, startDate, fullAmount, lockupAmount, {from: owner});
             await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
             // Plan example 1
-            await allocator.addPlan(lockupPeriod1, totalVestingDuration1, vestPeriod1, vestTime1, isDelegationAllowed1, true, {from: owner});
-            await allocator.connectBeneficiaryToPlan(beneficiary1, plan1, startDate, fullAmount1, lockupAmount1, {from: owner});
+            await allocator.addPlan(lockupPeriod1, totalVestingDuration1, vestingIntervalTimeUnit1, vestingInterval1, isDelegationAllowed1, true, {from: owner});
+            await allocator.connectBeneficiaryToPlan(beneficiary1, planId1, startDate, fullAmount1, lockupAmount1, {from: owner});
             await allocator.approveAddress({from: beneficiary1});
             await allocator.startVesting(beneficiary1, {from: owner});
             // Plan example 2
-            await allocator.addPlan(lockupPeriod2, totalVestingDuration2, vestPeriod2, vestTime2, isDelegationAllowed2, true, {from: owner});
-            await allocator.connectBeneficiaryToPlan(beneficiary2, plan2, startDate, fullAmount2, lockupAmount2, {from: owner});
+            await allocator.addPlan(lockupPeriod2, totalVestingDuration2, vestingIntervalTimeUnit2, vestingInterval2, isDelegationAllowed2, true, {from: owner});
+            await allocator.connectBeneficiaryToPlan(beneficiary2, planId2, startDate, fullAmount2, lockupAmount2, {from: owner});
             await allocator.approveAddress({from: beneficiary2});
             await allocator.startVesting(beneficiary2, {from: owner});
             // Plan example 3
-            await allocator.addPlan(lockupPeriod3, totalVestingDuration3, vestPeriod3, vestTime3, isDelegationAllowed3, true, {from: owner});
-            await allocator.connectBeneficiaryToPlan(beneficiary3, plan3, startDate, fullAmount3, lockupAmount3, {from: owner});
+            await allocator.addPlan(lockupPeriod3, totalVestingDuration3, vestingIntervalTimeUnit3, vestingInterval3, isDelegationAllowed3, true, {from: owner});
+            await allocator.connectBeneficiaryToPlan(beneficiary3, planId3, startDate, fullAmount3, lockupAmount3, {from: owner});
             await allocator.approveAddress({from: beneficiary3});
             await allocator.startVesting(beneficiary3, {from: owner});
         });
@@ -824,15 +824,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
         });
 
-        it("should not transferable of Plan 0", async () => {
-            await skaleToken.transfer(hacker, "100", {from: beneficiary}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
-            await skaleToken.transfer(hacker, "100", {from: beneficiary1}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
-            await skaleToken.transfer(hacker, "100", {from: beneficiary2}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
-            await skaleToken.transfer(hacker, "100", {from: beneficiary3}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
-        });
-
         it("All tokens should be locked of all beneficiaries", async () => {
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
             lockedAmount.toNumber().should.be.equal(fullAmount);
 
@@ -847,11 +839,20 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         });
 
         it("After 6 month", async () => {
-            await skipTimeToDate(web3, 1, 12);
+            // skip to Jan 1st
+            await skipTimeToDate(web3, 1, 0);
 
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
-            const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
-            // Plan 0 lockup amount unlocked
+            const lockedCalculatedAmount = calculateLockedAmount(
+                await currentTime(web3),
+                startDate,
+                lockupPeriod,
+                totalVestingDuration,
+                fullAmount,
+                lockupAmount,
+                vestingTimeUnit,
+                vestingInterval);
+            // Beneficiary 0 lockup amount unlocked
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
 
@@ -868,17 +869,17 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         it("After 9 month", async () => {
             await skipTimeToDate(web3, 1, 3);
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
-            // Plan 0 only lockup amount unlocked
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
+            // Beneficiary 0 only lockup amount unlocked
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount - lockupAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary1);
             lockedAmount.toNumber().should.be.equal(fullAmount1);
 
-            // Plan 2 lockup amount unlocked
+            // Beneficiary 2 lockup amount unlocked
             lockedAmount = await allocator.getLockedAmount(beneficiary2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestingIntervalTimeUnit2, vestingInterval2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount2 - lockupAmount2);
 
@@ -891,25 +892,25 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await skipTimeToDate(web3, 1, 6);
 
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
 
             // Plan 1 lockup amount unlocked
             lockedAmount = await allocator.getLockedAmount(beneficiary1);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestingIntervalTimeUnit1, vestingInterval1);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount1 - lockupAmount1);
 
             // Plan 2 lockup amount unlocked
             lockedAmount = await allocator.getLockedAmount(beneficiary2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestingIntervalTimeUnit2, vestingInterval2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount2 - lockupAmount2);
 
             // Plan 3 lockup amount unlocked
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(fullAmount3 - lockupAmount3);
         });
@@ -937,13 +938,13 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await skaleToken.transfer(hacker, "100", {from: beneficiary1});
             await skaleToken.transfer(hacker, "100", {from: beneficiary2});
             await skaleToken.transfer(hacker, "100", {from: beneficiary3});
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(fullAmount - lockedCalculatedAmount - 100);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestingIntervalTimeUnit1, vestingInterval1);
             (await skaleToken.balanceOf(beneficiary1)).toNumber().should.be.equal(fullAmount1 - lockedCalculatedAmount - 100);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestingIntervalTimeUnit2, vestingInterval2);
             (await skaleToken.balanceOf(beneficiary2)).toNumber().should.be.equal(fullAmount2 - lockedCalculatedAmount - 100);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             (await skaleToken.balanceOf(beneficiary3)).toNumber().should.be.equal(fullAmount3 - lockedCalculatedAmount - 100);
             (await skaleToken.balanceOf(hacker)).toNumber().should.be.equal(400);
         });
@@ -953,24 +954,24 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await skipTimeToDate(web3, 1, 9);
 
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount - lockupAmount);
 
             // Plan 1 unlocked all tokens
             lockedAmount = await allocator.getLockedAmount(beneficiary1);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestPeriod1, vestTime1);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod1, totalVestingDuration1, fullAmount1, lockupAmount1, vestingIntervalTimeUnit1, vestingInterval1);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
             // Plan 2 unlocked all tokens
             lockedAmount = await allocator.getLockedAmount(beneficiary2);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestPeriod2, vestTime2);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod2, totalVestingDuration2, fullAmount2, lockupAmount2, vestingIntervalTimeUnit2, vestingInterval2);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.lessThan(fullAmount3 - lockupAmount3);
         });
@@ -988,24 +989,24 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked16 = lockedAmount.toNumber();
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
             plan3unlocked16 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 11);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked17 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
             plan3unlocked17 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             plan0unlocked16.should.be.equal(plan0unlocked17);
@@ -1014,12 +1015,12 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
             lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked18 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
             plan3unlocked18 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             (plan3unlocked16 - plan3unlocked17).should.be.equal(plan3unlocked17 - plan3unlocked18);
@@ -1038,34 +1039,34 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
             let lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked24 = lockedAmount.toNumber();
-            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            let lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 12);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked30 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(web3, 1, 6);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary);
             plan0unlocked36 = lockedAmount.toNumber();
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestPeriod, vestTime);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 
             lockedAmount = await allocator.getLockedAmount(beneficiary3);
-            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestPeriod3, vestTime3);
+            lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startDate, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
             lockedAmount.toNumber().should.be.equal(0);
 

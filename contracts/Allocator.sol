@@ -452,39 +452,48 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the number of vesting events that have completed.
      */
     function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
-        revert("Check if it is wrong");
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint256 date = now;
+        
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        if (date < timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff)) {
+
+        uint256 firstVestingMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
+        if (now < timeHelpers.monthToTimestamp(firstVestingMonth)) {
             return 0;
+        } else {
+            uint256 currentMonth = timeHelpers.getCurrentMonth();
+            if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
+                return _daysBetweenMonths(firstVestingMonth, currentMonth).add(
+                    now.sub(timeHelpers.monthToTimestamp(currentMonth)).div(_SECONDS_PER_DAY)
+                );
+            } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
+                return currentMonth.sub(firstVestingMonth);
+            } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
+                return currentMonth.sub(firstVestingMonth).div(_MONTHS_PER_YEAR);
+            } else {
+                revert("Unknown time unit");
+            }
         }
-        uint256 dateTime = _getTimePointInCorrectPeriod(date, planParams.vestingIntervalTimeUnit);
-        uint256 lockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff),
-            planParams.vestingIntervalTimeUnit
-        );
-        return dateTime.sub(lockupTime).div(planParams.vestingInterval);
     }
 
     /**
      * @dev Returns the number of total vesting events.
      */
     function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint) {
-        revert("Check if it is wrong");
-        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        uint256 finishTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration),
-            planParams.vestingIntervalTimeUnit
-        );
-        uint256 afterLockupTime = _getTimePointInCorrectPeriod(
-            timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff),
-            planParams.vestingIntervalTimeUnit
-        );
-        return finishTime.sub(afterLockupTime).div(planParams.vestingInterval);
+        if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
+            return _daysBetweenMonths(
+                beneficiaryPlan.startMonth.add(planParams.vestingCliff),
+                beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)
+            );
+        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
+            return planParams.totalVestingDuration.sub(planParams.vestingCliff);
+        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
+            return planParams.totalVestingDuration.sub(planParams.vestingCliff).div(_MONTHS_PER_YEAR);
+        } else {
+            revert("Unknown time unit");
+        }
     }
 
     /**
@@ -501,29 +510,6 @@ contract Allocator is Permissions, IERC777Recipient {
         returns(uint)
     {
         return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllVestingEvents(wallet));
-    }
-
-    /**
-     * @dev Returns timestamp when adding timepoints (days/months/years) to
-     * timestamp.
-     */
-    function _getTimePointInCorrectPeriod(
-        uint256 timestamp,
-        TimeUnit vestingIntervalTimeUnit
-    )
-        private
-        view
-        returns (uint)
-    {
-        revert("Check if it is wrong");
-        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingIntervalTimeUnit == TimeUnit.DAY) {
-            return timeHelpers.timestampToDay(timestamp);
-        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return timeHelpers.timestampToMonth(timestamp);
-        } else {
-            return timeHelpers.timestampToYear(timestamp);
-        }
     }
 
     /**

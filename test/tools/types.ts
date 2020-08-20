@@ -40,4 +40,10 @@ export enum BeneficiaryStatus {
     TERMINATED
 }
 
+export enum TimeUnit {
+    DAY,
+    MONTH,
+    YEAR
+}
+
 export { Delegation, State };
