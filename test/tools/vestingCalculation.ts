@@ -1,90 +1,55 @@
+import { TimeUnit } from "./types";
 
-function calculatePartPayment(startDate: number, lockupPeriod: number, fullPeriod: number, fullAmount: number, lockupAmount: number, vestPeriod: number, vestTime: number) {
-    const initDate = new Date(startDate * 1000);
-    let tempDate = new Date(initDate.getTime());
-    let temp = initDate.getUTCMonth() + lockupPeriod;
-    const lockupDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
-
-    tempDate = new Date(initDate.getTime());
-    temp = initDate.getUTCMonth() + fullPeriod;
-    const finishDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
-
-    const lockupTime = Math.floor(lockupDate.getTime() / 1000);
-    const finishTime = Math.floor(finishDate.getTime() / 1000);
-
-    let numberOfPartPayments = 1;
-    if (vestPeriod === 1) {
-        const lockupDay = Math.floor(lockupTime / 86400);
-        const finishDay = Math.floor(finishTime / 86400);
-        numberOfPartPayments = Math.floor((finishDay - lockupDay) / vestTime);
-    } else if (vestPeriod === 2) {
-        numberOfPartPayments = Math.floor((fullPeriod - lockupPeriod) / vestTime);
-    } else {
-        numberOfPartPayments = Math.floor((fullPeriod - lockupPeriod) / 12 * vestTime);
-    }
-    // console.log("Full period:", fullPeriod);
-    // console.log("Lockup period:", lockupPeriod);
-    // console.log("Vesttime:", vestTime);
-    // console.log("Number of payments:", numberOfPartPayments);
-    return Math.floor((fullAmount - lockupAmount) / numberOfPartPayments);
+function differenceInMonths(date1: Date, date2: Date) {
+    let months = (date2.getFullYear() - date1.getFullYear()) * 12;
+    months -= date1.getMonth();
+    months += date2.getMonth();
+    return months <= 0 ? 0 : months;
 }
 
-function addTimePointToTimestamp(date: Date, vestPeriod: number, vestTime: number) {
-    if (vestPeriod === 1) {
-        const newDate = new Date(date);
-        newDate.setUTCDate(date.getUTCDate() + vestTime);
-        return newDate;
-    } else if (vestPeriod === 2) {
-        const newDate = new Date(date);
-        newDate.setUTCMonth(date.getUTCMonth() + vestTime);
-        return newDate;
-    } else {
-        const newDate = new Date(date);
-        newDate.setUTCFullYear(date.getUTCFullYear() + vestTime);
-        return newDate;
+export function calculateVestedAmount(
+    currentTimestamp: number,
+    startTimestamp: number,
+    vestingCliff: number,
+    totalVestingDuration: number,
+    vestingIntervalTimeUnit: TimeUnit,
+    vestingInterval: number,
+    tokensAmount: number,
+    tokensAmountAfterCliff: number) {
+
+        const begin = new Date(startTimestamp * 1000);
+        if (begin.getUTCHours() !== 0 || begin.getUTCMinutes() !== 0 || begin.getUTCSeconds() !== 0 || begin.getUTCMilliseconds() !== 0) {
+            throw Error("Start timestamp is not a beggining of a month");
+        }
+
+        const cliffEnd = new Date(begin);
+        cliffEnd.setMonth(begin.getMonth() + vestingCliff);
+
+        const end = new Date(begin);
+        end.setMonth(begin.getMonth() + totalVestingDuration);
+
+        const current = new Date(currentTimestamp * 1000);
+
+        if (current < cliffEnd) {
+            return 0;
+        } else {
+            let totalIntervalsNumber;
+            let passedIntervalsNumber;
+            if (vestingIntervalTimeUnit === TimeUnit.DAY) {
+                throw new Error("Days are not implemented");
+            } else if (vestingIntervalTimeUnit === TimeUnit.MONTH) {
+                totalIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, end) / vestingInterval);
+                passedIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, current <= end ? current : end) / vestingInterval);
+            } else if (vestingIntervalTimeUnit === TimeUnit.YEAR) {
+                throw new Error("Years are not implemented");
+            } else {
+                throw new Error("Unknown time unit");
+            }
+            return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) * passedIntervalsNumber / totalIntervalsNumber);
+        }
     }
-}
 
 export function calculateLockedAmount(time: number, startDate: number, lockupPeriod: number, fullPeriod: number, fullAmount: number, lockupAmount: number, vestPeriod: number, vestTime: number) {
-    const initDate = new Date(startDate * 1000);
-
-    let tempDate = new Date(initDate.getTime());
-    let temp = initDate.getUTCMonth() + lockupPeriod;
-    const lockupDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
-
-    tempDate = new Date(initDate.getTime());
-    temp = initDate.getUTCMonth() + fullPeriod;
-    const finishDate = new Date(tempDate.setUTCFullYear(initDate.getUTCFullYear() + Math.floor(temp / 12), temp % 12));
-
-    const currentTime = new Date(time * 1000);
-
-    // console.log("Current time:", currentTime.toUTCString());
-    // console.log("Start time:  ", initDate.toUTCString());
-    // console.log("Lockup time: ", lockupDate.toUTCString());
-    // console.log("Finish time: ", finishDate.toUTCString());
-
-    if (Math.floor(currentTime.getTime() / 1000) >= Math.floor(finishDate.getTime() / 1000)) {
-        return 0;
-    }
-
-    if (Math.floor(currentTime.getTime() / 1000) < Math.floor(lockupDate.getTime() / 1000)) {
-        return fullAmount;
-    }
-
-    let lockedAmount = fullAmount - lockupAmount;
-    const partPayment = calculatePartPayment(startDate, lockupPeriod, fullPeriod, fullAmount, lockupAmount, vestPeriod, vestTime);
-    // console.log("Part payment:", partPayment);
-
-    let indexTime = addTimePointToTimestamp(lockupDate, vestPeriod, vestTime);
-    // console.log("Index Time:", indexTime.toUTCString());
-
-    while (Math.floor(indexTime.getTime() / 1000) <= Math.floor(currentTime.getTime() / 1000)) {
-        // console.log("Index Time:", indexTime.toUTCString());
-        lockedAmount -= partPayment;
-        indexTime = addTimePointToTimestamp(indexTime, vestPeriod, vestTime);
-        // console.log("New Index Time:", indexTime.toUTCString());
-
-    }
-    return lockedAmount;
+    return fullAmount - calculateVestedAmount(time, startDate, lockupPeriod, fullPeriod, vestPeriod, vestTime, fullAmount, lockupAmount);
 }
 
