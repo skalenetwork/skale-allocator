@@ -59,9 +59,9 @@ async function deploy(deployer, networkName, accounts) {
 
     console.log("Starting Allocator deploying...");
 
-    if(!fs.existsSync("../scripts/manager.json")) {
+    if(!fs.existsSync(__dirname +  "/../scripts/manager.json")) {
         console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
-        process.exit();
+        process.exit(1);
     }
     
     const deployAccount = accounts[0];
@@ -90,10 +90,15 @@ async function deploy(deployer, networkName, accounts) {
     // await push(options);  
     execute("npx oz push --deploy-proxy-factory --network " + networkName);
 
+    // get ContractManager
+    const managerConfig = require("../scripts/manager.json");
+    const contractManager = new web3.eth.Contract(managerConfig['contract_manager_abi'], managerConfig['contract_manager_address']);
+    contractManager.address = contractManager._address;
+    console.log("contractManager address:", contractManager.address);
+
     // deploy upgradable contracts
 
     const deployed = new Map();
-    let contractManager;
     for (const contractName of contracts) {
         let contract = await create(Object.assign({ contractAlias: contractName, methodName: 'initialize', methodArgs: [contractManager.address] }, options));
         deployed.set(contractName, contract);
@@ -113,11 +118,6 @@ async function deploy(deployer, networkName, accounts) {
     contracts = contracts.concat(["ProxyAdmin", "ProxyFactory"]);
 
     console.log("Register contracts");
-
-    let managerConfig = require("../scripts/manager.json");
-    contractManager = new web3.eth.Contract(managerConfig['contract_manager_abi'], managerConfig['contract_manager_address']);
-    contractManager.address = contractManager._address;
-    console.log("contractManager address:", contractManager.address);
     
     for (const contract of contracts) {
         const address = deployed.get(contract).address;
@@ -136,6 +136,9 @@ async function deploy(deployer, networkName, accounts) {
             jsonObject[propertyName + "_abi"] = artifacts.require("./" + contractName).abi;
         }
     }
+
+    jsonObject['contract_manager_abi'] = managerConfig['contract_manager_abi'];
+    jsonObject['contract_manager_address'] = managerConfig['contract_manager_address'];
 
     await fsPromises.writeFile(`data/${networkName}.json`, JSON.stringify(jsonObject));
     console.log(`Done, check ${networkName}.json file in data folder.`);
