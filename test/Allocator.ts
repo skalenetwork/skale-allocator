@@ -142,15 +142,16 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     it("should stop cancelable vesting after start", async () => {
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.false;
 
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
 
         const currentTimestamp = await currentTime(web3);
         const month = 31 * 24 * 60 * 60;
         const vestingStartTimestamp = currentTimestamp + month;
+        const vestingStartMonth = await timeHelpers.timestampToMonth(vestingStartTimestamp);
         const totalTokens = 1e6;
         const tokensAfterLockup = 1e5;
 
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartTimestamp, totalTokens, tokensAfterLockup, {from: owner});
+        await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartMonth, totalTokens, tokensAfterLockup, {from: owner});
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.true;
         await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.false;
 
@@ -190,15 +191,16 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     it("should not stop uncancelable vesting after start", async () => {
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.false;
 
-        await allocator.addPlan(6, 36, 2, 6, false, false, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, false, {from: owner});
 
         const currentTimestamp = await currentTime(web3);
         const month = 31 * 24 * 60 * 60;
         const vestingStartTimestamp = currentTimestamp + month;
+        const vestingStartMonth = await timeHelpers.timestampToMonth(vestingStartTimestamp);
         const totalTokens = 1e6;
         const tokensAfterLockup = 1e5;
 
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartTimestamp, totalTokens, tokensAfterLockup, {from: owner});
+        await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartMonth, totalTokens, tokensAfterLockup, {from: owner});
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.true;
         await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.false;
 
@@ -236,37 +238,37 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     });
 
     it("should not register Plan if sender is not owner", async () => {
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
     });
 
     it("should not connect beneficiary to Plan  if sender is not owner", async () => {
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: hacker}).should.be.eventually.rejectedWith("Caller is not the owner");
     });
 
     it("should not register already registered beneficiary", async () => {
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Beneficiary is already added");
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 2, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner}).should.be.eventually.rejectedWith("Beneficiary is already added");
     });
 
     it("should not register Plan if periods incorrect", async () => {
-        await allocator.addPlan(37, 36, 2, 6, false, true, {from: owner}).should.be.eventually.rejectedWith("Cliff period exceeds full period");
+        await allocator.addPlan(37, 36, TimeUnit.MONTH, 6, false, true, {from: owner}).should.be.eventually.rejectedWith("Cliff period exceeds full period");
     });
 
     it("should not register Plan if vesting times incorrect", async () => {
-        await allocator.addPlan(6, 36, 2, 7, false, true, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 7, false, true, {from: owner}).should.be.eventually.rejectedWith("Incorrect vesting times");
     });
 
     it("should not connect beneficiary to Plan if amounts incorrect", async () => {
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e5, 1e6, {from: owner}).should.be.eventually.rejectedWith("Incorrect amounts");
     });
 
     it("should be possible to delegate tokens in escrow if allowed", async () => {
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
         await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
@@ -287,7 +289,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const delegatedAmount = 15000;
 
         beforeEach(async () => {
-            await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+            await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
             await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
@@ -331,7 +333,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const totalVestingDuration = 15;
         const fullAmount = 4e6;
         const lockupAmount = 1e6;
-        const vestPeriod = 2;
+        const vestPeriod = TimeUnit.MONTH;
         const vestTime = 3;
         const startDate = getTimeAtDate(1, 9, 2018);
         const isDelegationAllowed = false;
@@ -697,7 +699,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const fullAmount = 6e6;
         const lockupAmount = 1e6;
         const vestTime = 6;
-        const vestPeriod = 2;
+        const vestPeriod = TimeUnit.MONTH;
         const isDelegationAllowed = false;
 
         let startDate: number;
@@ -1076,7 +1078,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     describe("should calculate next vest time correctly", async () => {
         it("from Dec 30, year based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 2, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, TimeUnit.YEAR, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
@@ -1094,7 +1096,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         });
 
         it("from Dec 30, month based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 1, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, TimeUnit.MONTH, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
@@ -1112,7 +1114,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         });
 
         it("from Dec 30, day based vesting", async () => {
-            await allocator.addPlan(0, 2 * 12, 0, 1, false, false, {from: owner});
+            await allocator.addPlan(0, 2 * 12, TimeUnit.DAY, 1, false, false, {from: owner});
             const plan = 1;
 
             const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();

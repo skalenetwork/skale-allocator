@@ -429,21 +429,21 @@ contract Allocator is Permissions, IERC777Recipient {
      */
     function calculateVestedAmount(address wallet) public view returns (uint256 vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        uint256 date = now;
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         vestedAmount = 0;
-        if (date >= timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff)) {
+        uint256 currentMonth = timeHelpers.getCurrentMonth();
+        if (currentMonth >= beneficiaryPlan.startMonth.add(planParams.vestingCliff)) {
             vestedAmount = beneficiaryPlan.amountAfterLockup;
-            if (date >= timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration)) {
+            if (currentMonth >= beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)) {
                 vestedAmount = beneficiaryPlan.fullAmount;
             } else {
-                uint256 partPayment = _getPartPayment(
+                uint256 payment = _getSinglePaymentSize(
                     wallet,
                     beneficiaryPlan.fullAmount,
                     beneficiaryPlan.amountAfterLockup
                 );
-                vestedAmount = vestedAmount.add(partPayment.mul(_getNumberOfCompletedVestingEvents(wallet)));
+                vestedAmount = vestedAmount.add(payment.mul(_getNumberOfCompletedVestingEvents(wallet)));
             }
         }
     }
@@ -500,7 +500,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the amount of tokens that are unlocked in each vesting
      * period.
      */
-    function _getPartPayment(
+    function _getSinglePaymentSize(
         address wallet,
         uint256 fullAmount,
         uint256 afterLockupPeriodAmount
