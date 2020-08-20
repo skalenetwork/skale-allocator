@@ -1,5 +1,4 @@
 import { ContractManagerInstance, SkaleTokenTesterContract } from "../../../../types/truffle-contracts";
-import { deploySAFT } from "../saft";
 import { deployTokenStateTester } from "./tokenStateTester";
 import { deployDelegationControllerTester } from "./delegationControllerTester";
 
@@ -14,7 +13,6 @@ async function deploy(contractManager: ContractManagerInstance) {
 
 async function deployDependencies(contractManager: ContractManagerInstance) {
     await deployDelegationControllerTester(contractManager);
-    await deploySAFT(contractManager);
     await deployTokenStateTester(contractManager);
 }
 

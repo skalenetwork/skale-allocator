@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /*
-    IDelegationController.sol - SKALE Allocator
-    Copyright (C) 2019-Present SKALE Labs
-    @author Artem Payvin
+    IContractManager.sol - SKALE Allocator
+    Copyright (C) 2020-Present SKALE Labs
+    @author Dmytro Stebaiev
 
     SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -22,17 +22,18 @@
 pragma solidity 0.6.10;
 
 /**
- * @dev Interface of Delegatable Token operations.
+ * @title Contract Manager
+ * @dev This contract is the main contract for upgradeable approach. This
+ * contract contains the current mapping from contract IDs (in the form of
+ * human-readable strings) to addresses.
  */
-interface IDelegationController {
-
-    function delegate(
-        uint256 validatorId,
-        uint256 amount,
-        uint256 delegationPeriod,
-        string calldata info
-    )
-        external;
-
-    function requestUndelegation(uint256 delegationId) external;
+interface IContractManager {
+    /**
+     * @dev Returns the contract address of a given contract name.
+     *
+     * Requirements:
+     *
+     * - Contract mapping must exist.
+     */
+    function getContract(string calldata name) external view returns (address contractAddress);
 }
