@@ -39,7 +39,11 @@ contract Allocator is Permissions, IERC777Recipient {
     uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
     uint256 constant private _MONTHS_PER_YEAR = 12;
 
-    enum TimeUnit {DAY, MONTH, YEAR}
+    enum TimeUnit {
+        DAY,
+        MONTH,
+        YEAR
+    }
 
     enum BeneficiaryStatus {
         UNKNOWN,
@@ -151,7 +155,7 @@ contract Allocator is Permissions, IERC777Recipient {
     function addPlan(
         uint256 vestingCliff, // months
         uint256 totalVestingDuration, // months
-        uint8 vestingIntervalTimeUnit, // 1 - day 2 - month 3 - year
+        TimeUnit vestingIntervalTimeUnit, // 0 - day 1 - month 2 - year
         uint256 vestingInterval, // months or days or years
         bool canDelegate, // can beneficiary delegate all un-vested tokens
         bool isTerminatable
@@ -160,42 +164,31 @@ contract Allocator is Permissions, IERC777Recipient {
         onlyOwner
     {
         require(totalVestingDuration >= vestingCliff, "Cliff period exceeds total vesting duration");
-        require(vestingIntervalTimeUnit >= 1 && vestingIntervalTimeUnit <= 3, "Incorrect vesting time unit");
-        uint vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
-        require(
-            vestingDurationAfterCliff / vestingInterval * vestingInterval == vestingDurationAfterCliff,
-            "Vesting duration can't be divided into equal intervals"
-        );
+        // can't check if vesting interval in days is correct because it depends on startMonth
+        // This check is in connectBeneficiaryToPlan
+        if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
+            uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
+            require(
+                vestingDurationAfterCliff.mod(vestingInterval) == 0,
+                "Vesting duration can't be divided into equal intervals"
+            );
+        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
+            uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
+            require(
+                vestingDurationAfterCliff.mod(vestingInterval.mul(_MONTHS_PER_YEAR)) == 0,
+                "Vesting duration can't be divided into equal intervals"
+            );
+        }
+        
         _plans.push(Plan({
             totalVestingDuration: totalVestingDuration,
             vestingCliff: vestingCliff,
-            vestingIntervalTimeUnit: TimeUnit(vestingIntervalTimeUnit - 1),
+            vestingIntervalTimeUnit: vestingIntervalTimeUnit,
             vestingInterval: vestingInterval,
             isDelegationAllowed: canDelegate,
             isTerminatable: isTerminatable
         }));
         emit PlanCreated(_plans.length);
-    }
-
-    /**
-     * @dev Allows Owner to terminate vesting of a Escrow. Performed when
-     * a beneficiary is terminated.
-     * 
-     * Requirements:
-     * 
-     * - Vesting must be active.
-     */
-    function stopVesting(address beneficiary) external onlyOwner {
-        require(
-            _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE,
-            "Cannot stop vesting for a non active beneficiary"
-        );
-        require(
-            _plans[_beneficiaries[beneficiary].planId - 1].isTerminatable,
-            "Can't stop vesting for beneficiary with this plan"
-        );
-        _beneficiaries[beneficiary].status = BeneficiaryStatus.TERMINATED;
-        Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(calculateVestedAmount(beneficiary));
     }
 
     /**
@@ -219,9 +212,17 @@ contract Allocator is Permissions, IERC777Recipient {
     {
         require(_plans.length >= planId && planId > 0, "Plan does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
-        // require(startMonth <= now, "Incorrect period starts");
-        // TODO: Remove to allow both past and future vesting start date
         require(_beneficiaries[beneficiary].status == BeneficiaryStatus.UNKNOWN, "Beneficiary is already added");
+        if (_plans[planId - 1].vestingIntervalTimeUnit == TimeUnit.DAY) {
+            uint256 vestingDurationInDays = _daysBetweenMonths(
+                startMonth.add(_plans[planId - 1].vestingCliff),
+                startMonth.add(_plans[planId - 1].totalVestingDuration)
+            );
+            require(
+                vestingDurationInDays.mod(_plans[planId - 1].vestingInterval) == 0,
+                "Vesting duration can't be divided into equal intervals"
+            );
+        }
         _beneficiaries[beneficiary] = Beneficiary({
             status: BeneficiaryStatus.CONFIRMATION_PENDING,
             planId: planId,
@@ -230,6 +231,27 @@ contract Allocator is Permissions, IERC777Recipient {
             amountAfterLockup: lockupAmount
         });
         _beneficiaryToEscrow[beneficiary] = _deployEscrow(beneficiary);
+    }
+
+    /**
+     * @dev Allows Owner to terminate vesting of a Escrow. Performed when
+     * a beneficiary is terminated.
+     * 
+     * Requirements:
+     * 
+     * - Vesting must be active.
+     */
+    function stopVesting(address beneficiary) external onlyOwner {
+        require(
+            _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE,
+            "Cannot stop vesting for a non active beneficiary"
+        );
+        require(
+            _plans[_beneficiaries[beneficiary].planId - 1].isTerminatable,
+            "Can't stop vesting for beneficiary with this plan"
+        );
+        _beneficiaries[beneficiary].status = BeneficiaryStatus.TERMINATED;
+        Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(calculateVestedAmount(beneficiary));
     }
 
     /**
@@ -346,9 +368,10 @@ contract Allocator is Permissions, IERC777Recipient {
             return timeHelpers.monthToTimestamp(currentMonth.add(1));
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
             uint256 cliffEndMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
+            uint256 yearsPassed = currentMonth.sub(cliffEndMonth).div(_MONTHS_PER_YEAR);
             return timeHelpers.monthToTimestamp(
                 cliffEndMonth.add(
-                    currentMonth.sub(cliffEndMonth).div(_MONTHS_PER_YEAR).add(1).mul(_MONTHS_PER_YEAR)
+                    yearsPassed.add(1).mul(_MONTHS_PER_YEAR)
                 )
             );
         } else {
@@ -429,6 +452,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the number of vesting events that have completed.
      */
     function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
+        revert("Check if it is wrong");
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 date = now;
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
@@ -448,6 +472,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the number of total vesting events.
      */
     function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint) {
+        revert("Check if it is wrong");
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
@@ -542,5 +567,15 @@ contract Allocator is Permissions, IERC777Recipient {
                 )
             )
         );
+    }
+
+    function _daysBetweenMonths(uint256 beginMonth, uint256 endMonth) private view returns (uint256) {
+        assert(beginMonth <= endMonth);
+        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
+        uint256 beginTimestamp = timeHelpers.monthToTimestamp(beginMonth);
+        uint256 endTimestamp = timeHelpers.monthToTimestamp(endMonth);
+        uint256 secondsPassed = endTimestamp.sub(beginTimestamp);
+        require(secondsPassed.mod(_SECONDS_PER_DAY) == 0, "Internal error in calendar");
+        return secondsPassed.div(_SECONDS_PER_DAY);
     }
 }
