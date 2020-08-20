@@ -51,7 +51,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should get beneficiary data", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         ((await allocator.getStartMonth(beneficiary)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
@@ -62,7 +62,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const plan = await allocator.getPlan(1);
         plan.totalVestingDuration.should.be.equal('36');
         plan.vestingCliff.should.be.equal('6');
-        plan.vestingIntervalTimeUnit.should.be.equal('1');
+        plan.vestingIntervalTimeUnit.should.be.equal(TimeUnit.MONTH.toString());
         plan.vestingInterval.should.be.equal('6');
         plan.isDelegationAllowed.should.be.equal(false);
         const beneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary);
