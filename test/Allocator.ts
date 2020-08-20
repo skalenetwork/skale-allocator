@@ -268,13 +268,13 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     });
 
     it("should be possible to delegate tokens in escrow if allowed", async () => {
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, true, true, {from: owner});
+        await allocator.connectBeneficiaryToPlan(beneficiary, 1, await timeHelpers.timestampToMonth(getTimeAtDate(1, 6, 2020)), 1e6, 1e5, {from: owner})
         await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         const escrowAddress = await allocator.getEscrowAddress(beneficiary);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
-        const escrow: EscrowInstance = await Escrow.at(escrowAddress);
+        const escrow = await Escrow.at(escrowAddress);
         const amount = 15000;
         const delegationPeriod = 3;
         await escrow.delegate(
