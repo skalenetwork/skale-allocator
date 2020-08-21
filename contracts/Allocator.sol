@@ -163,6 +163,8 @@ contract Allocator is Permissions, IERC777Recipient {
         external
         onlyOwner
     {
+        require(totalVestingDuration > 0, "Vesting duration can't be zero");
+        require(vestingInterval > 0, "Vesting interval can't be zero");
         require(totalVestingDuration >= vestingCliff, "Cliff period exceeds total vesting duration");
         // can't check if vesting interval in days is correct because it depends on startMonth
         // This check is in connectBeneficiaryToPlan

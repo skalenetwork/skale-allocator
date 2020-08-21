@@ -32,6 +32,8 @@ export function calculateVestedAmount(
 
         if (current < cliffEnd) {
             return 0;
+        } else if (current >= end) {
+            return tokensAmount;
         } else {
             let totalIntervalsNumber;
             let passedIntervalsNumber;
@@ -45,7 +47,11 @@ export function calculateVestedAmount(
             } else {
                 throw new Error("Unknown time unit");
             }
-            return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) * passedIntervalsNumber / totalIntervalsNumber);
+            if (totalIntervalsNumber > 0) {
+                return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) * passedIntervalsNumber / totalIntervalsNumber);
+            } else {
+                return tokensAmountAfterCliff;
+            }
         }
     }
 
