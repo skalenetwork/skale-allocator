@@ -335,8 +335,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const lockupAmount = 1e6;
         const vestPeriod = TimeUnit.MONTH;
         const vestTime = 3;
-        const startMonth = (await timeHelpers.timestampToMonth(getTimeAtDate(1, 0, 2020))).toNumber();
-        const startTimestamp = (await timeHelpers.monthToTimestamp(startMonth)).toNumber();
+        const startMonth = (await timeHelpers.timestampToMonth(getTimeAtDate(1, 1, 2020))).toNumber();
         const isDelegationAllowed = false;
         const plan = 1;
 
@@ -347,6 +346,14 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const escrowAddress = await allocator.getEscrowAddress(beneficiary);
         const escrow = await Escrow.at(escrowAddress);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
+
+        const month = 31 * 24 * 60 * 60;
+        const year = 12 * month;
+        skipTime(web3, 100 * year);
+
+        await escrow.retrieve({from: beneficiary});
+        (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(0);
+        (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(fullAmount);
     });
 
     it("should operate with fractional payments", async () => {
