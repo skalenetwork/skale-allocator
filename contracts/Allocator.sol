@@ -174,7 +174,7 @@ contract Allocator is Permissions, IERC777Recipient {
                 vestingDurationAfterCliff.mod(vestingInterval) == 0,
                 "Vesting duration can't be divided into equal intervals"
             );
-        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
+        } else if (vestingIntervalTimeUnit == TimeUnit.YEAR) {
             uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
             require(
                 vestingDurationAfterCliff.mod(vestingInterval.mul(_MONTHS_PER_YEAR)) == 0,
