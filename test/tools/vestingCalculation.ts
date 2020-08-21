@@ -1,10 +1,19 @@
 import { TimeUnit } from "./types";
 
+function differenceInDays(date1: Date, date2: Date) {
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    return Math.floor((date2.getTime() - date1.getTime()) / MS_PER_DAY);
+}
+
 function differenceInMonths(date1: Date, date2: Date) {
     let months = (date2.getFullYear() - date1.getFullYear()) * 12;
     months -= date1.getMonth();
     months += date2.getMonth();
     return months <= 0 ? 0 : months;
+}
+
+function differenceInYears(date1: Date, date2: Date) {
+    return date2.getFullYear() - date1.getFullYear();
 }
 
 export function calculateVestedAmount(
@@ -38,12 +47,14 @@ export function calculateVestedAmount(
             let totalIntervalsNumber;
             let passedIntervalsNumber;
             if (vestingIntervalTimeUnit === TimeUnit.DAY) {
-                throw new Error("Days are not implemented");
+                totalIntervalsNumber = Math.floor(differenceInDays(cliffEnd, end) / vestingInterval);
+                passedIntervalsNumber = Math.floor(differenceInDays(cliffEnd, current <= end ? current : end) / vestingInterval);
             } else if (vestingIntervalTimeUnit === TimeUnit.MONTH) {
                 totalIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, end) / vestingInterval);
                 passedIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, current <= end ? current : end) / vestingInterval);
             } else if (vestingIntervalTimeUnit === TimeUnit.YEAR) {
-                throw new Error("Years are not implemented");
+                totalIntervalsNumber = Math.floor(differenceInYears(cliffEnd, end) / vestingInterval);
+                passedIntervalsNumber = Math.floor(differenceInYears(cliffEnd, current <= end ? current : end) / vestingInterval);
             } else {
                 throw new Error("Unknown time unit");
             }
