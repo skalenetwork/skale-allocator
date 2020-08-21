@@ -291,7 +291,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const delegatedAmount = 15000;
 
         beforeEach(async () => {
-            await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
+            await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, true, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner})
             await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
@@ -688,10 +688,11 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         lockedAmount.toNumber().should.be.equal(lockedCalculatedAmount);
         lockedAmount.toNumber().should.be.equal(fullAmount - 3 * lockupAmount);
         lockedAmount.toNumber().should.be.equal(0);
-        (await allocator.getTimeOfNextVest(beneficiary)).toString().should.be.equal((initDate.getTime() / 1000).toString());
+        await allocator.getTimeOfNextVest(beneficiary)
+            .should.be.eventually.rejectedWith("Vesting is over");
     });
 
-    it("should correctly operate Plan 6: only initial payment", async () => {
+    it("should not add plan with zero vesting duration", async () => {
         const lockupPeriod = 0;
         const totalVestingDuration = 0;
         const fullAmount = 2e6;
@@ -702,13 +703,8 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const startTimestamp = (await timeHelpers.monthToTimestamp(startMonth)).toNumber();
         const isDelegationAllowed = false;
         const plan = 1;
-        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
-        await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
-        await allocator.startVesting(beneficiary, {from: owner});
-        const lockedAmount = await allocator.getLockedAmount(beneficiary);
-        const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingIntervalTimeUnit, vestingInterval);
-        lockedAmount.toNumber().should.be.equal(0);
+        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner})
+            .should.be.eventually.rejectedWith("Vesting duration can't be zero");
     });
 
     describe("when Plans are registered at the past", async () => {
