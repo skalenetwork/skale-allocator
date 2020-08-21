@@ -42,7 +42,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should register beneficiary", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
@@ -75,7 +75,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should approve beneficiary address", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
@@ -86,7 +86,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should not approve beneficiary address from hacker", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
@@ -97,7 +97,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should not approve beneficiary address twice", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
@@ -109,7 +109,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should not start vesting without approve beneficiary address", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
@@ -128,7 +128,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
     it("should start vesting with registered & approved beneficiary", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, 2, 6, false, true, {from: owner});
+        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
