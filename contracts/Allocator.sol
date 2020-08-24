@@ -539,14 +539,14 @@ contract Allocator is Permissions, IERC777Recipient {
     function _deployEscrow(address beneficiary) private returns (Escrow) {
         // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
-        Allocator allocator = Allocator(contractManager.getContract("Allocator"));
+        Escrow escrow = Escrow(contractManager.getContract("Escrow"));
         // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
 
         return Escrow(
             proxyFactory.deploy(
                 uint256(bytes32(bytes20(beneficiary))),
-                proxyAdmin.getProxyImplementation(address(allocator)),
+                proxyAdmin.getProxyImplementation(address(escrow)),
                 address(proxyAdmin),
                 abi.encodeWithSelector(
                     Escrow.initialize.selector,
