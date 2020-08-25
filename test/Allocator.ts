@@ -84,55 +84,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         beneficiaryParams.amountAfterLockup.should.be.equal('100000');
     });
 
-    it("should approve beneficiary address", async () => {
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        const startMonth = 6; // July 2020
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        await allocator.approveAddress({from: beneficiary});
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(true);
-        (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
-    });
-
-    it("should not approve beneficiary address from hacker", async () => {
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        const startMonth = 6; // July 2020
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        await allocator.approveAddress({from: hacker}).should.be.eventually.rejectedWith("Beneficiary is not registered");
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
-    });
-
-    it("should not approve beneficiary address twice", async () => {
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        const startMonth = 6; // July 2020
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        await allocator.approveAddress({from: beneficiary});
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(true);
-        (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
-        await allocator.approveAddress({from: beneficiary}).should.be.eventually.rejectedWith("Beneficiary is already approved");
-    });
-
-    it("should not start vesting without approve beneficiary address", async () => {
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        const startMonth = 6; // July 2020
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
-        (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        await allocator.startVesting(beneficiary, {from: owner}).should.be.eventually.rejectedWith("Beneficiary has inappropriate status");
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
-    });
-
     it("should not start vesting without registering beneficiary", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
         await allocator.startVesting(beneficiary, {from: owner}).should.be.eventually.rejectedWith("Beneficiary has inappropriate status");
