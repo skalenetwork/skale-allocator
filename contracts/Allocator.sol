@@ -205,7 +205,7 @@ contract Allocator is Permissions, IERC777Recipient {
     function connectBeneficiaryToPlan(
         address beneficiary,
         uint256 planId,
-        uint256 startMonth, // timestamp
+        uint256 startMonth,
         uint256 fullAmount,
         uint256 lockupAmount
     )
