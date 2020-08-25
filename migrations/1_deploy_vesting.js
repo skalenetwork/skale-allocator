@@ -121,9 +121,20 @@ async function deploy(deployer, networkName, accounts) {
     
     for (const contract of contracts) {
         const address = deployed.get(contract).address;
-        await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
-            console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
-        });
+        let deployedAddress = "0x0000000000000000000000000000000000000000";
+        try {
+            deployedAddress = await contractManager.methods.getContract(contract).call({from: deployAccount});
+        } catch (err) {
+            console.log(err);
+            console.log("Error of getting contract from ContractManager!");
+        }
+        if (deployedAddress !== address) {
+            await contractManager.methods.setContractsAddress(contract, address).send({from: deployAccount}).then(function(res) {
+                console.log("Contract", contract, "with address", address, "is registered in Contract Manager");
+            });
+        } else {
+            console.log("Contract", contract, "has already been deployed at", deployedAddress, "and set in ContractManager");
+        }
     }
     
     console.log('Deploy done, writing results...');
