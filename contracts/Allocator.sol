@@ -566,8 +566,8 @@ contract Allocator is Permissions, IERC777Recipient {
     /**
      * @dev returns time of next vest in abstract time units named "step"
      * Examples:
-     *     if current step is 5 and vesting interval is 7 function fill return 7.
-     *     if current step is 17 and vesting interval is 7 function fill return 21.
+     *     if current step is 5 and vesting interval is 7 function returns 7.
+     *     if current step is 17 and vesting interval is 7 function returns 21.
      */
     function _calculateNextVestingStep(uint256 currentStep, uint256 vestingInterval) private pure returns (uint256) {
         return currentStep
