@@ -48,7 +48,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const startMonth = 6; // July 2020
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
         (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
     });
 
@@ -88,7 +87,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
         await allocator.startVesting(beneficiary, {from: owner}).should.be.eventually.rejectedWith("Beneficiary has inappropriate status");
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
         (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
     });
 
@@ -98,9 +96,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const startMonth = 6; // July 2020
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(false);
-        await allocator.approveAddress({from: beneficiary});
-        (await allocator.isBeneficiaryAddressApproved(beneficiary)).should.be.eq(true);
         (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
         await allocator.startVesting(beneficiary, {from: owner});
         (await allocator.isVestingActive(beneficiary)).should.be.eq(true);
@@ -120,10 +115,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartMonth, totalTokens, tokensAfterLockup, {from: owner});
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.true;
-        await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.false;
-
-        await allocator.approveAddress({from: beneficiary});
-        await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.true;
         await allocator.isVestingActive(beneficiary).should.be.eventually.false;
 
         await allocator.startVesting(beneficiary, {from: owner});
@@ -169,10 +160,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, vestingStartMonth, totalTokens, tokensAfterLockup, {from: owner});
         await allocator.isBeneficiaryRegistered(beneficiary).should.be.eventually.true;
-        await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.false;
-
-        await allocator.approveAddress({from: beneficiary});
-        await allocator.isBeneficiaryAddressApproved(beneficiary).should.be.eventually.true;
         await allocator.isVestingActive(beneficiary).should.be.eventually.false;
 
         await allocator.startVesting(beneficiary, {from: owner});
@@ -240,7 +227,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     it("should be possible to delegate tokens in escrow if allowed", async () => {
         await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, true, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, 1, await timeHelpers.timestampToMonth(getTimeAtDate(1, 6, 2020)), 1e6, 1e5, {from: owner})
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         const escrowAddress = await allocator.getEscrowAddress(beneficiary);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
@@ -262,7 +248,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, true, true, {from: owner});
             const startMonth = 6; // July 2020
             await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner})
-            await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
             const escrowAddress = await allocator.getEscrowAddress(beneficiary);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
@@ -312,7 +297,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
 
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         const escrowAddress = await allocator.getEscrowAddress(beneficiary);
         const escrow = await Escrow.at(escrowAddress);
@@ -340,7 +324,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const plan = 1;
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         let lockedAmount = (await allocator.getLockedAmount(beneficiary)).toNumber();
         lockedAmount.should.be.equal(fullAmount);
@@ -377,7 +360,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const plan = 1;
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         let lockedAmount = (await allocator.getLockedAmount(beneficiary)).toNumber();
         lockedAmount.should.be.equal(fullAmount);
@@ -445,7 +427,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const initDate = new Date(startTimestamp * 1000);
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         let lockedAmount = await allocator.getLockedAmount(beneficiary);
         lockedAmount.toNumber().should.be.equal(fullAmount);
@@ -537,7 +518,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const initDate = new Date(startTimestamp * 1000);
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         let lockedAmount = await allocator.getLockedAmount(beneficiary);
         lockedAmount.toNumber().should.be.equal(fullAmount);
@@ -629,7 +609,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const initDate = new Date(startTimestamp * 1000);
         await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
         await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.approveAddress({from: beneficiary});
         await allocator.startVesting(beneficiary, {from: owner});
         let lockedAmount = await allocator.getLockedAmount(beneficiary);
         lockedAmount.toNumber().should.be.equal(fullAmount);
@@ -698,7 +677,6 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             const plan = 1;
             await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-            await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
         });
 
@@ -783,22 +761,18 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             // Plan example 0
             await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary, planId, startMonth, fullAmount, lockupAmount, {from: owner});
-            await allocator.approveAddress({from: beneficiary});
             await allocator.startVesting(beneficiary, {from: owner});
             // Plan example 1
             await allocator.addPlan(lockupPeriod1, totalVestingDuration1, vestingIntervalTimeUnit1, vestingInterval1, isDelegationAllowed1, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary1, planId1, startMonth, fullAmount1, lockupAmount1, {from: owner});
-            await allocator.approveAddress({from: beneficiary1});
             await allocator.startVesting(beneficiary1, {from: owner});
             // Plan example 2
             await allocator.addPlan(lockupPeriod2, totalVestingDuration2, vestingIntervalTimeUnit2, vestingInterval2, isDelegationAllowed2, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary2, planId2, startMonth, fullAmount2, lockupAmount2, {from: owner});
-            await allocator.approveAddress({from: beneficiary2});
             await allocator.startVesting(beneficiary2, {from: owner});
             // Plan example 3
             await allocator.addPlan(lockupPeriod3, totalVestingDuration3, vestingIntervalTimeUnit3, vestingInterval3, isDelegationAllowed3, true, {from: owner});
             await allocator.connectBeneficiaryToPlan(beneficiary3, planId3, startMonth, fullAmount3, lockupAmount3, {from: owner});
-            await allocator.approveAddress({from: beneficiary3});
             await allocator.startVesting(beneficiary3, {from: owner});
         });
 
