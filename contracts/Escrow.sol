@@ -75,6 +75,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }   
 
     function initialize(address contractManagerAddress, address beneficiary) external initializer {
+        require(beneficiary != address(0), "Beneficiary address is not set");
         Permissions.initialize(contractManagerAddress);
         _beneficiary = beneficiary;
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
