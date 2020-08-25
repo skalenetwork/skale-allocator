@@ -45,8 +45,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     it("should register beneficiary", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
         await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        const startMonth = 6; // July 2020
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: owner});
+        await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
         (await allocator.isVestingActive(beneficiary)).should.be.eq(false);
     });
