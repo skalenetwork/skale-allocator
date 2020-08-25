@@ -191,10 +191,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");        
-        if (!allocator.isDelegationAllowed(_beneficiary)) {
-            require(allocator.calculateVestedAmount(_beneficiary) >= amount, "Incorrect amount to delegate");
-        }
+        require(allocator.isDelegationAllowed(_beneficiary), "Delegation is not allowed");
+        require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");
         
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
