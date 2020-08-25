@@ -465,13 +465,22 @@ contract Allocator is Permissions, IERC777Recipient {
         } else {
             uint256 currentMonth = timeHelpers.getCurrentMonth();
             if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
-                return _daysBetweenMonths(firstVestingMonth, currentMonth).add(
-                    now.sub(timeHelpers.monthToTimestamp(currentMonth)).div(_SECONDS_PER_DAY)
-                );
+                return _daysBetweenMonths(firstVestingMonth, currentMonth)
+                    .add(
+                        now
+                            .sub(timeHelpers.monthToTimestamp(currentMonth))
+                            .div(_SECONDS_PER_DAY)
+                    )
+                    .div(planParams.vestingInterval);
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-                return currentMonth.sub(firstVestingMonth);
+                return currentMonth
+                    .sub(firstVestingMonth)
+                    .div(planParams.vestingInterval);
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-                return currentMonth.sub(firstVestingMonth).div(_MONTHS_PER_YEAR);
+                return currentMonth
+                    .sub(firstVestingMonth)
+                    .div(_MONTHS_PER_YEAR)
+                    .div(planParams.vestingInterval);
             } else {
                 revert("Unknown time unit");
             }
@@ -488,11 +497,16 @@ contract Allocator is Permissions, IERC777Recipient {
             return _daysBetweenMonths(
                 beneficiaryPlan.startMonth.add(planParams.vestingCliff),
                 beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)
-            );
+            ).div(planParams.vestingInterval);
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return planParams.totalVestingDuration.sub(planParams.vestingCliff);
+            return planParams.totalVestingDuration
+                .sub(planParams.vestingCliff)
+                .div(planParams.vestingInterval);
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-            return planParams.totalVestingDuration.sub(planParams.vestingCliff).div(_MONTHS_PER_YEAR);
+            return planParams.totalVestingDuration
+                .sub(planParams.vestingCliff)
+                .div(_MONTHS_PER_YEAR)
+                .div(planParams.vestingInterval);
         } else {
             revert("Unknown time unit");
         }
