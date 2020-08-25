@@ -270,7 +270,7 @@ contract Allocator is Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.totalVestingDuration);
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.totalVestingDuration));
     }
 
     /**
@@ -329,11 +329,11 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the timestamp when vesting cliff ends and periodic vesting
      * begins.
      */
-    function getLockupPeriodTimestamp(address beneficiary) external view returns (uint) {
+    function getLockupPeriodEndTimestamp(address beneficiary) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff);
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.vestingCliff));
     }
 
     /**
@@ -411,12 +411,6 @@ contract Allocator is Permissions, IERC777Recipient {
      * TODO: remove, controlled by Escrow
      */
     function getLockedAmount(address wallet) external view returns (uint) {
-        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
-        Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        if (now < timeHelpers.addMonths(beneficiaryPlan.startMonth, planParams.vestingCliff)) {
-            return _beneficiaries[wallet].fullAmount;
-        }
         return _beneficiaries[wallet].fullAmount - calculateVestedAmount(wallet);
     }
 
@@ -526,28 +520,6 @@ contract Allocator is Permissions, IERC777Recipient {
         returns(uint)
     {
         return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllVestingEvents(wallet));
-    }
-
-    /**
-     * @dev Returns timepoints (days/months/years) from a given timestamp.
-     */
-    function _addMonthsAndTimePoint(
-        uint256 timestamp,
-        uint256 timePoints,
-        TimeUnit vestingIntervalTimeUnit
-    )
-        private
-        view
-        returns (uint)
-    {
-        ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        if (vestingIntervalTimeUnit == TimeUnit.DAY) {
-            return timeHelpers.addDays(timestamp, timePoints);
-        } else if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return timeHelpers.addMonths(timestamp, timePoints);
-        } else {
-            return timeHelpers.addYears(timestamp, timePoints);
-        }
     }
 
     function _deployEscrow(address beneficiary) private returns (Escrow) {

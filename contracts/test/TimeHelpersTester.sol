@@ -38,38 +38,11 @@ contract TimeHelpersTester is ITimeHelpers {
 
     uint256 constant private _ZERO_YEAR = 2020;
 
-    function addDays(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
-        return BokkyPooBahsDateTimeLibrary.addDays(fromTimestamp, n);
-    }
-
-    function addMonths(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
-        return BokkyPooBahsDateTimeLibrary.addMonths(fromTimestamp, n);
-    }
-
-    function addYears(uint256 fromTimestamp, uint256 n) external pure override returns (uint) {
-        return BokkyPooBahsDateTimeLibrary.addYears(fromTimestamp, n);
-    }
-
     function getCurrentMonth() external view override returns (uint) {
         return timestampToMonth(now);
     }
 
-    function timestampToDay(uint256 timestamp) external view override returns (uint) {
-        uint256 wholeDays = timestamp / BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY;
-        uint256 zeroDay = BokkyPooBahsDateTimeLibrary.timestampFromDate(_ZERO_YEAR, 1, 1) /
-            BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY;
-        require(wholeDays >= zeroDay, "Timestamp is too far in the past");
-        return wholeDays - zeroDay;
-    }
-
-    function timestampToYear(uint256 timestamp) external view override returns (uint) {
-        uint256 year;
-        (year, , ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-        require(year >= _ZERO_YEAR, "Timestamp is too far in the past");
-        return year - _ZERO_YEAR;
-    }
-
-    function timestampToMonth(uint256 timestamp) public view override returns (uint) {
+    function timestampToMonth(uint256 timestamp) public pure returns (uint) {
         uint256 year;
         uint256 month;
         (year, month, ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);

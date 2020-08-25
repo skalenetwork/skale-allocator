@@ -29,10 +29,4 @@ pragma solidity 0.6.10;
 interface ITimeHelpers {
     function getCurrentMonth() external view returns (uint);
     function monthToTimestamp(uint month) external view returns (uint timestamp);
-    function addDays(uint256 fromTimestamp, uint256 n) external pure returns (uint);
-    function addMonths(uint256 fromTimestamp, uint256 n) external pure returns (uint);
-    function addYears(uint256 fromTimestamp, uint256 n) external pure returns (uint);
-    function timestampToDay(uint256 timestamp) external view returns (uint);
-    function timestampToMonth(uint256 timestamp) external view returns (uint);
-    function timestampToYear(uint256 timestamp) external view returns (uint);
 }

@@ -54,11 +54,19 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
     it("should get beneficiary data", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(false);
         await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, false, true, {from: owner});
-        await allocator.connectBeneficiaryToPlan(beneficiary, 1, getTimeAtDate(1, 6, 2020), 1e6, 1e5, {from: owner});
+        const startMonth = 6; // July 2020
+        await allocator.connectBeneficiaryToPlan(
+            beneficiary,
+            1,
+            startMonth,
+            1e6,
+            1e5,
+            {from: owner}
+        );
         (await allocator.isBeneficiaryRegistered(beneficiary)).should.be.eq(true);
-        ((await allocator.getStartMonth(beneficiary)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2020));
+        ((await allocator.getStartMonth(beneficiary)).toNumber()).should.be.equal(startMonth);
         ((await allocator.getVestingCliffInMonth(beneficiary)).toNumber()).should.be.equal(6);
-        ((await allocator.getLockupPeriodTimestamp(beneficiary)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
+        ((await allocator.getLockupPeriodEndTimestamp(beneficiary)).toNumber()).should.be.equal(getTimeAtDate(1, 0, 2021));
         (await allocator.isDelegationAllowed(beneficiary)).should.be.equal(false);
         ((await allocator.getFinishVestingTime(beneficiary)).toNumber()).should.be.equal(getTimeAtDate(1, 6, 2023));
         const plan = await allocator.getPlan(1);
@@ -70,7 +78,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         const beneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary);
         web3.utils.toBN(beneficiaryParams.status).toNumber().should.be.equal(BeneficiaryStatus.CONFIRMATION_PENDING);
         beneficiaryParams.planId.should.be.equal('1');
-        beneficiaryParams.startMonth.should.be.equal(getTimeAtDate(1, 6, 2020).toString());
+        beneficiaryParams.startMonth.should.be.equal(startMonth.toString());
         beneficiaryParams.fullAmount.should.be.equal('1000000');
         beneficiaryParams.amountAfterLockup.should.be.equal('100000');
     });
@@ -1099,7 +1107,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await allocator.addPlan(0, 2 * 12, TimeUnit.YEAR, 1, false, false, {from: owner});
             const plan = 1;
 
-            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const currentYear = new Date(await currentTime(web3) * 1000).getFullYear();
             const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
@@ -1117,7 +1125,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await allocator.addPlan(0, 2 * 12, TimeUnit.MONTH, 1, false, false, {from: owner});
             const plan = 1;
 
-            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const currentYear = new Date(await currentTime(web3) * 1000).getFullYear();
             const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
@@ -1135,7 +1143,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
             await allocator.addPlan(0, 2 * 12, TimeUnit.DAY, 1, false, false, {from: owner});
             const plan = 1;
 
-            const currentYear = 2020 + (await timeHelpers.timestampToYear(await currentTime(web3))).toNumber();
+            const currentYear = new Date(await currentTime(web3) * 1000).getFullYear();
             const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
