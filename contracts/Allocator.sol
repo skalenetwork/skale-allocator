@@ -500,7 +500,7 @@ contract Allocator is Permissions, IERC777Recipient {
         // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
         Escrow escrow = Escrow(contractManager.getContract("Escrow"));
-        // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
+        // TODO: replace with ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
 
         return Escrow(
