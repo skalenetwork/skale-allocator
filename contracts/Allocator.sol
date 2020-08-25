@@ -341,13 +341,12 @@ contract Allocator is Permissions, IERC777Recipient {
      */
     function getTimeOfNextVest(address beneficiary) external view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        
+
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
 
-        uint256 lockupEndTimestamp = timeHelpers.monthToTimestamp(
-            beneficiaryPlan.startMonth.add(planParams.vestingCliff)
-        );
+        uint256 firstVestingMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
+        uint256 lockupEndTimestamp = timeHelpers.monthToTimestamp(firstVestingMonth);
         if (now < lockupEndTimestamp) {
             return lockupEndTimestamp;
         }
@@ -356,24 +355,35 @@ contract Allocator is Permissions, IERC777Recipient {
             "Vesting is over"
         );
         require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");
-
+        
         uint256 currentMonth = timeHelpers.getCurrentMonth();
         if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
             // TODO: it may be simplified if TimeHelpers contract in skale-manager is updated
+            uint daysPassedBeforeCurrentMonth = _daysBetweenMonths(firstVestingMonth, currentMonth);
             uint256 currentMonthBeginningTimestamp = timeHelpers.monthToTimestamp(currentMonth);
-            // return next day midnight
+            uint256 daysPassedInCurrentMonth = now.sub(currentMonthBeginningTimestamp).div(_SECONDS_PER_DAY);
+            uint256 daysPassedBeforeNextVest = _calculateNextVestingStep(
+                daysPassedBeforeCurrentMonth.add(daysPassedInCurrentMonth),
+                planParams.vestingInterval
+            );
             return currentMonthBeginningTimestamp.add(
-                now.sub(currentMonthBeginningTimestamp).div(_SECONDS_PER_DAY).add(1).mul(_SECONDS_PER_DAY)
+                daysPassedBeforeNextVest
+                    .sub(daysPassedBeforeCurrentMonth)
+                    .mul(_SECONDS_PER_DAY)
             );
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            // return beginning of next month
-            return timeHelpers.monthToTimestamp(currentMonth.add(1));
-        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-            uint256 cliffEndMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
-            uint256 yearsPassed = currentMonth.sub(cliffEndMonth).div(_MONTHS_PER_YEAR);
             return timeHelpers.monthToTimestamp(
-                cliffEndMonth.add(
-                    yearsPassed.add(1).mul(_MONTHS_PER_YEAR)
+                firstVestingMonth.add(
+                    _calculateNextVestingStep(currentMonth.sub(firstVestingMonth), planParams.vestingInterval)
+                )
+            );
+        } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
+            return timeHelpers.monthToTimestamp(
+                firstVestingMonth.add(
+                    _calculateNextVestingStep(
+                        currentMonth.sub(firstVestingMonth),
+                        planParams.vestingInterval.mul(_MONTHS_PER_YEAR)
+                    )
                 )
             );
         } else {
@@ -551,5 +561,19 @@ contract Allocator is Permissions, IERC777Recipient {
         uint256 secondsPassed = endTimestamp.sub(beginTimestamp);
         require(secondsPassed.mod(_SECONDS_PER_DAY) == 0, "Internal error in calendar");
         return secondsPassed.div(_SECONDS_PER_DAY);
+    }
+
+    /**
+     * @dev returns time of next vest in abstract time units named "step"
+     * Examples:
+     *     if current step is 5 and vesting interval is 7 function fill return 7.
+     *     if current step is 17 and vesting interval is 7 function fill return 21.
+     */
+    function _calculateNextVestingStep(uint256 currentStep, uint256 vestingInterval) private pure returns (uint256) {
+        return currentStep
+            .add(vestingInterval)
+            .sub(
+                currentStep.mod(vestingInterval)
+            );
     }
 }
