@@ -47,7 +47,6 @@ contract Allocator is Permissions, IERC777Recipient {
 
     enum BeneficiaryStatus {
         UNKNOWN,
-        CONFIRMATION_PENDING,
         CONFIRMED,
         ACTIVE,
         TERMINATED
@@ -100,24 +99,6 @@ contract Allocator is Permissions, IERC777Recipient {
         // solhint-disable-next-line no-empty-blocks
     {
 
-    }
-
-    /**
-     * @dev Allows `msg.sender` to approve their address as a Beneficiary.
-     * 
-     * Requirements:
-     * 
-     * - Beneficiary address must be already registered.
-     * - Beneficiary address must not already be approved.
-     */
-    function approveAddress() external {
-        address beneficiary = msg.sender;
-        require(_beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN, "Beneficiary is not registered");
-        require(
-            _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMATION_PENDING,
-            "Beneficiary is already approved"
-        );
-        _beneficiaries[beneficiary].status = BeneficiaryStatus.CONFIRMED;
     }
 
     /**
@@ -226,7 +207,7 @@ contract Allocator is Permissions, IERC777Recipient {
             );
         }
         _beneficiaries[beneficiary] = Beneficiary({
-            status: BeneficiaryStatus.CONFIRMATION_PENDING,
+            status: BeneficiaryStatus.CONFIRMED,
             planId: planId,
             startMonth: startMonth,
             fullAmount: fullAmount,
@@ -285,14 +266,6 @@ contract Allocator is Permissions, IERC777Recipient {
      */
     function isVestingActive(address beneficiary) external view returns (bool) {
         return _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE;
-    }
-
-    /**
-     * @dev Confirms whether the beneficiary is approved in a Plan.
-     */
-    function isBeneficiaryAddressApproved(address beneficiary) external view returns (bool) {
-        return _beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN &&
-            _beneficiaries[beneficiary].status != BeneficiaryStatus.CONFIRMATION_PENDING;
     }
 
     /**
