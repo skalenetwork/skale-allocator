@@ -23,7 +23,7 @@ chai.should();
 chai.use(chaiAsPromised);
 chai.use(chaiAlmost());
 
-contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, beneficiary2, beneficiary3, hacker]) => {
+contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, beneficiary2, beneficiary3, hacker]) => {
     let contractManager: ContractManagerInstance;
     let skaleToken: SkaleTokenTesterInstance;
     let allocator: AllocatorInstance;
@@ -39,7 +39,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         // each test will start from July 1
         await skipTimeToDate(web3, 1, 6);
         await skaleToken.mint(allocator.address, 1e9, "0x", "0x");
-        await allocator.grantRole(await allocator.VESTING_MANAGER_ROLE(), vestringManager);
+        await allocator.grantRole(await allocator.VESTING_MANAGER_ROLE(), vestingManager);
     });
 
     it("should register beneficiary", async () => {
@@ -138,11 +138,11 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         (await skaleToken.balanceOf(beneficiary)).toNumber()
             .should.be.equal(vested);
 
-        await escrow.retrieveAfterTermination({from: vestringManager});
+        await escrow.retrieveAfterTermination(vestingManager, {from: vestingManager});
         (await skaleToken.balanceOf(escrow.address)).toNumber()
             .should.be.equal(0);
-        (await skaleToken.balanceOf(allocator.address)).toNumber()
-            .should.be.equal(1e9 - vested);
+        (await skaleToken.balanceOf(vestingManager)).toNumber()
+            .should.be.equal(totalTokens - vested);
     });
 
     it("should not stop uncancelable vesting after start", async () => {
@@ -184,7 +184,7 @@ contract("Allocator", ([owner, vestringManager, beneficiary, beneficiary1, benef
         (await skaleToken.balanceOf(beneficiary)).toNumber()
             .should.be.equal(vested);
 
-        await escrow.retrieveAfterTermination({from: vestringManager})
+        await escrow.retrieveAfterTermination(vestingManager, {from: vestingManager})
             .should.be.eventually.rejectedWith("Vesting is active");
         (await skaleToken.balanceOf(escrow.address)).toNumber()
             .should.be.equal(1e6 - vested);

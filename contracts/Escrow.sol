@@ -61,7 +61,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _;
     }
 
-    modifier onlyBeneficiaryAndVestingManager() {
+    modifier onlyActiveBeneficiaryOrVestingManager() {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(_msgSender() == _beneficiary, "Message sender is not beneficiary");
@@ -108,8 +108,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     )
         external override
         allow("SkaleToken")
+        // solhint-disable-next-line no-empty-blocks
     {
-        require(to == _beneficiary || to == address(_getAllocatorContract()), "Not authorized transfer");
+
     }
 
     /**
@@ -156,17 +157,18 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Allocator must be active.
      */
-    function retrieveAfterTermination() external onlyVestingManager {
+    function retrieveAfterTermination(address destination) external onlyVestingManager {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
 
+        require(destination != address(0), "Destination address is not set");
         require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
-                    address(_getAllocatorContract()),
+                    destination,
                     escrowBalance.sub(forbiddenToSend)
                 ),
                 "Error of token send"
@@ -212,7 +214,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Beneficiary and Vesting Owner must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external onlyBeneficiaryAndVestingManager {
+    function requestUndelegation(uint256 delegationId) external onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -231,15 +233,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Beneficiary or Vesting Owner must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external onlyBeneficiaryAndVestingManager {        
+    function withdrawBounty(uint256 validatorId, address to) external onlyActiveBeneficiaryOrVestingManager {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
-        if (_msgSender() == _beneficiary) {
-            Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-            require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");            
-            distributor.withdrawBounty(validatorId, to);
-        } else {            
-            distributor.withdrawBounty(validatorId, address(_getAllocatorContract()));
-        }
+        distributor.withdrawBounty(validatorId, to);
     }
 
     /**
@@ -248,11 +244,5 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      */
     function cancelVesting(uint256 vestedAmount) external allow("Allocator") {
         _availableAmountAfterTermination = vestedAmount;
-    }
-
-    // private
-
-    function _getAllocatorContract() internal view returns (Allocator) {
-        return Allocator(contractManager.getContract("Allocator"));
     }
 }
