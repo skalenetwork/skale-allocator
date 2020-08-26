@@ -241,8 +241,6 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     /**
      * @dev Allows Allocator contract to cancel vesting of a Beneficiary. Cancel
      * vesting is performed upon termination.
-     * 
-     * TODO: missing moving beneficiary to deactivated state?
      */
     function cancelVesting(uint256 vestedAmount) external allow("Allocator") {
         _availableAmountAfterTermination = vestedAmount;

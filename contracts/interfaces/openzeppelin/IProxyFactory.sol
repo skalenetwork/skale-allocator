@@ -21,6 +21,7 @@
 
 pragma solidity 0.6.10;
 
+// TODO: Remove it when @openzeppelin/upgrades will be compatible with solidity 0.6
 interface IProxyFactory {
     function deploy(uint256 _salt, address _logic, address _admin, bytes memory _data) external returns (address);
 }

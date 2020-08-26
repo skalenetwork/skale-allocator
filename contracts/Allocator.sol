@@ -388,15 +388,6 @@ contract Allocator is Permissions, IERC777Recipient {
         return _beneficiaries[beneficiary];
     }
 
-    /**
-     * @dev Returns the locked token amount. 
-     * 
-     * TODO: remove, controlled by Escrow
-     */
-    function getLockedAmount(address wallet) external view returns (uint) {
-        return _beneficiaries[wallet].fullAmount - calculateVestedAmount(wallet);
-    }
-
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
@@ -509,7 +500,7 @@ contract Allocator is Permissions, IERC777Recipient {
         // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
         Escrow escrow = Escrow(contractManager.getContract("Escrow"));
-        // TODO: change address to ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
+        // TODO: replace with ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
         IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
 
         return Escrow(
