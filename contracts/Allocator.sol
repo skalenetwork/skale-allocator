@@ -86,6 +86,14 @@ contract Allocator is Permissions, IERC777Recipient {
     //       beneficiary => Escrow
     mapping (address => Escrow) private _beneficiaryToEscrow;
 
+    modifier onlyVestingManager() {
+        require(
+            hasRole(VESTING_MANAGER_ROLE, _msgSender()),
+            "Message sender is not a vesting manager"
+        );
+        _;
+    }
+
     function tokensReceived(
         address operator,
         address from,
@@ -102,14 +110,14 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to activate a vesting and transfer locked
+     * @dev Allows Vesting manager to activate a vesting and transfer locked
      * tokens from the Allocator contract to the associated Escrow address.
      * 
      * Requirements:
      * 
      * - Beneficiary address must be already confirmed.
      */
-    function startVesting(address beneficiary) external onlyOwner {
+    function startVesting(address beneficiary) external onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMED,
             "Beneficiary has inappropriate status"
@@ -125,7 +133,7 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to define and add a Plan.
+     * @dev Allows Vesting manager to define and add a Plan.
      * 
      * Requirements:
      * 
@@ -142,7 +150,7 @@ contract Allocator is Permissions, IERC777Recipient {
         bool isTerminatable
     )
         external
-        onlyOwner
+        onlyVestingManager
     {
         require(totalVestingDuration > 0, "Vesting duration can't be zero");
         require(vestingInterval > 0, "Vesting interval can't be zero");
@@ -175,7 +183,7 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to register a beneficiary to a Plan.
+     * @dev Allows Vesting manager to register a beneficiary to a Plan.
      * 
      * Requirements:
      * 
@@ -191,7 +199,7 @@ contract Allocator is Permissions, IERC777Recipient {
         uint256 lockupAmount
     )
         external
-        onlyOwner
+        onlyVestingManager
     {
         require(_plans.length >= planId && planId > 0, "Plan does not exist");
         require(fullAmount >= lockupAmount, "Incorrect amounts");
@@ -217,14 +225,14 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
-     * @dev Allows Owner to terminate vesting of a Escrow. Performed when
+     * @dev Allows Vesting manager to terminate vesting of a Escrow. Performed when
      * a beneficiary is terminated.
      * 
      * Requirements:
      * 
      * - Vesting must be active.
      */
-    function stopVesting(address beneficiary) external onlyOwner {
+    function stopVesting(address beneficiary) external onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE,
             "Cannot stop vesting for a non active beneficiary"
