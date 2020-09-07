@@ -206,13 +206,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Beneficiary and Vesting Owner to request undelegation. Only 
-     * Vesting Owner can request undelegation after beneficiary is deactivated 
+     * @dev Allows Beneficiary and Vesting manager to request undelegation. Only 
+     * Vesting manager can request undelegation after beneficiary is deactivated 
      * (after beneficiary termination).
      * 
      * Requirements:
      * 
-     * - Beneficiary and Vesting Owner must be `msg.sender`.
+     * - Beneficiary and Vesting manager must be `msg.sender`.
      */
     function requestUndelegation(uint256 delegationId) external onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
@@ -222,15 +222,15 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
-     * @dev Allows Beneficiary and Vesting Owner to withdraw earned bounty. Only
-     * Vesting Owner can withdraw bounty to Allocator contract after beneficiary
+     * @dev Allows Beneficiary and Vesting manager to withdraw earned bounty. Only
+     * Vesting manager can withdraw bounty to Allocator contract after beneficiary
      * is deactivated.
      * 
      * IMPORTANT: Withdraws are only possible after 90 day initial network lock.
      * 
      * Requirements:
      * 
-     * - Beneficiary or Vesting Owner must be `msg.sender`.
+     * - Beneficiary or Vesting manager must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
     function withdrawBounty(uint256 validatorId, address to) external onlyActiveBeneficiaryOrVestingManager {        
