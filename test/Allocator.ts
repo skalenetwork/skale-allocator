@@ -606,9 +606,9 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
         const isDelegationAllowed = false;
         const plan = 1;
         const initDate = new Date(startTimestamp * 1000);
-        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
-        await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.startVesting(beneficiary, {from: owner});
+        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: vestingManager});
+        await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: vestingManager});
+        await allocator.startVesting(beneficiary, {from: vestingManager});
 
         await skipTimeToDate(web3, 1, 5); // 01.05.2022
         let lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary)).toNumber();
@@ -645,9 +645,9 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
         const isDelegationAllowed = false;
         const plan = 1;
         const initDate = new Date(startTimestamp * 1000);
-        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: owner});
-        await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: owner});
-        await allocator.startVesting(beneficiary, {from: owner});
+        await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: vestingManager});
+        await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: vestingManager});
+        await allocator.startVesting(beneficiary, {from: vestingManager});
 
         await skipTimeToDate(web3, 1, 2);
         let lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary)).toNumber();
