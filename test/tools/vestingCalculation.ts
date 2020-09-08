@@ -59,7 +59,7 @@ export function calculateVestedAmount(
                 throw new Error("Unknown time unit");
             }
             if (totalIntervalsNumber > 0) {
-                return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) * passedIntervalsNumber / totalIntervalsNumber);
+                return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) / totalIntervalsNumber) * passedIntervalsNumber;
             } else {
                 return tokensAmountAfterCliff;
             }
