@@ -258,6 +258,11 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
             delegationId = 0;
         });
 
+        it("should be able to cancel pending delegation request", async () => {
+            await escrow.cancelPendingDelegation(delegationId, {from: beneficiary});
+            (await skaleToken.getAndUpdateLockedAmount.call(escrow.address)).toNumber().should.be.equal(0);
+        });
+
         it("should be able to undelegate escrow tokens", async () => {
             await escrow.requestUndelegation(delegationId, {from: beneficiary});
             (await skaleToken.getAndUpdateLockedAmount.call(escrow.address)).toNumber().should.be.equal(0);

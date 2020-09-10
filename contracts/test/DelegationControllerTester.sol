@@ -63,6 +63,11 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
         _locked[holder] -= _delegations[delegationId].amount;
     }
 
+    function cancelPendingDelegation(uint delegationId) external override {
+        address holder = _delegations[delegationId].holder;
+        _locked[holder] -= _delegations[delegationId].amount;
+    }
+
     /**
      * @dev See ILocker.
      */
