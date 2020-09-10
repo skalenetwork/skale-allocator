@@ -222,6 +222,22 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     }
 
     /**
+     * @dev Allows Beneficiary and Vesting manager to cancel a delegation proposal. Only 
+     * Vesting manager can request undelegation after beneficiary is deactivated 
+     * (after beneficiary termination).
+     * 
+     * Requirements:
+     * 
+     * - Beneficiary and Vesting manager must be `msg.sender`.
+     */
+    function cancelPendingDelegation(uint delegationId) external onlyActiveBeneficiaryOrVestingManager {
+        IDelegationController delegationController = IDelegationController(
+            contractManager.getContract("DelegationController")
+        );
+        delegationController.cancelPendingDelegation(delegationId);
+    }
+
+    /**
      * @dev Allows Beneficiary and Vesting manager to withdraw earned bounty. Only
      * Vesting manager can withdraw bounty to Allocator contract after beneficiary
      * is deactivated.

@@ -35,4 +35,6 @@ interface IDelegationController {
         external;
 
     function requestUndelegation(uint256 delegationId) external;
+
+    function cancelPendingDelegation(uint delegationId) external;
 }
