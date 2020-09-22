@@ -78,7 +78,6 @@ contract Allocator is Permissions, IERC777Recipient {
     // array of Plan configs
     Plan[] private _plans;
 
-    uint public newVariable;
     bytes32 public constant VESTING_MANAGER_ROLE = keccak256("VESTING_MANAGER_ROLE");
 
     //       beneficiary => beneficiary plan params
