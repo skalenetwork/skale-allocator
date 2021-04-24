@@ -49,7 +49,7 @@
     "chai-almost": "^1.0.1",
     "chai-as-promised": "^7.1.1",
     "ethereumjs-tx": "2.1.2",
-    "solc": "^0.6.10",
+    "solc": "^0.8.4",
     "truffle": "5.1.42",
     "truffle-typings": "^1.0.8",
     "ts-node": "9.0.0",
