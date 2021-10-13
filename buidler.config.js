@@ -20,6 +20,22 @@ task("accounts", "Prints the list of accounts", async () => {
   }
 });
 
+function getCustomUrl(url) {
+  if (url) {
+    return url;
+  } else {
+    return "http://127.0.0.1:8545"
+  }
+}
+
+function getCustomPrivateKey(privateKey) {
+  if (privateKey) {
+    return [privateKey];
+  } else {
+    return [];
+  }
+}
+
 module.exports = {
   defaultNetwork: "buidlerevm",
   solc: {
@@ -36,8 +52,8 @@ module.exports = {
     buidlerevm: {
     },
     custom: {
-      url: process.env.ENDPOINT,
-      accounts: [process.env.PRIVATE_KEY]
+      url: getCustomUrl(process.env.ENDPOINT),
+      accounts: getCustomPrivateKey(process.env.PRIVATE_KEY)
     }
   },
   etherscan: {
