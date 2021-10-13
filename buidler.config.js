@@ -1,4 +1,5 @@
 usePlugin("@nomiclabs/buidler-truffle5");
+usePlugin("@nomiclabs/buidler-ethers");
 usePlugin("solidity-coverage");
 require('dotenv').config();
 
