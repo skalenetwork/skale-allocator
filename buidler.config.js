@@ -1,5 +1,6 @@
 usePlugin("@nomiclabs/buidler-truffle5");
 usePlugin("@nomiclabs/buidler-ethers");
+usePlugin("@nomiclabs/buidler-etherscan");
 usePlugin("solidity-coverage");
 require('dotenv').config();
 
@@ -33,6 +34,13 @@ module.exports = {
   },
   networks: {
     buidlerevm: {
+    },
+    custom: {
+      url: process.env.ENDPOINT,
+      accounts: [process.env.PRIVATE_KEY]
     }
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN
   }
 };
