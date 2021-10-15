@@ -42,13 +42,13 @@ import "./Permissions.sol";
  */
 contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
 
-    address private _beneficiary;
+    address internal _beneficiary;
 
     uint256 private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;
 
-    modifier onlyBeneficiary() {
+    modifier onlyBeneficiary() virtual {
         require(_msgSender() == _beneficiary, "Message sender is not a plan beneficiary");
         _;
     }
@@ -62,7 +62,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _;
     }
 
-    modifier onlyActiveBeneficiaryOrVestingManager() {
+    modifier onlyActiveBeneficiaryOrVestingManager() virtual {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(_msgSender() == _beneficiary, "Message sender is not beneficiary");
