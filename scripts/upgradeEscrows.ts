@@ -3,6 +3,7 @@ import { createMultiSendTransaction, sendSafeTransaction } from "./tools/gnosis-
 import { promises as fs } from "fs";
 import { encodeTransaction } from "./tools/multiSend";
 import env from "@nomiclabs/buidler";
+import { Wallet } from "@ethersproject/wallet";
 
 async function verify(contractName: string, contractAddress: string, constructorArguments: object) {
     if (![1337, 31337].includes((await env.ethers.provider.getNetwork()).chainId)) {
@@ -47,6 +48,16 @@ async function main() {
     if (!privateKey.startsWith("0x")) {
         privateKey = "0x" + privateKey;
     }
+    const sender = (new Wallet(privateKey)).connect(env.ethers.provider);
+
+    let maxFeePerGasGWei = "100";
+    if (process.env.MAX_FEE_GWEI) {
+        maxFeePerGasGWei = process.env.MAX_FEE_GWEI;
+    }
+    let maxPriorityFeePerGasGWei = "1";
+    if (process.env.MAX_PRIORITY_FEE_GWEI) {
+        maxPriorityFeePerGasGWei = process.env.MAX_PRIORITY_FEE_GWEI
+    }
 
     const proxyAdminFile = JSON.parse(await fs.readFile("node_modules/@openzeppelin/upgrades/build/contracts/ProxyAdmin.json", "utf-8"));
     const proxyAdmin = await env.ethers.getContractAt(proxyAdminFile["abi"], proxyAdminAddress);
@@ -78,8 +89,11 @@ async function main() {
     let new_implementation_address;
     if (!process.env.NEW_IMPLEMENTATION) {
         console.log("Deploy implementation");
-        const escrowFactory = await env.ethers.getContractFactory("Escrow");
-        const escrow = await escrowFactory.deploy();
+        const escrowFactory = (await env.ethers.getContractFactory("Escrow")).connect(sender);
+        const escrow = await escrowFactory.deploy({
+            maxFeePerGas: env.ethers.utils.parseUnits(maxFeePerGasGWei, "gwei"),
+            maxPriorityFeePerGas: env.ethers.utils.parseUnits(maxPriorityFeePerGasGWei, "gwei")
+        });
         console.log("Deploy transaction:");
         console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
         console.log("New Escrow address:", escrow.address);
