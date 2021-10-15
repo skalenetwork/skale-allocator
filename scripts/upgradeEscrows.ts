@@ -41,10 +41,38 @@ async function main() {
         process.exit(1);
     }
 
-    const safe = process.env.SAFE;
+    const safe = env.ethers.utils.getAddress(process.env.SAFE);
+    const proxyAdminAddress = env.ethers.utils.getAddress(process.env.PROXY_ADMIN);
     let privateKey = process.env.PRIVATE_KEY;
     if (!privateKey.startsWith("0x")) {
         privateKey = "0x" + privateKey;
+    }
+
+    const proxyAdminFile = JSON.parse(await fs.readFile("node_modules/@openzeppelin/upgrades/build/contracts/ProxyAdmin.json", "utf-8"));
+    const proxyAdmin = await env.ethers.getContractAt(proxyAdminFile["abi"], proxyAdminAddress);
+
+    const proxies = (await fs.readFile(process.env.PROXIES, "utf-8"))
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line !== "")
+
+    const implementations = await Promise.all(proxies.map(async (proxy) => {
+        return await proxyAdmin.getProxyImplementation(proxy);
+    }));
+    const distinct_implementations = [...new Set(implementations)];
+    if (distinct_implementations.length != 1) {
+        console.log("Upgraded Escrows have different implementations. Check if Escrow list is correct.");
+        console.log("Present implementations:");
+        distinct_implementations.forEach((implementation) => console.log);
+        throw Error("Wrong Escrow list");
+    }
+
+    for (const proxy of proxies) {
+        const currentProxyAdminAddress = await proxyAdmin.getProxyAdmin(proxy);
+        if (proxyAdminAddress !== currentProxyAdminAddress) {
+            console.log(proxy, "Escrow are controlled by different ProxyAdmin (" + currentProxyAdminAddress +")");
+            throw Error("Wrong ProxyAdmin");
+        }
     }
 
     let new_implementation_address;
@@ -63,14 +91,6 @@ async function main() {
     } else {
         new_implementation_address = process.env.NEW_IMPLEMENTATION;
     }
-
-    const proxyAdminFile = JSON.parse(await fs.readFile("node_modules/@openzeppelin/upgrades/build/contracts/ProxyAdmin.json", "utf-8"));
-    const proxyAdmin = await env.ethers.getContractAt(proxyAdminFile["abi"], process.env.PROXY_ADMIN);
-
-    const proxies = (await fs.readFile(process.env.PROXIES, "utf-8"))
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line !== "")
 
     const safeTransactions: string[] = []    
     for (const proxy of proxies) {
