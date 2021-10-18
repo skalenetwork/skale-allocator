@@ -243,14 +243,18 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
         let delegationId: number;
         let escrow: EscrowInstance;
         const delegatedAmount = 15000;
+        const fullAmount = 1e6;
 
         beforeEach(async () => {
             await allocator.addPlan(6, 36, TimeUnit.MONTH, 6, true, true, {from: vestingManager});
-            const startMonth = 6; // July 2020
-            await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, 1e6, 1e5, {from: vestingManager})
+            const time = await currentTime(web3);
+            const currentDate = new Date(time * 1000);
+            const previousYear = currentDate.getFullYear() - 1;
+            const startMonth = 6 + 12 * (previousYear - 2020); // July of previous year
+            await allocator.connectBeneficiaryToPlan(beneficiary, 1, startMonth, fullAmount, 1e5, {from: vestingManager})
             await allocator.startVesting(beneficiary, {from: vestingManager});
             const escrowAddress = await allocator.getEscrowAddress(beneficiary);
-            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
+            (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             escrow = (await Escrow.at(escrowAddress)) as EscrowInstance;
             const delegationPeriod = 3;
             await escrow.delegate(
@@ -286,6 +290,13 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
             );
             await escrow.withdrawBounty(validatorId, beneficiary, {from: beneficiary});
             (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(bounty);
+        });
+
+        it("should allow retrieving vested tokens", async () => {
+            const vested = (await allocator.calculateVestedAmount(beneficiary)).toNumber();
+            const free = Math.min(vested, fullAmount - delegatedAmount);
+            await escrow.retrieve({from: beneficiary});
+            (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(free);
         });
     });
 
@@ -700,6 +711,7 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
 
         let startMonth: number;
         let startTimestamp: number;
+        let escrow: EscrowInstance;
 
         beforeEach(async () => {
             const time = await currentTime(web3);
@@ -712,6 +724,8 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
             await allocator.addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true, {from: vestingManager});
             await allocator.connectBeneficiaryToPlan(beneficiary, plan, startMonth, fullAmount, lockupAmount, {from: vestingManager});
             await allocator.startVesting(beneficiary, {from: vestingManager});
+
+            escrow = await Escrow.at(await allocator.getEscrowAddress(beneficiary));
         });
 
         it("should unlock tokens after lockup", async () => {
@@ -723,8 +737,6 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
         });
 
         it("should be able to transfer token", async () => {
-            const escrowAddress = await allocator.getEscrowAddress(beneficiary);
-            const escrow = await Escrow.at(escrowAddress);
             await escrow.retrieve({from: beneficiary});
             (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(lockupAmount);
             await skaleToken.transfer(beneficiary1, "100", {from: beneficiary});
@@ -733,8 +745,6 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
         });
 
         it("should not be able to transfer more than unlocked", async () => {
-            const escrowAddress = await allocator.getEscrowAddress(beneficiary);
-            const escrow = await Escrow.at(escrowAddress);
             await escrow.retrieve({from: beneficiary});
             (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(lockupAmount);
             await skaleToken.transfer(beneficiary1, "1000001", {from: beneficiary}).should.be.eventually.rejectedWith("ERC777: transfer amount exceeds balance");
@@ -746,6 +756,15 @@ contract("Allocator", ([owner, vestingManager, beneficiary, beneficiary1, benefi
             const lockedCalculatedAmount = calculateLockedAmount(await currentTime(web3), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingIntervalTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
             lockedAmount.should.be.lessThan(fullAmount - lockupAmount);
+        });
+
+        it("should work if Escrow was refilled", async () => {
+            await skaleToken.mint(hacker, 1, "0x", "0x");
+            await skaleToken.transfer(escrow.address, 1, {from: hacker});
+
+            const vested = (await allocator.calculateVestedAmount(beneficiary)).toNumber();
+            await escrow.retrieve({from: beneficiary});
+            (await skaleToken.balanceOf(beneficiary)).toNumber().should.be.equal(vested + 1);
         });
     });
 
