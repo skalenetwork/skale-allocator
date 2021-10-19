@@ -1,4 +1,4 @@
 {
-    "detectors_to_exclude": "solc-version,timestamp",
+    "detectors_to_exclude": "naming-convention,solc-version,timestamp",
     "filter_paths": "@openzeppelin/contracts-ethereum-package|@nomiclabs/buidler/|thirdparty|Migrations.sol|test"
 }
