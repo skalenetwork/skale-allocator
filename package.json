@@ -68,7 +68,7 @@
     "@types/web3": "^1.2.2",
     "codecov": "^3.7.2",
     "dotenv": "^8.2.0",
-    "elliptic": "^6.5.3",
+    "elliptic": "^6.5.4",
     "ganache-cli": "^6.10.1",
     "solhint": "^3.0.0",
     "solidity-coverage": "^0.7.5",
