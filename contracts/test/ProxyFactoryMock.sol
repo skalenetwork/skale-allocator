@@ -37,7 +37,7 @@ contract ProxyMock {
         }
     }
 
-    fallback () payable external {
+    fallback () external payable {
         _delegate(_implementation());
     }
 
