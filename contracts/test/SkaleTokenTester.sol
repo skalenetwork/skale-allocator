@@ -63,11 +63,11 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address) pure external returns (uint) {
+    function getAndUpdateDelegatedAmount(address) external pure returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address) pure external returns (uint) {
+    function getAndUpdateSlashedAmount(address) external pure returns (uint) {
         return 0;
     }
 

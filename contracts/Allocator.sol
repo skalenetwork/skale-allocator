@@ -4,6 +4,7 @@
     Allocator.sol - SKALE Allocator
     Copyright (C) 2020-Present SKALE Labs
     @author Artem Payvin
+    @author Dmytro Stebaiev
 
     SKALE Allocator is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -36,9 +37,6 @@ import "./Permissions.sol";
  */
 contract Allocator is Permissions, IERC777Recipient {
 
-    uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
-    uint256 constant private _MONTHS_PER_YEAR = 12;
-
     enum TimeUnit {
         DAY,
         MONTH,
@@ -69,9 +67,8 @@ contract Allocator is Permissions, IERC777Recipient {
         uint256 amountAfterLockup;
     }
 
-    event PlanCreated(
-        uint256 id
-    );
+    uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
+    uint256 constant private _MONTHS_PER_YEAR = 12;
 
     IERC1820Registry private _erc1820;
 
@@ -85,6 +82,10 @@ contract Allocator is Permissions, IERC777Recipient {
 
     //       beneficiary => Escrow
     mapping (address => Escrow) private _beneficiaryToEscrow;
+
+    event PlanCreated(
+        uint256 id
+    );
 
     modifier onlyVestingManager() {
         require(
