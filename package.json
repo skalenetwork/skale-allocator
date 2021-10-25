@@ -68,7 +68,7 @@
     "codecov": "^3.7.2",
     "dotenv": "^10.0.0",
     "elliptic": "^6.5.4",
-    "ganache-cli": "^6.10.1",
+    "ganache-cli": "^6.12.2",
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.5",
     "tslint": "^6.1.3",
