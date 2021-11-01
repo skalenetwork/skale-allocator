@@ -41,7 +41,7 @@
     "@truffle/hdwallet-provider": "^1.5.1",
     "@types/chai": "^4.2.12",
     "@types/chai-almost": "^1.0.1",
-    "@types/chai-as-promised": "^7.1.3",
+    "@types/chai-as-promised": "^7.1.4",
     "@types/minimist": "^1.2.2",
     "bignumber.js": "^9.0.0",
     "chai": "^4.3.4",
