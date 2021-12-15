@@ -1,2 +1,2 @@
 slither-analyzer==0.8.1
-crytic-compile==0.2.1
+crytic-compile==0.2.2
