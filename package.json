@@ -50,7 +50,7 @@
     "ethereumjs-tx": "2.1.2",
     "ethers": "^5.5.2",
     "ethers-eip712": "^0.2.0",
-    "solc": "^0.8.10",
+    "solc": "^0.8.11",
     "truffle": "5.4.24",
     "truffle-typings": "^1.0.8",
     "ts-node": "9.1.1",
