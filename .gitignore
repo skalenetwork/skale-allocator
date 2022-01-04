@@ -50,5 +50,6 @@ coverage.json
 
 # Typescript staff
 types/
+typechain/
 
 .openzeppelin/.session

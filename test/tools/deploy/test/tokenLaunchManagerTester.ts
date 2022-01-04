@@ -1,15 +1,16 @@
-import { ContractManagerInstance,
-    TokenLaunchManagerTesterContract } from "../../../../types/truffle-contracts";
+import { ethers } from "hardhat";
+import { ContractManager,
+    TokenLaunchManagerTester } from "../../../../typechain";
 
-const TokenLaunchManager: TokenLaunchManagerTesterContract = artifacts.require("./TokenLaunchManagerTester");
 const name = "TokenLaunchManager";
 
-export async function deployTokenLaunchManagerTester(contractManager: ContractManagerInstance) {
+export async function deployTokenLaunchManagerTester(contractManager: ContractManager) {
+    const factory = await ethers.getContractFactory("TokenLaunchManagerTester")
     try {
         const address = await contractManager.getContract(name);
-        return TokenLaunchManager.at(address);
+        return factory.attach(address);
     } catch (e) {
-        const tokenLaunchManager = await TokenLaunchManager.new();
+        const tokenLaunchManager = await factory.deploy();
         tokenLaunchManager.initialize(contractManager.address);
         await contractManager.setContractsAddress(name, tokenLaunchManager.address);
         return tokenLaunchManager;

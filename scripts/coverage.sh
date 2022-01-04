@@ -1,4 +1,4 @@
 #!/bin/bash
 
-npx buidler coverage --solcoverjs .solcover.js || exit $?
+npx hardhat coverage --solcoverjs .solcover.js || exit $?
 bash <(curl -s https://codecov.io/bash) || exit $?

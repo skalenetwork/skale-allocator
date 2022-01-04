@@ -1,56 +1,66 @@
-import { ContractManagerInstance } from "../../../types/truffle-contracts";
-
-function getContract(contractName: string): Truffle.Contract<Truffle.ContractInstance> {
-    return artifacts.require("./" + contractName);
-}
+import { Contract } from "ethers";
+import { ethers } from "hardhat";
+import { ContractManager } from "../../../typechain";
 
 async function defaultDeploy(contractName: string,
-                             contractManager: ContractManagerInstance): Promise<Truffle.ContractInstance> {
-    const Contract = getContract(contractName);
-    const instance = await Contract.new();
+    contractManager: ContractManager): Promise<Contract> {
+    const ContractFactory = await ethers.getContractFactory(contractName);
+    const instance = await ContractFactory.deploy();
     await instance.initialize(contractManager.address);
     return instance;
 }
 
 async function defaultDeployWithConstructor(
     contractName: string,
-    contractManager: ContractManagerInstance): Promise<Truffle.ContractInstance> {
-        const Contract = getContract(contractName);
-        return await Contract.new(contractManager.address);
+    contractManager: ContractManager) {
+    const contractFactory = await ethers.getContractFactory(contractName);
+    return await contractFactory.deploy(contractManager.address);
+}
+
+async function deployWithConstructor(
+    contractName: string) {
+    const contractFactory = await ethers.getContractFactory(contractName);
+    return await contractFactory.deploy();
 }
 
 function deployFunctionFactory(
     contractName: string,
-    deployDependencies: (contractManager: ContractManagerInstance) => Promise<void>
-      = async (contractManager: ContractManagerInstance) => undefined,
-    deploy: (contractManager: ContractManagerInstance) => Promise<Truffle.ContractInstance>
-      = async ( contractManager: ContractManagerInstance) => {
-          return await defaultDeploy(contractName, contractManager);
-      }): any {
-
-    return async (contractManager: ContractManagerInstance) => {
-            const Contract = getContract(contractName);
-            try {
-                return Contract.at(await contractManager.getContract(contractName));
-            } catch (e) {
-                const instance = await deploy(contractManager);
-                await contractManager.setContractsAddress(contractName, instance.address);
-                await deployDependencies(contractManager);
-                return instance;
-            }
-        };
+    deployDependencies: (contractManager: ContractManager) => Promise<void>
+        = async (contractManager: ContractManager) => undefined,
+    deploy = async (contractManager: ContractManager) => {
+        return await defaultDeploy(contractName, contractManager);
+    }): any {
+    return async (contractManager: ContractManager) => {
+        const contractFactory = await ethers.getContractFactory(contractName);
+        try {
+            return contractFactory.attach(await contractManager.getContract(contractName));
+        } catch (e) {
+            const instance = await deploy(contractManager);
+            await contractManager.setContractsAddress(contractName, instance.address);
+            await deployDependencies(contractManager);
+            return instance;
+        }
+    };
 }
 
 function deployWithConstructorFunctionFactory(
     contractName: string,
-    deployDependencies: (contractManager: ContractManagerInstance) => Promise<void>
-        = async (contractManager: ContractManagerInstance) => undefined): any {
-            return deployFunctionFactory(
-                contractName,
-                deployDependencies,
-                async ( contractManager: ContractManagerInstance) => {
-                    return await defaultDeployWithConstructor(contractName, contractManager);
-                });
-    }
+    deployDependencies: (contractManager: ContractManager) => Promise<void>
+        = async (contractManager: ContractManager) => undefined,
+    deploy
+        = async (contractManager: ContractManager) => {
+            return await defaultDeployWithConstructor(contractName, contractManager);
+        }
+): any {
+    return deployFunctionFactory(
+        contractName,
+        deployDependencies,
+        deploy);
+}
 
-export { deployFunctionFactory, deployWithConstructorFunctionFactory };
+export {
+    deployFunctionFactory,
+    deployWithConstructorFunctionFactory,
+    deployWithConstructor,
+    defaultDeploy
+};

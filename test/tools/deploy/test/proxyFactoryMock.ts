@@ -1,13 +1,14 @@
 import { deployEscrow } from "../escrow";
-import { ProxyFactoryMockInstance, ContractManagerInstance } from "../../../../types/truffle-contracts";
+import { ProxyFactoryMock, ContractManager } from "../../../../typechain";
+import { ethers } from "hardhat";
 
-export async function deployProxyFactoryMock(contractManager: ContractManagerInstance) {
-    const ProxyFactoryMock = artifacts.require("./ProxyFactoryMock");
+export async function deployProxyFactoryMock(contractManager: ContractManager) {
+    const factory = await ethers.getContractFactory("ProxyFactoryMock");
     const proxyFactoryMockName = "ProxyFactory";
     try {
         await contractManager.getContract(proxyFactoryMockName);
     } catch (e) {
-        const proxyFactoryMock: ProxyFactoryMockInstance = await ProxyFactoryMock.new();
+        const proxyFactoryMock = await factory.deploy() as ProxyFactoryMock;
         await contractManager.setContractsAddress(proxyFactoryMockName, proxyFactoryMock.address);
         await contractManager.setContractsAddress("ProxyAdmin", proxyFactoryMock.address);
         const escrow = await deployEscrow(contractManager);

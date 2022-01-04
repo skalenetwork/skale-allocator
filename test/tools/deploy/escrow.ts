@@ -1,14 +1,15 @@
-import { ContractManagerInstance, EscrowInstance } from "../../../types/truffle-contracts";
+import { ethers } from "hardhat";
+import { ContractManager, Escrow } from "../../../typechain";
 import { deployFunctionFactory } from "./factory";
 import { deployDelegationControllerTester } from "./test/delegationControllerTester";
 
-export const deployEscrow: (contractManager: ContractManagerInstance) => Promise<EscrowInstance>
+export const deployEscrow: (contractManager: ContractManager) => Promise<Escrow>
     = deployFunctionFactory("Escrow",
-                            async (contractManager: ContractManagerInstance) => {
+                            async (contractManager: ContractManager) => {
                                 await deployDelegationControllerTester(contractManager);
                             },
-                            async (contractManager: ContractManagerInstance) => {
-                                const Escrow = artifacts.require("./Escrow");
-                                const escrow = await Escrow.new();
+                            async (contractManager: ContractManager) => {
+                                const factory = await ethers.getContractFactory("Escrow")
+                                const escrow = await factory.deploy();
                                 return escrow;
                             });
