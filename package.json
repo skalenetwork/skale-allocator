@@ -51,7 +51,7 @@
     "ethers": "^5.5.3",
     "ethers-eip712": "^0.2.0",
     "solc": "^0.8.11",
-    "truffle": "5.4.30",
+    "truffle": "5.5.5",
     "truffle-typings": "^1.0.8",
     "ts-node": "9.1.1",
     "typechain": "^1.0.5",
