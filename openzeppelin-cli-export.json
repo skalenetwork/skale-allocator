@@ -1,0 +1,44 @@
+{
+  "networks": {
+    "mainnet": {
+      "proxies": {
+        "@skalenetwork/skale-allocator/Allocator": [
+          {
+            "address": "0xB575c158399227b6ef4Dcfb05AA3bCa30E12a7ba",
+            "version": "0.0.1",
+            "implementation": "0x2CE9c54C5e5F167a838cd49441E085adE7368671",
+            "admin": "0x9B1E4A9Fe5142346E1C51907f0583e6aC663b8A0",
+            "kind": "Upgradeable"
+          }
+        ],
+        "@skalenetwork/skale-allocator/Escrow": [
+          {
+            "address": "0x7A7d709332d10786adCf35FD83608F656a7b4a30",
+            "version": "0.0.1",
+            "implementation": "0xE61b48d00B9CA02dD9A3764A4d9d263CD7B4D351",
+            "admin": "0x9B1E4A9Fe5142346E1C51907f0583e6aC663b8A0",
+            "kind": "Upgradeable"
+          }
+        ]
+      },
+      "proxyFactory": {
+        "address": "0xBc81979091a5A7A50b80e490024Bcbc336216f9b"
+      }
+    }
+  },
+  "compiler": {
+    "compilerSettings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": "200"
+      }
+    },
+    "solcVersion": "0.6.10",
+    "typechain": {
+      "enabled": false
+    },
+    "manager": "openzeppelin",
+    "artifactsDir": "build/contracts",
+    "contractsDir": "contracts"
+  }
+}

@@ -83,8 +83,15 @@ contract Allocator is Permissions, IERC777Recipient {
     //       beneficiary => Escrow
     mapping (address => Escrow) private _beneficiaryToEscrow;
 
+    string public version;
+
     event PlanCreated(
         uint256 id
+    );
+
+    event VersionUpdated(
+        string oldVersion,
+        string newVersion
     );
 
     modifier onlyVestingManager() {
@@ -244,6 +251,18 @@ contract Allocator is Permissions, IERC777Recipient {
         );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.TERMINATED;
         Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(calculateVestedAmount(beneficiary));
+    }
+
+    /**
+     * @dev Sets new version of contracts on schain
+     *
+     * Requirements:
+     *
+     * - `msg.sender` must be granted DEFAULT_ADMIN_ROLE
+     */
+    function setVersion(string calldata newVersion) external onlyOwner {
+        emit VersionUpdated(version, newVersion);
+        version = newVersion;
     }
 
     /**
