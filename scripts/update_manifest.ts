@@ -12,7 +12,7 @@ export function getContractKeyInAbiFile(contract: string) {
 async function main() {
     if (!process.env.MANIFEST || !process.env.VERSION) {
         console.log("Example of usage:");
-        console.log("MANIFEST=.openzeppelin/mainnet.json VERSION=1.7.2-stable.0 npx hardhat run scripts/update_mainnet.json.ts --network localhost")
+        console.log("MANIFEST=.openzeppelin/mainnet.json VERSION=2.2.0-stable.0 npx hardhat run scripts/update_manifest.json.ts --network localhost")
         console.log();
         console.log("IMPORTANT! openzeppelin-cli-export.json must correspond the manifest file");
         process.exit(1);
@@ -34,7 +34,7 @@ async function main() {
 
     console.log("Deploy contracts");
     await exec(`rm .openzeppelin/unknown-31337.json || rm .openzeppelin/unknown-1337.json || true`);
-    await exec("npx hardhat run migrations/deploy.ts --network localhost");
+    await exec(`VERSION=${version} npx hardhat run migrations/deploy.ts --network localhost`);
 
     await exec("rm -r contracts");
     await exec("mv contracts_tmp contracts");
@@ -51,7 +51,7 @@ async function main() {
     const manifest = JSON.parse(await fs.readFile(manifestFilename, "utf-8"));
     const newManifest = JSON.parse(await fs.readFile(newManifestFilename, "utf-8"));
     const cliExport = JSON.parse(await fs.readFile(exportFilename, "utf-8"));
-    const artifacts = JSON.parse(await fs.readFile(`data/skale-allocator-${(await fs.readFile("VERSION", "utf-8")).trim()}-localhost-abi.json`, "utf-8"));
+    const artifacts = JSON.parse(await fs.readFile(`data/skale-allocator-${version}-localhost-abi.json`, "utf-8"));
     const network = manifestFilename.substr(0, manifestFilename.lastIndexOf(".")).split("/").pop() as string;
 
     interface ImplementationInterface {
@@ -97,7 +97,12 @@ async function main() {
                 throw Error(`Contract ${contractName} was not deployed`);
             }
         } else {
-            throw Error(`Can't find information about implementation at address ${contract.address} in openzeppelin-cli-export.json`);
+            const layout = contract.layout as any;
+            if (layout.storage[layout.storage.length - 1].contract === "ContractManager") {
+                continue;
+            } else {
+                throw Error(`Can't find information about implementation at address ${contract.address} in openzeppelin-cli-export.json`);
+            }
         }
     }
 
