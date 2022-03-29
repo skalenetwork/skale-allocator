@@ -42,6 +42,15 @@ contract TimeHelpersTester is ITimeHelpers {
         return timestampToMonth(now);
     }
 
+    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
+        uint256 year = _ZERO_YEAR;
+        uint256 _month = month;
+        year = year.add(_month.div(12));
+        _month = _month.mod(12);
+        _month = _month.add(1);
+        return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, _month, 1);
+    }
+
     function timestampToMonth(uint256 timestamp) public pure returns (uint) {
         uint256 year;
         uint256 month;
@@ -52,12 +61,4 @@ contract TimeHelpersTester is ITimeHelpers {
         return month;
     }
 
-    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
-        uint256 year = _ZERO_YEAR;
-        uint256 _month = month;
-        year = year.add(_month.div(12));
-        _month = _month.mod(12);
-        _month = _month.add(1);
-        return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, _month, 1);
-    }
 }

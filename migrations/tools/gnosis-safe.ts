@@ -2,10 +2,6 @@ import axios from "axios";
 import { TypedDataUtils } from "ethers-eip712";
 import * as ethUtil from 'ethereumjs-util';
 import chalk from "chalk";
-import type { ethers } from "ethers";
-import { HardhatEthersHelpers } from "@nomiclabs/hardhat-ethers/types";
-
-type Ethers = typeof ethers & HardhatEthersHelpers;
 
 enum Network {
     MAINNET = 1,
@@ -126,7 +122,7 @@ function concatTransactions(transactions: string[]) {
     }).join("");
 }
 
-export async function createMultiSendTransaction(ethers: Ethers, safeAddress: string, privateKey: string, transactions: string[], isSafeMock = false) {
+export async function createMultiSendTransaction(ethers: any, safeAddress: string, privateKey: string, transactions: string[], isSafeMock = false) {
     const chainId = (await ethers.provider.getNetwork()).chainId;
     const multiSendAddress = getMultiSendAddress(chainId);
     const multiSendAbi = [{"constant":false,"inputs":[{"internalType":"bytes","name":"transactions","type":"bytes"}],"name":"multiSend","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}];

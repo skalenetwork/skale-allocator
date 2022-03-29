@@ -7,6 +7,7 @@ import { verifyProxy } from './tools/verification';
 import { Manifest } from "@openzeppelin/upgrades-core";
 import { Allocator } from '../typechain';
 import { getVersion } from './tools/version';
+import chalk from "chalk";
 
 
 export function getContractKeyInAbiFile(contract: string) {
@@ -78,7 +79,7 @@ async function main() {
                 await (await (proxy as Allocator).setVersion(version)).wait();
                 console.log(`Set version ${version}`)
             } catch {
-                console.log("Failed to set skale-allocator version");
+                console.log(chalk.red("Failed to set skale-allocator version"));
             }
         }
     }
@@ -92,8 +93,8 @@ async function main() {
         outputObject[contractKey + "_abi"] = getAbi(artifact.interface);
     }
 
-    outputObject['contract_manager_address'] = managerConfig['contract_manager_address'];
-    outputObject['contract_manager_abi'] = managerConfig['contract_manager_abi'];
+    outputObject.contract_manager_address = managerConfig.contract_manager_address;
+    outputObject.contract_manager_abi = managerConfig.contract_manager_abi;
 
     await fs.writeFile(`data/skale-allocator-${version}-${network.name}-abi.json`, JSON.stringify(outputObject, null, 4));
 

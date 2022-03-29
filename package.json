@@ -22,12 +22,12 @@
     }
   ],
   "scripts": {
-    "compile": "rm -rf ./artifacts/ && npx hardhat compile",
-    "deploy": "bash ./scripts/deploy.sh",
+    "compile": "npx hardhat clean && npx hardhat compile",
     "hooks": "git config core.hooksPath .githooks || true",
+    "no-hooks": "git config core.hooksPath .git/hooks",
     "lint": "npx solhint \"contracts/**/*.sol\"",
     "prepare": "yarn compile && yarn hooks",
-    "test": "npx hardhat test && yarn tsc",
+    "test": "yarn tsc && npx hardhat test",
     "tsc": "tsc --noEmit",
     "tslint": "npx tslint --project .",
     "slither": "slither .",

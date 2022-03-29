@@ -51,7 +51,7 @@ async function main() {
     const manifest = JSON.parse(await fs.readFile(manifestFilename, "utf-8"));
     const newManifest = JSON.parse(await fs.readFile(newManifestFilename, "utf-8"));
     const cliExport = JSON.parse(await fs.readFile(exportFilename, "utf-8"));
-    const artifacts = JSON.parse(await fs.readFile(`data/skale-manager-${(await fs.readFile("VERSION", "utf-8")).trim()}-localhost-abi.json`, "utf-8"));
+    const artifacts = JSON.parse(await fs.readFile(`data/skale-allocator-${(await fs.readFile("VERSION", "utf-8")).trim()}-localhost-abi.json`, "utf-8"));
     const network = manifestFilename.substr(0, manifestFilename.lastIndexOf(".")).split("/").pop() as string;
 
     interface ImplementationInterface {
@@ -94,11 +94,7 @@ async function main() {
                     throw Error(`There is no implementation for ${contractName} contract`);
                 }
             } else {
-                if (contractName === "Bounty") {
-                    console.log("Skip update for Bounty");
-                } else {
-                    throw Error(`Contract ${contractName} was not deployed`);
-                }
+                throw Error(`Contract ${contractName} was not deployed`);
             }
         } else {
             throw Error(`Can't find information about implementation at address ${contract.address} in openzeppelin-cli-export.json`);

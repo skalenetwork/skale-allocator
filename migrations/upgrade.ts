@@ -49,7 +49,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     try {
         deployedVersion = await allocator.version();
     } catch {
-        console.log("Can't read deployed version");
+        console.log(chalk.red("Can't read deployed version"));
     }
     const version = await getVersion();
     if (deployedVersion) {
@@ -67,7 +67,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     let safe = await proxyAdmin.owner();
     const safeTransactions: string[] = [];
     let safeMock;
-    console.log(safe);
     if (await ethers.provider.getCode(safe) === "0x") {
         console.log("Owner is not a contract");
         if (deployer.address !== safe) {
@@ -95,7 +94,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     // deploy new implementations
     const contractsToUpgrade: { proxyAddress: string, implementationAddress: string, name: string, abi: [] }[] = [];
     for (const contract of contractNamesToUpgrade) {
-        if (contract == "Escrow" && production) {
+        if (contract === "Escrow" && production) {
             continue;
         }
         const contractFactory = await ethers.getContractFactory(contract);
@@ -119,7 +118,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
 
     // Switch proxies to new implementations
     for (const contract of contractsToUpgrade) {
-        if (contract.name == "Escrow" && production) {
+        if (contract.name === "Escrow" && production) {
             continue;
         }
         console.log(chalk.yellowBright(`Prepare transaction to upgrade ${contract.name} at ${contract.proxyAddress} to ${contract.implementationAddress}`));
@@ -175,7 +174,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
             newImplementationAddress = process.env.NEW_IMPLEMENTATION;
         }
 
-        const safeTransactions: string[] = []
         for (const proxy of proxies) {
             safeTransactions.push(encodeTransaction(
                 0,

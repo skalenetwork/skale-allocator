@@ -63,20 +63,20 @@ contract ProxyMock {
         }
     }
 
-    function _implementation() internal view returns (address impl) {
-        bytes32 slot = _IMPLEMENTATION_SLOT;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            impl := sload(slot)
-        }
-    }
-    
     function _setImplementation(address newImplementation) internal {
         bytes32 slot = _IMPLEMENTATION_SLOT;
 
         // solhint-disable-next-line no-inline-assembly
         assembly {
             sstore(slot, newImplementation)
+        }
+    }
+
+    function _implementation() internal view returns (address impl) {
+        bytes32 slot = _IMPLEMENTATION_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            impl := sload(slot)
         }
     }
 }
