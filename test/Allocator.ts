@@ -61,6 +61,14 @@ describe("Allocator", () => {
         (await allocator.isVestingActive(beneficiary.address)).should.be.eq(false);
     });
 
+    it("should allow only owner to set a version", async () => {
+        await allocator.connect(hacker).setVersion("bad")
+            .should.be.eventually.rejectedWith("Caller is not the owner");
+
+        await allocator.setVersion("good");
+        (await allocator.version()).should.be.equal("good");
+    });
+
     it("should get beneficiary data", async () => {
         (await allocator.isBeneficiaryRegistered(beneficiary.address)).should.be.eq(false);
         await allocator.connect(vestingManager).addPlan(6, 36, TimeUnit.MONTH, 6, false, true);
