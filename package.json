@@ -38,7 +38,6 @@
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
     "@openzeppelin/upgrades": "^2.8.0",
-    "@truffle/hdwallet-provider": "^2.0.0",
     "@types/chai": "^4.3.0",
     "@types/chai-almost": "^1.0.1",
     "@types/chai-as-promised": "^7.1.4",
@@ -53,10 +52,7 @@
     "ethers-eip712": "^0.2.0",
     "hardhat": "^2.8.0",
     "solc": "^0.8.11",
-    "truffle": "5.4.30",
-    "truffle-typings": "^1.0.8",
     "ts-node": "9.1.1",
-    "typechain-target-truffle": "^1.0.2",
     "web3": "^1.7.0"
   },
   "devDependencies": {
