@@ -286,7 +286,10 @@ describe("Allocator", () => {
         it("should allow only beneficiary to change address", async () => {
             await escrow.connect(hacker).changeBeneficiary(hacker.address)
                 .should.be.eventually.rejectedWith("Message sender is not a plan beneficiary");
-            await escrow.changeBeneficiary(beneficiary1.address);
+            await escrow.connect(beneficiary).changeBeneficiary(ethers.constants.AddressZero)
+                .should.be.eventually.rejectedWith("Beneficiary address must not be zero");
+
+            await escrow.connect(beneficiary).changeBeneficiary(beneficiary1.address);
         });
 
         it("should be able to cancel pending delegation request", async () => {
