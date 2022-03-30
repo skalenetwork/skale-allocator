@@ -49,13 +49,19 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
 
     IERC1820Registry private _erc1820;
 
+    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
+
     event BeneficiaryUpdated(
         address oldValue,
         address newValue
     );
 
     modifier onlyBeneficiary() virtual {
-        require(_msgSender() == _beneficiary, "Message sender is not a plan beneficiary");
+        require(
+            _msgSender() == _beneficiary ||
+            hasRole(BENEFICIARY_ROLE, _msgSender()),
+            "Message sender is not a plan beneficiary"
+        );
         _;
     }
 
@@ -71,7 +77,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     modifier onlyActiveBeneficiaryOrVestingManager() virtual {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
-            require(_msgSender() == _beneficiary, "Message sender is not beneficiary");
+            require(
+                _msgSender() == _beneficiary ||
+                hasRole(BENEFICIARY_ROLE, _msgSender()),
+                "Message sender is not a plan beneficiary"
+            );
         } else {
             require(
                 allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
@@ -90,6 +100,19 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
     } 
+
+    function grantBeneficiaryRole(address account) external onlyBeneficiary {
+        super.grantRole(BENEFICIARY_ROLE, account);
+    }
+
+    function revokeBeneficiaryRole(address account) external onlyBeneficiary {
+        super.revokeRole(BENEFICIARY_ROLE, account);
+    }
+
+    function changeBeneficiary(address beneficiary) external onlyBeneficiary {
+        require(beneficiary != address(0), "Beneficiary address must not be zero");
+        _beneficiary = beneficiary;
+    }
 
     function tokensReceived(
         address operator,
