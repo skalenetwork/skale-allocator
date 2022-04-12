@@ -25,5 +25,5 @@ rm -r --interactive=never skale-manager
 
 nvm use $CURRENT_NODE_VERSION
 
-NODE_OPTIONS="--max-old-space-size=4096" npx hardhat run migrations/deploy.ts --network localhost || exit $?
+NODE_OPTIONS="--max-old-space-size=4096" npx hardhat run migrations/deploy.ts --network localhost
 kill $GANACHE_PID

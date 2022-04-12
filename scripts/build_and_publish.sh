@@ -13,7 +13,7 @@ LATEST_IMAGE_NAME=$REPO_NAME:$BRANCH-latest
 # Build image
 
 echo "Building $IMAGE_NAME..."
-docker build -t $IMAGE_NAME . || exit $?
+docker build -t $IMAGE_NAME .
 docker tag $IMAGE_NAME $LATEST_IMAGE_NAME
 
 echo "========================================================================================="
@@ -26,5 +26,5 @@ echo "Built $IMAGE_NAME"
 
 echo "$DOCKER_PASSWORD" | docker login --username $DOCKER_USERNAME --password-stdin
 
-docker push $IMAGE_NAME || exit $?
-docker push $LATEST_IMAGE_NAME || exit $?
+docker push $IMAGE_NAME
+docker push $LATEST_IMAGE_NAME

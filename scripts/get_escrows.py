@@ -24,12 +24,13 @@ def main():
     else:
         raise KeyError('Set NETWORK type or ABI filepath')
     
+    
     payload = {
         'module': 'account',
         'action': 'tokentx',
         'contractaddress': skale_token_address,
         'address': allocator_abi['allocator_address'],
-        'apikey': 'AY9DUYN3HXW7C7DZ1N9GJKHVKUM799NAFA'
+        'apikey': os.environ['ETHERSCAN']
     }
 
     r = requests.get(url, params=payload)

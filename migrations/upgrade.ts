@@ -11,6 +11,10 @@ import { Allocator, ContractManager, SafeMock } from "../typechain";
 import { getVersion } from "./tools/version";
 import { getAbi } from "./tools/abi";
 import { verify } from "./tools/verification";
+import { exec as asyncExec } from "child_process";
+import util from 'util';
+const exec = util.promisify(asyncExec);
+
 
 async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) {
     if (!process.env.ABI) {
@@ -132,11 +136,18 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
 
     // switch implementation for Escrows in production mode
     if (production) {
+        await exec(
+            `ABI=${process.env.ABI} ` +
+            `NETWORK=${process.env.NETWORK} ` +
+            `ETHERSCAN=${process.env.ETHERSCAN} ` +
+            `python3 ${__dirname}"/../scripts/get_escrows.py`
+        );
 
         if (!existsSync(__dirname + "/../data/proxy_list.txt")) {
-            console.log("PLEASE Provide a proxy_list.txt which contains all escrow proxy addresses  ");
+            console.log("PLEASE Provide a proxy_list.txt which contains all escrow proxy addresses.");
             process.exit(1);
         }
+
         const proxies = (await fs.readFile(__dirname + "/../data/proxy_list.txt", "utf-8"))
             .split('\n')
             .map((line) => line.trim())

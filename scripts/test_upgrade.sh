@@ -38,8 +38,8 @@ then
     rm $GITHUB_WORKSPACE/.openzeppelin/dev-*.json
 fi
 cp .openzeppelin/dev-*.json $GITHUB_WORKSPACE/.openzeppelin
-cp .openzeppelin/project.json $GITHUB_WORKSPACE/.openzeppelin || exit $?
-cp data/test.json $GITHUB_WORKSPACE/data || exit $?
+cp .openzeppelin/project.json $GITHUB_WORKSPACE/.openzeppelin
+cp data/test.json $GITHUB_WORKSPACE/data
 cd $GITHUB_WORKSPACE
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
@@ -50,13 +50,13 @@ nvm use $CURRENT_NODE_VERSION
 NETWORK_ID=$(ls -a .openzeppelin | grep dev | cut -d '-' -f 2 | cut -d '.' -f 1)
 CHAIN_ID=1337
 
-mv .openzeppelin/dev-$NETWORK_ID.json .openzeppelin/mainnet.json || exit $?
+mv .openzeppelin/dev-$NETWORK_ID.json .openzeppelin/mainnet.json
 
-npx migrate-oz-cli-project || exit $?
-MANIFEST=.openzeppelin/mainnet.json VERSION=$DEPLOYED_ALLOCATOR_TAG npx hardhat run scripts/update_manifest.ts --network localhost || exit $?
+npx migrate-oz-cli-project
+MANIFEST=.openzeppelin/mainnet.json VERSION=$DEPLOYED_ALLOCATOR_TAG npx hardhat run scripts/update_manifest.ts --network localhost
 
-mv .openzeppelin/new-mainnet.json .openzeppelin/unknown-$CHAIN_ID.json || exit $?
+mv .openzeppelin/new-mainnet.json .openzeppelin/unknown-$CHAIN_ID.json
 
-ABI=data/test.json npx hardhat run migrations/upgrade.ts --network localhost || exit $?
+ABI=data/test.json npx hardhat run migrations/upgrade.ts --network localhost
 
 kill $GANACHE_PID

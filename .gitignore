@@ -7,7 +7,6 @@ build/
 artifacts/
 cache/
 tmp.sol
-data/*.json
 scTopics
 
 ### Node ###
@@ -20,6 +19,7 @@ node_modules
 
 package-lock.json
 data/*.json
+data/*.txt
 
 ### Geth ###
 # geth secrets
