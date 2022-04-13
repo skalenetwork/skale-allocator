@@ -40,9 +40,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     const abi = JSON.parse(await fs.readFile(abiFilePath, "utf-8"));
 
     const proxyAdmin = await getManifestAdmin(hre);
-    const contractManagerName = "ContractManager";
-    const contractManagerFactory = await ethers.getContractFactory(contractManagerName);
-    const contractManager = (contractManagerFactory.attach(abi[getContractKeyInAbiFile(contractManagerName) + "_address"] as string)) as ContractManager;
 
     const allocatorName = "Allocator";
     const allocator = ((await ethers.getContractFactory(allocatorName)).attach(
@@ -85,7 +82,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
         console.log(chalk.blue("Transfer ownership to SafeMock"));
         safe = safeMock.address;
         await (await proxyAdmin.transferOwnership(safe)).wait();
-        await (await contractManager.transferOwnership(safe)).wait();
         for (const contractName of contractNamesToUpgrade) {
             const contractFactory = await ethers.getContractFactory(contractName);
             const contractAddress = abi[getContractKeyInAbiFile(contractName) + "_address"] as string;
@@ -226,7 +222,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
             })).wait();
         } finally {
             console.log(chalk.blue("Return ownership to wallet"));
-            await (await safeMock.transferProxyAdminOwnership(contractManager.address, deployer.address)).wait();
             await (await safeMock.transferProxyAdminOwnership(proxyAdmin.address, deployer.address)).wait();
             if (await proxyAdmin.owner() === deployer.address) {
                 await (await safeMock.destroy()).wait();
