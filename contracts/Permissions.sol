@@ -23,6 +23,7 @@ pragma solidity 0.6.10;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "./thirdparty/openzeppelin/InitializableWithGap.sol";
 
 import "./interfaces/IContractManager.sol";
 
@@ -31,7 +32,7 @@ import "./interfaces/IContractManager.sol";
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
  * @author Artem Payvin
  */
-contract Permissions is AccessControlUpgradeable {
+contract Permissions is InitializableWithGap, AccessControlUpgradeable {
     using SafeMathUpgradeable for uint;
     using AddressUpgradeable for address;
 
