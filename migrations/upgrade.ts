@@ -101,7 +101,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
         const proxyAddress = abi[getContractKeyInAbiFile(contract) + "_address"] as string;
 
         console.log(`Prepare upgrade of ${contract}`);
-        const newImplementationAddress = await upgrades.prepareUpgrade(proxyAddress, contractFactory);
+        const newImplementationAddress = await upgrades.prepareUpgrade(proxyAddress, contractFactory, { unsafeAllowRenames: true });
         const currentImplementationAddress = await getImplementationAddress(network.provider, proxyAddress);
         if (newImplementationAddress !== currentImplementationAddress) {
             contractsToUpgrade.push({
