@@ -21,12 +21,12 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/ERC777.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
 
 import "../Permissions.sol";
 import "../interfaces/delegation/ITokenState.sol";
 
-contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
+contract SkaleTokenTester is ERC777Upgradeable, Permissions {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
@@ -38,7 +38,7 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
     )
         public
     {
-        ERC777UpgradeSafe.__ERC777_init(name, symbol, defOp);
+        ERC777Upgradeable.__ERC777_init(name, symbol, defOp);
         Permissions.initialize(contractManagerAddress);
     }
 
@@ -52,7 +52,8 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
         onlyOwner
         returns (bool)
     {
-        require(amount <= CAP.sub(totalSupply()), "Amount is too big");
+        (, uint result) = CAP.trySub(totalSupply());
+        require(amount <= result, "Amount is too big");
         _mint(
             account,
             amount,

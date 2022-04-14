@@ -70,7 +70,7 @@ async function main() {
         );
         await proxy.deployTransaction.wait();
         console.log("Register", contract, "=>", proxy.address);
-        await (await contractManager.setContractsAddress(contract, proxy.address)).wait();
+        await contractManager.setContractsAddress(contract, proxy.address);
         contractArtifacts.push({ address: proxy.address, interface: proxy.interface, contract });
         await verifyProxy(contract, proxy.address, []);
 
@@ -93,11 +93,10 @@ async function main() {
         outputObject[contractKey + "_abi"] = getAbi(artifact.interface);
     }
 
-    outputObject.contract_manager_address = managerConfig.contract_manager_address;
-    outputObject.contract_manager_abi = managerConfig.contract_manager_abi;
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(outputObject.escrow_address);
+    await contractManager.setContractsAddress("ProxyAdmin", proxyAdminAddress);
 
     await fs.writeFile(`data/skale-allocator-${version}-${network.name}-abi.json`, JSON.stringify(outputObject, null, 4));
-
     console.log("Done");
 }
 

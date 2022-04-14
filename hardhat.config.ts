@@ -1,5 +1,6 @@
 import { task, HardhatUserConfig } from "hardhat/config";
 import "@openzeppelin/hardhat-upgrades";
+import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
 import "hardhat-typechain";
 import * as dotenv from "dotenv"
@@ -86,6 +87,9 @@ const config: HardhatUserConfig = {
       accounts: getCustomPrivateKey(process.env.PRIVATE_KEY),
       gasPrice: getGasPrice(process.env.GASPRICE)
     }
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN
   }
 };
 

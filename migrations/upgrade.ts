@@ -1,4 +1,4 @@
-import { contracts, getContractKeyInAbiFile, getManifestFile } from "./deploy";
+import { contracts, getContractKeyInAbiFile } from "./deploy";
 import { createMultiSendTransaction, sendSafeTransaction } from "./tools/gnosis-safe";
 import { promises as fs, existsSync } from "fs";
 import { encodeTransaction } from "./tools/multiSend";
@@ -7,7 +7,7 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core";
 import hre, { upgrades } from "hardhat";
 import { ethers, network } from "hardhat";
 import chalk from "chalk";
-import { Allocator, ContractManager, SafeMock } from "../typechain";
+import { Allocator, SafeMock } from "../typechain";
 import { getVersion } from "./tools/version";
 import { getAbi } from "./tools/abi";
 import { verify } from "./tools/verification";
@@ -136,7 +136,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
             `ABI=${process.env.ABI} ` +
             `NETWORK=${process.env.NETWORK} ` +
             `ETHERSCAN=${process.env.ETHERSCAN} ` +
-            `python3 ${__dirname}"/../scripts/get_escrows.py`
+            `python3 ${__dirname}/../scripts/get_escrows.py`
         );
 
         if (!existsSync(__dirname + "/../data/proxy_list.txt")) {

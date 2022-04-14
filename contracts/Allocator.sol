@@ -26,7 +26,8 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/openzeppelin/IProxyFactory.sol";
+import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "./interfaces/openzeppelin/IProxyAdmin.sol";
 import "./interfaces/ITimeHelpers.sol";
 import "./Escrow.sol";
@@ -36,6 +37,7 @@ import "./Permissions.sol";
  * @title Allocator
  */
 contract Allocator is Permissions, IERC777Recipient {
+    using ClonesUpgradeable for address;
 
     enum TimeUnit {
         DAY,
@@ -525,24 +527,16 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     function _deployEscrow(address beneficiary) private returns (Escrow) {
-        // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
-        IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
-        Escrow escrow = Escrow(contractManager.getContract("Escrow"));
-        // TODO: replace with ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
-        IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
-
-        return Escrow(
-            proxyFactory.deploy(
-                uint256(bytes32(bytes20(beneficiary))),
-                proxyAdmin.getProxyImplementation(address(escrow)),
-                address(proxyAdmin),
-                abi.encodeWithSelector(
-                    Escrow.initialize.selector,
-                    address(contractManager),
-                    beneficiary
-                )
-            )
+        address proxyAdmin = contractManager.getContract("ProxyAdmin");
+        address escrow = contractManager.getContract("Escrow");
+        address escrowImplementation = IProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
+        bytes memory initializingData = abi.encodeWithSignature(
+            "initialize(address,address)", address(contractManager), beneficiary
         );
+        address beneficiaryEscrow = address(new TransparentUpgradeableProxy(
+            escrowImplementation, proxyAdmin, initializingData
+        ));
+        return Escrow(beneficiaryEscrow);
     }
 
     function _daysBetweenMonths(uint256 beginMonth, uint256 endMonth) private view returns (uint256) {

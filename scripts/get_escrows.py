@@ -32,8 +32,9 @@ def main():
         'address': allocator_abi['allocator_address'],
         'apikey': os.environ['ETHERSCAN']
     }
+    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36'}
 
-    r = requests.get(url, params=payload)
+    r = requests.get(url, params=payload, headers=headers)
     transactions = r.json()['result']
     escrow_addresses = [tx['to'] for tx in transactions if tx['from'] == allocator_abi['allocator_address'].lower()]
     escrow_addresses = [w3.toChecksumAddress(escrow_address) for escrow_address in escrow_addresses]

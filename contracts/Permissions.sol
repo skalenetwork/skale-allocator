@@ -21,8 +21,8 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "./interfaces/IContractManager.sol";
 
@@ -31,9 +31,9 @@ import "./interfaces/IContractManager.sol";
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
  * @author Artem Payvin
  */
-contract Permissions is AccessControlUpgradeSafe {
-    using SafeMath for uint;
-    using Address for address;
+contract Permissions is AccessControlUpgradeable {
+    using SafeMathUpgradeable for uint;
+    using AddressUpgradeable for address;
 
     IContractManager public contractManager;
 
@@ -57,7 +57,7 @@ contract Permissions is AccessControlUpgradeSafe {
     }
 
     function initialize(address contractManagerAddress) public virtual initializer {
-        AccessControlUpgradeSafe.__AccessControl_init();
+        AccessControlUpgradeable.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);
     }
