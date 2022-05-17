@@ -26,8 +26,19 @@ import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
 import "../Permissions.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
+interface ISkaleTokenTester {
+    function mint(
+        address account,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    ) external returns(bool);
+    function getAndUpdateLockedAmount(address wallet) external returns (uint);
+    function getAndUpdateDelegatedAmount(address) external pure returns (uint);
+    function getAndUpdateSlashedAmount(address) external pure returns (uint);
+}
 
-contract SkaleTokenTester is ERC777Upgradeable, Permissions {
+contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
@@ -49,7 +60,7 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions {
         bytes memory userData,
         bytes memory operatorData
     )
-        external
+        external override
         onlyOwner
         returns (bool)
     {
@@ -65,15 +76,15 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address) external pure returns (uint) {
+    function getAndUpdateDelegatedAmount(address) external pure override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address) external pure returns (uint) {
+    function getAndUpdateSlashedAmount(address) external pure override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
         ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
         return tokenState.getAndUpdateLockedAmount(wallet);
     }

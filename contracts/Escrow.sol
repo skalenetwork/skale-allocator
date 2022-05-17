@@ -93,7 +93,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         _;
     }   
 
-    function initialize(address contractManagerAddress, address beneficiary) external initializer {
+    function initialize(address contractManagerAddress, address beneficiary) external override initializer {
         require(beneficiary != address(0), "Beneficiary address is not set");
         Permissions.initialize(contractManagerAddress);
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
@@ -270,7 +270,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      * - Beneficiary or Vesting manager must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external override onlyActiveBeneficiaryOrVestingManager {        
+    function withdrawBounty(
+        uint256 validatorId,
+        address to
+    )
+        external override
+        onlyActiveBeneficiaryOrVestingManager
+    {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }

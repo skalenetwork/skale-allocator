@@ -26,6 +26,14 @@ import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 
 import "./utils/StringUtils.sol";
 
+interface IContractManager {
+        function setContractsAddress(
+        string calldata contractsName,
+        address newContractsAddress
+    )
+        external;
+    function getContract(string calldata name) external view returns (address contractAddress);
+}
 
 /**
  * @title Contract Manager
@@ -33,7 +41,7 @@ import "./utils/StringUtils.sol";
  * contract contains the current mapping from contract IDs (in the form of
  * human-readable strings) to addresses.
  */
-contract ContractManager is OwnableUpgradeSafe {
+contract ContractManager is OwnableUpgradeSafe, IContractManager {
     using StringUtils for string;
     using Address for address;
 
@@ -42,7 +50,7 @@ contract ContractManager is OwnableUpgradeSafe {
 
     event ContractUpgraded(string contractsName, address contractsAddress);
 
-    function initialize() external initializer {
+    function initialize() external override initializer {
         OwnableUpgradeSafe.__Ownable_init();
     }
 
@@ -57,7 +65,13 @@ contract ContractManager is OwnableUpgradeSafe {
      * - Contract address is not already added.
      * - Contract contains code.
      */
-    function setContractsAddress(string calldata contractsName, address newContractsAddress) external onlyOwner {
+    function setContractsAddress(
+        string calldata contractsName,
+        address newContractsAddress
+    )
+        external override
+        onlyOwner
+    {
         // check newContractsAddress is not equal to zero
         require(newContractsAddress != address(0), "New address is equal zero");
         // create hash of contractsName
@@ -77,7 +91,7 @@ contract ContractManager is OwnableUpgradeSafe {
      * 
      * - Contract mapping must exist.
      */
-    function getContract(string calldata name) external view returns (address contractAddress) {
+    function getContract(string calldata name) external view override returns (address contractAddress) {
         contractAddress = contracts[keccak256(abi.encodePacked(name))];
         require(contractAddress != address(0), name.strConcat(" contract has not been found"));
     }

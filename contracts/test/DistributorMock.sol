@@ -27,9 +27,11 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 
 import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
 
+interface IDistributorMock {
+    function withdrawBounty(uint256 validatorId, address to) external;
+}
 
-
-contract DistributorMock is IERC777Recipient {    
+contract DistributorMock is IERC777Recipient, IDistributorMock {    
 
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     IERC20 public skaleToken;
@@ -37,12 +39,12 @@ contract DistributorMock is IERC777Recipient {
     //        wallet =>   validatorId => tokens
     mapping (address => mapping (uint256 => uint)) public approved;
 
-    constructor (address skaleTokenAddress) public {        
+    constructor (address skaleTokenAddress) {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
-    function withdrawBounty(uint256 validatorId, address to) external {
+    function withdrawBounty(uint256 validatorId, address to) external override {
         uint256 bounty = approved[msg.sender][validatorId];        
         delete approved[msg.sender][validatorId];
         require(skaleToken.transfer(to, bounty), "Failed to transfer tokens");

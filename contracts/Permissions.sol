@@ -26,13 +26,14 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "./thirdparty/openzeppelin/InitializableWithGap.sol";
 
 import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
+import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
 
 
 /**
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
  * @author Artem Payvin
  */
-contract Permissions is InitializableWithGap, AccessControlUpgradeable {
+contract Permissions is InitializableWithGap, AccessControlUpgradeable, IPermissions {
     using SafeMathUpgradeable for uint;
     using AddressUpgradeable for address;
 
@@ -57,7 +58,7 @@ contract Permissions is InitializableWithGap, AccessControlUpgradeable {
         _;
     }
 
-    function initialize(address contractManagerAddress) public virtual initializer {
+    function initialize(address contractManagerAddress) public virtual override initializer {
         AccessControlUpgradeable.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);

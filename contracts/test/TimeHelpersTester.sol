@@ -25,7 +25,11 @@ import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";
 
-import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
+interface ITimeHelpers {
+    function getCurrentMonth() external view returns (uint);
+    function monthToTimestamp(uint256 month) external view returns (uint256 timestamp);
+    function timestampToMonth(uint256 timestamp) external pure returns (uint);
+}
 
 /**
  * @title TimeHelpers
@@ -33,16 +37,16 @@ import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
  *
  * These functions are used to calculate monthly and Proof of Use epochs.
  */
-contract TimeHelpersTester {
+contract TimeHelpersTester is ITimeHelpers {
     using SafeMath for uint;
 
     uint256 constant private _ZERO_YEAR = 2020;
 
-    function getCurrentMonth() external view returns (uint) {
+    function getCurrentMonth() external view override returns (uint) {
         return timestampToMonth(now);
     }
 
-    function monthToTimestamp(uint256 month) public view returns (uint256 timestamp) {
+    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
         uint256 year = _ZERO_YEAR;
         uint256 _month = month;
         year = year.add(_month.div(12));
@@ -51,7 +55,7 @@ contract TimeHelpersTester {
         return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, _month, 1);
     }
 
-    function timestampToMonth(uint256 timestamp) public pure returns (uint) {
+    function timestampToMonth(uint256 timestamp) public pure override returns (uint) {
         uint256 year;
         uint256 month;
         (year, month, ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);

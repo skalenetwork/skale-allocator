@@ -25,15 +25,18 @@ pragma solidity 0.6.10;
 
 import "../Permissions.sol";
 
+interface IConstantsHolderMock {
+    function setLaunchTimestamp(uint256 timestamp) external;
+}
 
 /**
  * @dev Interface of Delegatable Token operations.
  */
-contract ConstantsHolderMock is Permissions {
+contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
 
     uint256 public launchTimestamp;
 
-    function setLaunchTimestamp(uint256 timestamp) external onlyOwner {
+    function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
         require(now < launchTimestamp, "Can't set network launch timestamp because network is already launched");
         launchTimestamp = timestamp;
     }

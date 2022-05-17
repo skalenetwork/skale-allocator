@@ -24,8 +24,12 @@ pragma solidity 0.6.10;
 import "../interfaces/openzeppelin/IProxyFactory.sol";
 import "../interfaces/openzeppelin/IProxyAdmin.sol";
 
+interface IProxyMock {
+    fallback () external payable;
+}
 
-contract ProxyMock {
+
+contract ProxyMock is IProxyMock{
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     constructor(address implementation, bytes memory _data) public {
@@ -37,7 +41,7 @@ contract ProxyMock {
         }
     }
 
-    fallback () external payable {
+    fallback () external payable override {
         _delegate(_implementation());
     }
 
@@ -86,7 +90,7 @@ contract ProxyFactoryMock is IProxyFactory, IProxyAdmin {
     function deploy(uint256, address _logic, address, bytes memory _data) external override returns (address) {
         return address(new ProxyMock(_logic, _data));
     }
-    function setImplementation(address _implementation) external {
+    function setImplementation(address _implementation) external override {
         implementation = _implementation;
     }
     function getProxyImplementation(address) external view override returns (address) {

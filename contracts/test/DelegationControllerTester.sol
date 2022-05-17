@@ -26,12 +26,24 @@ import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 import "./TokenStateTester.sol";
 import "./SkaleTokenTester.sol";
 
-contract DelegationControllerTester is Permissions {
-
+interface IDelegationControllerTester {
     struct Delegation {
         address holder;
         uint256 amount;
     }
+    function delegate(
+        uint256 ,
+        uint256 amount,
+        uint256 ,
+        string calldata
+    ) external;
+    function requestUndelegation(uint256 delegationId) external;
+    function cancelPendingDelegation(uint delegationId) external;
+    function getAndUpdateLockedAmount(address wallet) external returns (uint);
+    function getAndUpdateForbiddenForDelegationAmount(address wallet) external returns (uint);
+}
+
+contract DelegationControllerTester is Permissions, IDelegationControllerTester {
 
     mapping (address => uint) private _locked;
     Delegation[] private _delegations;
@@ -42,7 +54,7 @@ contract DelegationControllerTester is Permissions {
         uint256 ,
         string calldata
     )
-        external
+        external override
     {
         SkaleTokenTester skaleToken = SkaleTokenTester(contractManager.getContract("SkaleToken"));
         TokenStateTester tokenState = TokenStateTester(contractManager.getContract("TokenState"));
@@ -56,12 +68,12 @@ contract DelegationControllerTester is Permissions {
         require(holderBalance >= forbiddenForDelegation, "Token holder does not have enough tokens to delegate");
     }
 
-    function requestUndelegation(uint256 delegationId) external {
+    function requestUndelegation(uint256 delegationId) external override {
         address holder = _delegations[delegationId].holder;
         _locked[holder] -= _delegations[delegationId].amount;
     }
 
-    function cancelPendingDelegation(uint delegationId) external {
+    function cancelPendingDelegation(uint delegationId) external override {
         address holder = _delegations[delegationId].holder;
         _locked[holder] -= _delegations[delegationId].amount;
     }
@@ -69,14 +81,14 @@ contract DelegationControllerTester is Permissions {
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateLockedAmount(address wallet) external returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateForbiddenForDelegationAmount(address wallet) external returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 

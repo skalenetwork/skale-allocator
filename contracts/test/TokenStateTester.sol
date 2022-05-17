@@ -22,14 +22,19 @@
 pragma solidity 0.6.10;
 
 import "../Permissions.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/ITokenState.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
-contract TokenStateTester is Permissions {
+interface ITokenStateTester {
+    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint);
+    function getAndUpdateLockedAmount(address holder) external returns (uint);
+    function addLocker(string memory locker) external;
+}
+
+contract TokenStateTester is Permissions, ITokenStateTester {
 
     string[] private _lockers;
 
-    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address holder) external override returns (uint) {
         uint256 forbidden = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
@@ -38,7 +43,7 @@ contract TokenStateTester is Permissions {
         return forbidden;
     }
 
-    function getAndUpdateLockedAmount(address holder) external returns (uint) {
+    function getAndUpdateLockedAmount(address holder) external override returns (uint) {
         uint256 locked = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
@@ -59,7 +64,7 @@ contract TokenStateTester is Permissions {
      *
      * @param locker string name of contract to add to locker
      */
-    function addLocker(string memory locker) public onlyOwner {
+    function addLocker(string memory locker) public override onlyOwner {
         _lockers.push(locker);
     }
 }
