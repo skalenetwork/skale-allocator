@@ -24,7 +24,8 @@ pragma solidity 0.6.10;
 import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
 
 import "../Permissions.sol";
-import "../interfaces/delegation/ITokenState.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
+
 
 contract SkaleTokenTester is ERC777Upgradeable, Permissions {
 
@@ -73,7 +74,7 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions {
     }
 
     function getAndUpdateLockedAmount(address wallet) public returns (uint) {
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
         return tokenState.getAndUpdateLockedAmount(wallet);
     }
 

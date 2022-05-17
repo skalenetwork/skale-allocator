@@ -25,7 +25,7 @@ import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "./thirdparty/openzeppelin/InitializableWithGap.sol";
 
-import "./interfaces/IContractManager.sol";
+import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
 
 
 /**

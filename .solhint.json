@@ -17,6 +17,7 @@
     "function-max-lines": "error",
     "no-unused-vars": "error",
     "no-inline-assembly": "error",
-    "contract-name-camelcase": "error"
+    "contract-name-camelcase": "error",
+    "comprehensive-interface": "error"
   }
 }

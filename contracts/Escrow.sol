@@ -30,8 +30,10 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777R
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/delegation/IDelegationController.sol";
-import "./interfaces/delegation/IDistributor.sol";
-import "./interfaces/delegation/ITokenState.sol";
+import "./interfaces/IEscrow.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
+
 
 import "./Allocator.sol";
 import "./Permissions.sol";
@@ -41,7 +43,7 @@ import "./Permissions.sol";
  * @title Escrow
  * @dev This contract manages funds locked by the Allocator contract.
  */
-contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
+contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     address internal _beneficiary;
 
@@ -101,15 +103,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
     } 
 
-    function grantBeneficiaryRole(address account) external onlyBeneficiary {
-        super.grantRole(BENEFICIARY_ROLE, account);
-    }
-
-    function revokeBeneficiaryRole(address account) external onlyBeneficiary {
-        super.revokeRole(BENEFICIARY_ROLE, account);
-    }
-
-    function changeBeneficiary(address beneficiary) external onlyBeneficiary {
+    function changeBeneficiary(address beneficiary) external override onlyBeneficiary {
         require(beneficiary != address(0), "Beneficiary address must not be zero");
         _beneficiary = beneficiary;
     }
@@ -149,9 +143,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * IMPORTANT: Slashed tokens are non-transferable.
      */
-    function retrieve() external onlyBeneficiary {
+    function retrieve() external override onlyBeneficiary {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
         uint256 vestedAmount = 0;
         if (allocator.isVestingActive(_beneficiary)) {
             vestedAmount = allocator.calculateVestedAmount(_beneficiary);
@@ -184,9 +178,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Allocator must be active.
      */
-    function retrieveAfterTermination(address destination) external onlyVestingManager {
+    function retrieveAfterTermination(address destination) external override onlyVestingManager {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
 
         require(destination != address(0), "Destination address is not set");
         require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
@@ -219,7 +213,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         uint256 delegationPeriod,
         string calldata info
     )
-        external
+        external override
         onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
@@ -241,7 +235,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external onlyActiveBeneficiaryOrVestingManager {
+    function requestUndelegation(uint256 delegationId) external override onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -257,7 +251,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function cancelPendingDelegation(uint delegationId) external onlyActiveBeneficiaryOrVestingManager {
+    function cancelPendingDelegation(uint delegationId) external override onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -276,7 +270,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Beneficiary or Vesting manager must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external onlyActiveBeneficiaryOrVestingManager {        
+    function withdrawBounty(uint256 validatorId, address to) external override onlyActiveBeneficiaryOrVestingManager {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
@@ -285,7 +279,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * @dev Allows Allocator contract to cancel vesting of a Beneficiary. Cancel
      * vesting is performed upon termination.
      */
-    function cancelVesting(uint256 vestedAmount) external allow("Allocator") {
+    function cancelVesting(uint256 vestedAmount) external override allow("Allocator") {
         _availableAmountAfterTermination = vestedAmount;
     }
 }

@@ -22,14 +22,14 @@
 pragma solidity 0.6.10;
 
 import "../Permissions.sol";
-import "../interfaces/delegation/ITokenState.sol";
-import "./interfaces/ILocker.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ITokenState.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
-contract TokenStateTester is Permissions, ITokenState {
+contract TokenStateTester is Permissions {
 
     string[] private _lockers;
 
-    function getAndUpdateForbiddenForDelegationAmount(address holder) external override returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint) {
         uint256 forbidden = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
@@ -38,7 +38,7 @@ contract TokenStateTester is Permissions, ITokenState {
         return forbidden;
     }
 
-    function getAndUpdateLockedAmount(address holder) external override returns (uint) {
+    function getAndUpdateLockedAmount(address holder) external returns (uint) {
         uint256 locked = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));

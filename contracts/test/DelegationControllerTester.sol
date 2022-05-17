@@ -22,12 +22,11 @@
 pragma solidity 0.6.10;
 
 import "../Permissions.sol";
-import "../interfaces/delegation/IDelegationController.sol";
-import "./interfaces/ILocker.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 import "./TokenStateTester.sol";
 import "./SkaleTokenTester.sol";
 
-contract DelegationControllerTester is Permissions, IDelegationController, ILocker {
+contract DelegationControllerTester is Permissions {
 
     struct Delegation {
         address holder;
@@ -44,7 +43,6 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
         string calldata
     )
         external
-        override
     {
         SkaleTokenTester skaleToken = SkaleTokenTester(contractManager.getContract("SkaleToken"));
         TokenStateTester tokenState = TokenStateTester(contractManager.getContract("TokenState"));
@@ -58,12 +56,12 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
         require(holderBalance >= forbiddenForDelegation, "Token holder does not have enough tokens to delegate");
     }
 
-    function requestUndelegation(uint256 delegationId) external override {
+    function requestUndelegation(uint256 delegationId) external {
         address holder = _delegations[delegationId].holder;
         _locked[holder] -= _delegations[delegationId].amount;
     }
 
-    function cancelPendingDelegation(uint delegationId) external override {
+    function cancelPendingDelegation(uint delegationId) external {
         address holder = _delegations[delegationId].holder;
         _locked[holder] -= _delegations[delegationId].amount;
     }
@@ -71,14 +69,14 @@ contract DelegationControllerTester is Permissions, IDelegationController, ILock
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) external returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address wallet) external returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 

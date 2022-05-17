@@ -25,7 +25,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
 import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";
 
-import "../interfaces/ITimeHelpers.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
 
 /**
  * @title TimeHelpers
@@ -33,16 +33,16 @@ import "../interfaces/ITimeHelpers.sol";
  *
  * These functions are used to calculate monthly and Proof of Use epochs.
  */
-contract TimeHelpersTester is ITimeHelpers {
+contract TimeHelpersTester {
     using SafeMath for uint;
 
     uint256 constant private _ZERO_YEAR = 2020;
 
-    function getCurrentMonth() external view override returns (uint) {
+    function getCurrentMonth() external view returns (uint) {
         return timestampToMonth(now);
     }
 
-    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
+    function monthToTimestamp(uint256 month) public view returns (uint256 timestamp) {
         uint256 year = _ZERO_YEAR;
         uint256 _month = month;
         year = year.add(_month.div(12));
