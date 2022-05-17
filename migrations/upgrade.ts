@@ -7,16 +7,25 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core";
 import hre, { upgrades } from "hardhat";
 import { ethers, network } from "hardhat";
 import chalk from "chalk";
-import { Allocator, SafeMock } from "../typechain";
 import { getVersion } from "./tools/version";
 import { getAbi } from "./tools/abi";
 import { verify } from "./tools/verification";
 import { exec as asyncExec } from "child_process";
 import util from 'util';
+import { SkaleABIFile } from "./tools/types";
+import { Permissions, ProxyAdmin } from "../typechain-types";
 const exec = util.promisify(asyncExec);
 
 
-async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) {
+type CustomEscrowsAction = (proxyAdmin: ProxyAdmin, proxies: string[], safeTransactions: string[]) => Promise<void>;
+interface CustomEscrows {
+    [escrow: string]: {
+        oldImplementation: string
+        newImplementation: string
+    }
+}
+
+async function upgrade(targetVersion: string, contractNamesToUpgrade: string[], upgradeCustomEscrows: CustomEscrowsAction) {
     if (!process.env.ABI) {
         console.log(chalk.red("Set path to file with ABI and addresses to ABI environment variables"));
         return;
@@ -37,14 +46,14 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     }
 
     const abiFilePath = process.env.ABI;
-    const abi = JSON.parse(await fs.readFile(abiFilePath, "utf-8"));
+    const abi = JSON.parse(await fs.readFile(abiFilePath, "utf-8")) as SkaleABIFile;
 
-    const proxyAdmin = await getManifestAdmin(hre);
+    const proxyAdmin = await getManifestAdmin(hre) as ProxyAdmin;
 
     const allocatorName = "Allocator";
     const allocator = ((await ethers.getContractFactory(allocatorName)).attach(
         abi[getContractKeyInAbiFile(allocatorName) + "_address"] as string
-    )) as Allocator;
+    ));
 
     let deployedVersion = "";
     try {
@@ -76,7 +85,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
         }
         console.log(chalk.blue("Deploy SafeMock to simulate upgrade via multisig"));
         const safeMockFactory = await ethers.getContractFactory("SafeMock");
-        safeMock = (await safeMockFactory.deploy()) as SafeMock;
+        safeMock = (await safeMockFactory.deploy());
         await safeMock.deployTransaction.wait();
 
         console.log(chalk.blue("Transfer ownership to SafeMock"));
@@ -85,7 +94,7 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
         for (const contractName of contractNamesToUpgrade) {
             const contractFactory = await ethers.getContractFactory(contractName);
             const contractAddress = abi[getContractKeyInAbiFile(contractName) + "_address"] as string;
-            const contract = contractFactory.attach(contractAddress);
+            const contract = contractFactory.attach(contractAddress) as Permissions;
             console.log(chalk.blue(`Grant access to ${contractName}`));
             await (await contract.grantRole(await contract.DEFAULT_ADMIN_ROLE(), safe)).wait();
         }
@@ -94,9 +103,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
     // deploy new implementations
     const contractsToUpgrade: { proxyAddress: string, implementationAddress: string, name: string, abi: [] }[] = [];
     for (const contract of contractNamesToUpgrade) {
-        if (contract === "Escrow" && production) {
-            continue;
-        }
         const contractFactory = await ethers.getContractFactory(contract);
         const proxyAddress = abi[getContractKeyInAbiFile(contract) + "_address"] as string;
 
@@ -118,9 +124,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
 
     // Switch proxies to new implementations
     for (const contract of contractsToUpgrade) {
-        if (contract.name === "Escrow" && production) {
-            continue;
-        }
         console.log(chalk.yellowBright(`Prepare transaction to upgrade ${contract.name} at ${contract.proxyAddress} to ${contract.implementationAddress}`));
         safeTransactions.push(encodeTransaction(
             0,
@@ -132,6 +135,14 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
 
     // switch implementation for Escrows in production mode
     if (production) {
+        if (!process.env.NETWORK) {
+            console.log(chalk.red("Set network type. Example NETWORK=mainnet"));
+            return;
+        }
+        if (!process.env.ETHERSCAN) {
+            console.log(chalk.red("Set ETHERSCAN api key"));
+            return;
+        }
         await exec(
             `ABI=${process.env.ABI} ` +
             `NETWORK=${process.env.NETWORK} ` +
@@ -149,37 +160,34 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
             .map((line) => line.trim())
             .filter((line) => line !== "")
 
+        await upgradeCustomEscrows(proxyAdmin, proxies, safeTransactions);
+
         const implementations = await Promise.all(proxies.map(async (proxy) => {
             return await proxyAdmin.getProxyImplementation(proxy);
         }));
 
         const distinctImplementations = [...new Set(implementations)];
-        if (distinctImplementations.length !== 1) {
+        // change to !== 1 after upgrade
+        if (distinctImplementations.length !== 2) {
             console.log("Upgraded Escrows have different implementations. Check if Escrow list is correct.");
             console.log("Present implementations:");
-            distinctImplementations.forEach((implementation) => console.log);
+            distinctImplementations.forEach((implementation) => console.log(implementation));
             throw Error("Wrong Escrow list");
         }
 
-        let newImplementationAddress;
-        if (!process.env.NEW_IMPLEMENTATION) {
-            console.log("Deploy implementation");
-            const escrowFactory = (await ethers.getContractFactory("Escrow")).connect(deployer);
-            const escrow = await escrowFactory.deploy({
-                maxFeePerGas: ethers.utils.parseUnits(maxFeePerGasGWei, "gwei"),
-                maxPriorityFeePerGas: ethers.utils.parseUnits(maxPriorityFeePerGasGWei, "gwei")
-            });
-            console.log("Deploy transaction:");
-            console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
-            console.log("New Escrow address:", escrow.address);
-            await escrow.deployTransaction.wait();
+        console.log("Deploy implementation");
+        const escrowFactory = (await ethers.getContractFactory("Escrow")).connect(deployer);
+        const escrow = await escrowFactory.deploy({
+            maxFeePerGas: ethers.utils.parseUnits(maxFeePerGasGWei, "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits(maxPriorityFeePerGasGWei, "gwei")
+        });
+        console.log("Deploy transaction:");
+        console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
+        console.log("New Escrow address:", escrow.address);
+        await escrow.deployTransaction.wait();
+        await verify("Escrow", escrow.address, []);
 
-            await verify("Escrow", escrow.address, []);
-
-            newImplementationAddress = escrow.address;
-        } else {
-            newImplementationAddress = process.env.NEW_IMPLEMENTATION;
-        }
+        const newImplementationAddress = escrow.address;
 
         for (const proxy of proxies) {
             safeTransactions.push(encodeTransaction(
@@ -240,7 +248,27 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[]) 
 async function main() {
     await upgrade(
         "2.2.0",
-        contracts
+        contracts,
+        async(proxyAdmin, proxies, safeTransactions) => {
+            const escrows = JSON.parse(await fs.readFile(__dirname + "/../data/customEscrows.json", "utf-8")) as CustomEscrows;
+            for (const escrow in escrows) {
+                if (escrows.escrow.oldImplementation == await proxyAdmin.getProxyImplementation(escrow)) {
+                    if (escrows.escrow.newImplementation == "") {
+                        throw Error("New implementation wasn't found");
+                    }
+                    safeTransactions.push(encodeTransaction(
+                        0,
+                        proxyAdmin.address,
+                        0,
+                        proxyAdmin.interface.encodeFunctionData("upgrade", [escrow, escrows.escrow.newImplementation])
+                    ));
+                }
+                const index = proxies.indexOf(escrow);
+                if (~index) {
+                    proxies.splice(index, 1);
+                }
+            }
+        }
     );
 }
 

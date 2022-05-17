@@ -2,7 +2,7 @@ import { task, HardhatUserConfig } from "hardhat/config";
 import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
-import "hardhat-typechain";
+import '@typechain/hardhat'
 import * as dotenv from "dotenv"
 import { utils, Wallet } from "ethers";
 import { HardhatNetworkAccountUserConfig } from "hardhat/types/config";
@@ -90,6 +90,9 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN
+  },
+  typechain: {
+    externalArtifacts: ['node_modules/@openzeppelin/upgrades-core/artifacts/*.json']
   }
 };
 
