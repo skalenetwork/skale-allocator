@@ -4,7 +4,7 @@ import {
     Allocator,
     Escrow,
     TimeHelpersTester
-} from "../typechain";
+} from "../typechain-types";
 
 import { calculateLockedAmount } from "./tools/vestingCalculation";
 import { currentTime, getTimeAtDate, skipTimeToDate, skipTime } from "./tools/time";
@@ -137,7 +137,7 @@ describe("Allocator", () => {
         await allocator.connect(vestingManager).startVesting(beneficiary.address);
         await allocator.isVestingActive(beneficiary.address).should.be.eventually.true;
 
-        skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
+        await skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
         // 12 month after plan start
         // 6  month after lockup end
         const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
@@ -183,7 +183,7 @@ describe("Allocator", () => {
         await allocator.connect(vestingManager).startVesting(beneficiary.address);
         await allocator.isVestingActive(beneficiary.address).should.be.eventually.true;
 
-        skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
+        await skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
         // 12 month after plan start
         // 6  month after lockup end
         const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
@@ -196,7 +196,7 @@ describe("Allocator", () => {
         await allocator.isVestingActive(beneficiary.address).should.be.eventually.true;
 
         const escrowFactory = await ethers.getContractFactory("Escrow");
-        const escrow = escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address));
+        const escrow = escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address)) ;
 
         (await skaleToken.balanceOf(beneficiary.address)).toNumber()
             .should.be.equal(0);
@@ -250,7 +250,7 @@ describe("Allocator", () => {
         const escrowAddress = await allocator.getEscrowAddress(beneficiary.address);
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(1e6);
         const escrowFactory = await ethers.getContractFactory("Escrow");
-        const escrow = escrowFactory.attach(escrowAddress);
+        const escrow = escrowFactory.attach(escrowAddress) ;
         const amount = 15000;
         const delegationPeriod = 3;
         await escrow.connect(beneficiary).delegate(
@@ -259,7 +259,7 @@ describe("Allocator", () => {
         (await skaleToken.callStatic.getAndUpdateLockedAmount(escrowAddress)).toNumber().should.be.equal(amount);
     });
 
-    describe("when beneficiary delegate escrow tokens", async () => {
+    describe("when beneficiary delegate escrow tokens", () => {
         let delegationId: number;
         let escrow: Escrow;
         const delegatedAmount = 15000;
@@ -276,7 +276,7 @@ describe("Allocator", () => {
             const escrowAddress = await allocator.getEscrowAddress(beneficiary.address);
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             const escrowFactory = await ethers.getContractFactory("Escrow");
-            escrow = (escrowFactory.attach(escrowAddress)) as Escrow;
+            escrow = (escrowFactory.attach(escrowAddress)) ;
             const delegationPeriod = 3;
             await escrow.connect(beneficiary).delegate(
                 1, delegatedAmount, delegationPeriod, "D2 is even");
@@ -346,12 +346,12 @@ describe("Allocator", () => {
         await allocator.connect(vestingManager).startVesting(beneficiary.address);
         const escrowAddress = await allocator.getEscrowAddress(beneficiary.address);
         const escrowFactory = await ethers.getContractFactory("Escrow");
-        const escrow = escrowFactory.attach(escrowAddress);
+        const escrow = escrowFactory.attach(escrowAddress) ;
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
 
         const month = 31 * 24 * 60 * 60;
         const year = 12 * month;
-        skipTime(100 * year);
+        await skipTime(100 * year);
 
         await escrow.connect(beneficiary).retrieve();
         (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(0);
@@ -719,19 +719,14 @@ describe("Allocator", () => {
     it("should not add plan with zero vesting duration", async () => {
         const lockupPeriod = 0;
         const totalVestingDuration = 0;
-        const fullAmount = 2e6;
-        const lockupAmount = 2e6;
         const vestingIntervalTimeUnit = TimeUnit.MONTH;
         const vestingInterval = 0;
-        const startMonth = (await timeHelpers.getCurrentMonth()).toNumber();
-        const startTimestamp = (await timeHelpers.monthToTimestamp(startMonth)).toNumber();
         const isDelegationAllowed = false;
-        const plan = 1;
         await allocator.connect(vestingManager).addPlan(lockupPeriod, totalVestingDuration, vestingIntervalTimeUnit, vestingInterval, isDelegationAllowed, true)
             .should.be.eventually.rejectedWith("Vesting duration can't be zero");
     });
 
-    describe("when Plans are registered at the past", async () => {
+    describe("when Plans are registered at the past", () => {
         const lockupPeriod = 6;
         const totalVestingDuration = 36;
         const fullAmount = 6e6;
@@ -757,7 +752,7 @@ describe("Allocator", () => {
             await allocator.connect(vestingManager).startVesting(beneficiary.address);
 
             const escrowFactory = await ethers.getContractFactory("Escrow");
-            escrow = (escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address))) as Escrow;
+            escrow = (escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address))) ;
         });
 
         it("should unlock tokens after lockup", async () => {
@@ -800,7 +795,7 @@ describe("Allocator", () => {
         });
     });
 
-    describe("when all beneficiaries are registered", async () => {
+    describe("when all beneficiaries are registered", () => {
         const lockupPeriod = 6;
         const totalVestingDuration = 36;
         const fullAmount = 6e6;
@@ -968,19 +963,19 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 6);
             let escrowAddress = await allocator.getEscrowAddress(beneficiary.address);
             const escrowFactory = await ethers.getContractFactory("Escrow");
-            let escrow = escrowFactory.attach(escrowAddress);
+            let escrow = escrowFactory.attach(escrowAddress) ;
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount);
             await escrow.connect(beneficiary).retrieve();
             escrowAddress = await allocator.getEscrowAddress(beneficiary1.address);
-            escrow = escrowFactory.attach(escrowAddress);
+            escrow = escrowFactory.attach(escrowAddress) ;
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount1);
             await escrow.connect(beneficiary1).retrieve();
             escrowAddress = await allocator.getEscrowAddress(beneficiary2.address);
-            escrow = escrowFactory.attach(escrowAddress);
+            escrow = escrowFactory.attach(escrowAddress) ;
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount2);
             await escrow.connect(beneficiary2).retrieve();
             escrowAddress = await allocator.getEscrowAddress(beneficiary3.address);
-            escrow = escrowFactory.attach(escrowAddress);
+            escrow = escrowFactory.attach(escrowAddress) ;
             (await skaleToken.balanceOf(escrowAddress)).toNumber().should.be.equal(fullAmount3);
             await escrow.connect(beneficiary3).retrieve();
             await skaleToken.connect(beneficiary).transfer(hacker.address, "100");
@@ -1026,35 +1021,28 @@ describe("Allocator", () => {
         });
 
         it("After 16, 17, 18 month", async () => {
-            let plan0unlocked16: number;
-            let plan0unlocked17: number;
-            let plan0unlocked18: number;
-            let plan3unlocked16: number;
-            let plan3unlocked17: number;
-            let plan3unlocked18: number;
-
             await skipTimeToDate(1, 5);
             await skipTimeToDate(1, 10);
 
             let lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked16 = lockedAmount;
+            const plan0unlocked16 = lockedAmount;
             let lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = fullAmount3 - (await allocator.calculateVestedAmount(beneficiary3.address)).toNumber();
-            plan3unlocked16 = lockedAmount;
+            const plan3unlocked16 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
             await skipTimeToDate(1, 11);
 
             lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked17 = lockedAmount;
+            const plan0unlocked17 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = fullAmount3 - (await allocator.calculateVestedAmount(beneficiary3.address)).toNumber();
-            plan3unlocked17 = lockedAmount;
+            const plan3unlocked17 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
@@ -1063,12 +1051,12 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 12);
 
             lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked18 = lockedAmount;
+            const plan0unlocked18 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
             lockedAmount = fullAmount3 - (await allocator.calculateVestedAmount(beneficiary3.address)).toNumber();
-            plan3unlocked18 = lockedAmount;
+            const plan3unlocked18 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod3, totalVestingDuration3, fullAmount3, lockupAmount3, vestingIntervalTimeUnit3, vestingInterval3);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
@@ -1078,16 +1066,12 @@ describe("Allocator", () => {
         });
 
         it("After 24, 30, 36 month", async () => {
-            let plan0unlocked24: number;
-            let plan0unlocked30: number;
-            let plan0unlocked36: number;
-
             await skipTimeToDate(1, 5);
             await skipTimeToDate(1, 4);
             await skipTimeToDate(1, 6);
 
             let lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked24 = lockedAmount;
+            const plan0unlocked24 = lockedAmount;
             let lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
@@ -1098,7 +1082,7 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 12);
 
             lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked30 = lockedAmount;
+            const plan0unlocked30 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
 
@@ -1109,7 +1093,7 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 6);
 
             lockedAmount = fullAmount - (await allocator.calculateVestedAmount(beneficiary.address)).toNumber();
-            plan0unlocked36 = lockedAmount;
+            const plan0unlocked36 = lockedAmount;
             lockedCalculatedAmount = calculateLockedAmount(await currentTime(), startTimestamp, lockupPeriod, totalVestingDuration, fullAmount, lockupAmount, vestingTimeUnit, vestingInterval);
             lockedAmount.should.be.equal(lockedCalculatedAmount);
             lockedAmount.should.be.equal(0);
@@ -1123,13 +1107,13 @@ describe("Allocator", () => {
         });
     });
 
-    describe("should calculate next vest time correctly", async () => {
+    describe("should calculate next vest time correctly", () => {
         it("from Dec 30, year based vesting", async () => {
             await allocator.connect(vestingManager).addPlan(0, 2 * 12, TimeUnit.YEAR, 1, false, false);
             const plan = 1;
 
             const currentYear = new Date(await currentTime() * 1000).getFullYear();
-            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startDate = (new Date(currentYear.toString() + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
             // start from Dec
@@ -1139,7 +1123,7 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 0);
 
             (await allocator.getTimeOfNextVest(beneficiary.address)).toNumber()
-                .should.be.equal((new Date(currentYear + 1 + "-12-01T00:00:00.000+00:00")).getTime() / 1000);
+                .should.be.equal((new Date((currentYear + 1).toString() + "-12-01T00:00:00.000+00:00")).getTime() / 1000);
         });
 
         it("from Dec 30, month based vesting", async () => {
@@ -1147,7 +1131,7 @@ describe("Allocator", () => {
             const plan = 1;
 
             const currentYear = new Date(await currentTime() * 1000).getFullYear();
-            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startDate = (new Date(currentYear.toString() + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
             // start from Dec
@@ -1157,7 +1141,7 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 0);
 
             (await allocator.getTimeOfNextVest(beneficiary.address)).toNumber()
-                .should.be.equal((new Date(currentYear + 1 + "-02-01T00:00:00.000+00:00")).getTime() / 1000);
+                .should.be.equal((new Date((currentYear + 1).toString() + "-02-01T00:00:00.000+00:00")).getTime() / 1000);
         });
 
         it("from Dec 30, day based vesting", async () => {
@@ -1165,7 +1149,7 @@ describe("Allocator", () => {
             const plan = 1;
 
             const currentYear = new Date(await currentTime() * 1000).getFullYear();
-            const startDate = (new Date(currentYear + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
+            const startDate = (new Date(currentYear.toString() + "-12-30T00:00:00.000+00:00")).getTime() / 1000; // Dec 30th
             const startMonth = await timeHelpers.timestampToMonth(startDate.toString(10)); // Dec
 
             // start from Dec
@@ -1175,7 +1159,7 @@ describe("Allocator", () => {
             await skipTimeToDate(1, 0);
 
             (await allocator.getTimeOfNextVest(beneficiary.address)).toNumber()
-                .should.be.equal((new Date(currentYear + 1 + "-01-02T00:00:00.000+00:00")).getTime() / 1000);
+                .should.be.equal((new Date((currentYear + 1).toString() + "-01-02T00:00:00.000+00:00")).getTime() / 1000);
         });
     });
 });

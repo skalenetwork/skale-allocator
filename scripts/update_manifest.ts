@@ -2,6 +2,7 @@ import { exec as asyncExec } from "child_process";
 import { ethers, upgrades } from "hardhat";
 import { promises as fs } from "fs";
 import * as syncFs from "fs";
+import { ManifestData } from "@openzeppelin/upgrades-core";
 import util from 'util';
 const exec = util.promisify(asyncExec);
 
@@ -48,8 +49,8 @@ async function main() {
         throw Error("Can't find new manifest file");
     }
 
-    const manifest = JSON.parse(await fs.readFile(manifestFilename, "utf-8"));
-    const newManifest = JSON.parse(await fs.readFile(newManifestFilename, "utf-8"));
+    const manifest = JSON.parse(await fs.readFile(manifestFilename, "utf-8")) as ManifestData;
+    const newManifest = JSON.parse(await fs.readFile(newManifestFilename, "utf-8")) as ManifestData;
     const cliExport = JSON.parse(await fs.readFile(exportFilename, "utf-8"));
     const artifacts = JSON.parse(await fs.readFile(`data/skale-allocator-${version}-localhost-abi.json`, "utf-8"));
     const network = manifestFilename.substr(0, manifestFilename.lastIndexOf(".")).split("/").pop() as string;

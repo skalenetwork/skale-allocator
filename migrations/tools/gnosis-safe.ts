@@ -1,5 +1,4 @@
 import axios from "axios";
-import { TypedDataUtils } from "ethers-eip712";
 import * as ethUtil from 'ethereumjs-util';
 import chalk from "chalk";
 import { ethers } from "ethers";

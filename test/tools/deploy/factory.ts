@@ -1,13 +1,10 @@
-import { Contract } from "ethers";
-import { ethers } from "hardhat";
-import { ContractManager } from "../../../typechain";
+import { ethers, upgrades } from "hardhat";
+import { ContractManager } from "../../../typechain-types";
 
 async function defaultDeploy(contractName: string,
-    contractManager: ContractManager): Promise<Contract> {
-    const ContractFactory = await ethers.getContractFactory(contractName);
-    const instance = await ContractFactory.deploy();
-    await instance.initialize(contractManager.address);
-    return instance;
+                             contractManager: ContractManager) {
+    const contractFactory = await ethers.getContractFactory(contractName);
+    return await upgrades.deployProxy(contractFactory, [contractManager.address]);
 }
 
 async function defaultDeployWithConstructor(
@@ -26,32 +23,34 @@ async function deployWithConstructor(
 function deployFunctionFactory(
     contractName: string,
     deployDependencies: (contractManager: ContractManager) => Promise<void>
-        = async (contractManager: ContractManager) => undefined,
-    deploy = async (contractManager: ContractManager) => {
-        return await defaultDeploy(contractName, contractManager);
-    }): any {
-    return async (contractManager: ContractManager) => {
-        const contractFactory = await ethers.getContractFactory(contractName);
-        try {
-            return contractFactory.attach(await contractManager.getContract(contractName));
-        } catch (e) {
-            const instance = await deploy(contractManager);
-            await contractManager.setContractsAddress(contractName, instance.address);
-            await deployDependencies(contractManager);
-            return instance;
+        = () => Promise.resolve(undefined),
+    deploy
+        = async (contractManager: ContractManager) => {
+          return await defaultDeploy(contractName, contractManager);
         }
-    };
+) {
+    return async (contractManager: ContractManager) => {
+            const contractFactory = await ethers.getContractFactory(contractName);
+            try {
+                return contractFactory.attach(await contractManager.getContract(contractName));
+            } catch (e) {
+                const instance = await deploy(contractManager);
+                await contractManager.setContractsAddress(contractName, instance.address);
+                await deployDependencies(contractManager);
+                return instance;
+            }
+        };
 }
 
 function deployWithConstructorFunctionFactory(
     contractName: string,
     deployDependencies: (contractManager: ContractManager) => Promise<void>
-        = async (contractManager: ContractManager) => undefined,
+        = () => Promise.resolve(undefined),
     deploy
-        = async (contractManager: ContractManager) => {
+        = async ( contractManager: ContractManager) => {
             return await defaultDeployWithConstructor(contractName, contractManager);
         }
-): any {
+) {
     return deployFunctionFactory(
         contractName,
         deployDependencies,

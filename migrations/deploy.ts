@@ -1,13 +1,14 @@
 import {promises as fs} from 'fs';
 import {existsSync} from 'fs';
 import { Interface } from "ethers/lib/utils";
-import { ethers, upgrades, network, run, artifacts } from "hardhat";
+import { ethers, upgrades, network, run } from "hardhat";
 import { getAbi } from './tools/abi';
 import { verifyProxy } from './tools/verification';
 import { Manifest } from "@openzeppelin/upgrades-core";
-import { Allocator } from '../typechain';
+import { Allocator } from '../typechain-types';
 import { getVersion } from './tools/version';
 import chalk from "chalk";
+import { SkaleABIFile } from './tools/types';
 
 
 export function getContractKeyInAbiFile(contract: string) {
@@ -32,7 +33,7 @@ function getInitializer(contract: string) {
 }
 
 export async function getManifestFile(): Promise<string> {
-    return (await Manifest.forNetwork(ethers.provider)).file;;
+    return (await Manifest.forNetwork(ethers.provider)).file;
 }
 
 export const contracts = [
@@ -53,10 +54,10 @@ async function main() {
     const version = await getVersion();
     const contractArtifacts: { address: string, interface: Interface, contract: string }[] = [];
 
-    const managerConfig = require("../scripts/manager.json");
+    const managerConfig = JSON.parse(await fs.readFile(__dirname + "/../scripts/manager.json", "utf-8")) as SkaleABIFile;
     const contractManagerName = "ContractManager";
     const contractManagerFactory = await ethers.getContractFactory(contractManagerName);
-    const contractManager = contractManagerFactory.attach(managerConfig[getContractKeyInAbiFile(contractManagerName) + "_address"] as string);
+    const contractManager = contractManagerFactory.attach(managerConfig[getContractKeyInAbiFile(contractManagerName) + "_address"] as string) ;
 
     for (const contract of contracts) {
         const contractFactory = await ethers.getContractFactory(contract);
@@ -86,14 +87,14 @@ async function main() {
 
     console.log("Store ABIs");
 
-    const outputObject: { [k: string]: any } = {};
+    const outputObject: { [k: string]: unknown } = {};
     for (const artifact of contractArtifacts) {
         const contractKey = getContractKeyInAbiFile(artifact.contract);
         outputObject[contractKey + "_address"] = artifact.address;
         outputObject[contractKey + "_abi"] = getAbi(artifact.interface);
     }
 
-    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(outputObject.escrow_address);
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(outputObject.escrow_address as string);
     await contractManager.setContractsAddress("ProxyAdmin", proxyAdminAddress);
 
     await fs.writeFile(`data/skale-allocator-${version}-${network.name}-abi.json`, JSON.stringify(outputObject, null, 4));

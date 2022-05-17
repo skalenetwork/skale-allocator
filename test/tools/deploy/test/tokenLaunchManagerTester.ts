@@ -1,18 +1,13 @@
-import { ethers } from "hardhat";
-import { ContractManager,
-    TokenLaunchManagerTester } from "../../../../typechain";
+import { ContractManager, TokenLaunchManagerTester } from "../../../../typechain-types";
+import { defaultDeploy, deployFunctionFactory } from "./../factory";
 
-const name = "TokenLaunchManager";
-
-export async function deployTokenLaunchManagerTester(contractManager: ContractManager) {
-    const factory = await ethers.getContractFactory("TokenLaunchManagerTester")
-    try {
-        const address = await contractManager.getContract(name);
-        return factory.attach(address);
-    } catch (e) {
-        const tokenLaunchManager = await factory.deploy();
-        tokenLaunchManager.initialize(contractManager.address);
-        await contractManager.setContractsAddress(name, tokenLaunchManager.address);
-        return tokenLaunchManager;
+export const deployTokenLaunchManagerTester = deployFunctionFactory(
+    "TokenLaunchManagerTester",
+    undefined,
+    async(contractManager: ContractManager) => {
+        const tokenState = await defaultDeploy("TokenLaunchManagerTester", contractManager);
+        await contractManager.setContractsAddress("TokenLaunchManager", tokenState.address);
+        return tokenState;
     }
-}
+) as  (contractManager: ContractManager) => Promise<TokenLaunchManagerTester>;
+

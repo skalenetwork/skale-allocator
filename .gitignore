@@ -13,6 +13,8 @@ scTopics
 # Logs
 *.log
 npm-debug.log*
+.eslintcache
+
 
 # Dependency directories
 node_modules
@@ -50,7 +52,7 @@ coverage.json
 
 # Typescript staff
 types/
-typechain/
+typechain-types/
 
 # OpenZeppelin
 .openzeppelin/dev-*.json

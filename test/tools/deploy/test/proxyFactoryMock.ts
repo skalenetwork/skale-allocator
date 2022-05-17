@@ -1,5 +1,5 @@
 import { deployEscrow } from "../escrow";
-import { ProxyFactoryMock, ContractManager } from "../../../../typechain";
+import { ContractManager } from "../../../../typechain-types";
 import { ethers } from "hardhat";
 
 export async function deployProxyFactoryMock(contractManager: ContractManager) {
@@ -8,7 +8,7 @@ export async function deployProxyFactoryMock(contractManager: ContractManager) {
     try {
         await contractManager.getContract(proxyFactoryMockName);
     } catch (e) {
-        const proxyFactoryMock = await factory.deploy() as ProxyFactoryMock;
+        const proxyFactoryMock = await factory.deploy();
         await contractManager.setContractsAddress(proxyFactoryMockName, proxyFactoryMock.address);
         await contractManager.setContractsAddress("ProxyAdmin", proxyFactoryMock.address);
         const escrow = await deployEscrow(contractManager);

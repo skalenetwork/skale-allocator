@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
-import { ContractManager, TimeHelpersTester } from "../../../../typechain";
+import { ContractManager, TimeHelpersTester } from "../../../../typechain-types";
 import { deployFunctionFactory } from "./../factory";
 
-export const deployTimeHelpersTester: (contractManager: ContractManager) => Promise<TimeHelpersTester>
+export const deployTimeHelpersTester
     = deployFunctionFactory("TimeHelpersTester",
                             undefined,
                             async (contractManager: ContractManager) => {
@@ -10,4 +10,4 @@ export const deployTimeHelpersTester: (contractManager: ContractManager) => Prom
                                 const instance = await Contract.deploy();
                                 await contractManager.setContractsAddress("TimeHelpers", instance.address);
                                 return instance;
-                            });
+                            }) as  (contractManager: ContractManager) => Promise<TimeHelpersTester>;

@@ -1,5 +1,5 @@
-import { ContractManager, ConstantsHolderMock } from "../../../../typechain";
+import { ContractManager, ConstantsHolderMock } from "../../../../typechain-types";
 import { deployFunctionFactory } from "./../factory";
 
-export const deployConstantsHolderMock: (contractManager: ContractManager) => Promise<ConstantsHolderMock>
-    = deployFunctionFactory("ConstantsHolderMock");
+export const deployConstantsHolderMock
+    = deployFunctionFactory("ConstantsHolderMock") as (contractManager: ContractManager) => Promise<ConstantsHolderMock>;
