@@ -42,6 +42,7 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
+    // solhint-disable-next-line comprehensive-interface
     constructor(
         address contractManagerAddress,
         string memory name,

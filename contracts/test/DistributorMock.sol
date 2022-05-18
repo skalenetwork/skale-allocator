@@ -21,9 +21,9 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
 
@@ -39,7 +39,8 @@ contract DistributorMock is IERC777Recipient, IDistributorMock {
     //        wallet =>   validatorId => tokens
     mapping (address => mapping (uint256 => uint)) public approved;
 
-    constructor (address skaleTokenAddress) {        
+    // solhint-disable-next-line comprehensive-interface
+    constructor (address skaleTokenAddress) public {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }

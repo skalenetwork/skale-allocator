@@ -21,8 +21,7 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 library StringUtils {
     using SafeMath for uint;
@@ -31,7 +30,8 @@ library StringUtils {
         bytes memory _ba = bytes(a);
         bytes memory _bb = bytes(b);
 
-        string memory ab = new string(_ba.length.add(_bb.length));
+        (, uint256 sumLength) = _ba.length.tryAdd(_bb.length);
+        string memory ab = new string(sumLength);
         bytes memory strBytes = bytes(ab);
         uint256 k = 0;
         uint256 i = 0;

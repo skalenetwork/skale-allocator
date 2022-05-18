@@ -21,12 +21,12 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 interface ISafeMock {
     enum Operation {Call, DelegateCall}
 
-    function transferProxyAdminOwnership(OwnableUpgradeSafe proxyAdmin, address newOwner) external;
+    function transferProxyAdminOwnership(OwnableUpgradeable proxyAdmin, address newOwner) external;
     function destroy() external;
     function multiSend(bytes memory transactions) external;
     function getTransactionHash(
@@ -43,7 +43,7 @@ interface ISafeMock {
     ) external view returns (bytes32);
 }
 
-contract SafeMock is OwnableUpgradeSafe, ISafeMock {
+contract SafeMock is OwnableUpgradeable, ISafeMock {
 
     bool public constant IS_SAFE_MOCK = true;
     bytes32 public constant SAFE_TX_TYPE_HASH = keccak256(
@@ -54,12 +54,13 @@ contract SafeMock is OwnableUpgradeSafe, ISafeMock {
         "EIP712Domain(uint256 chainId,address verifyingContract)"
     );
 
+    // solhint-disable-next-line comprehensive-interface
     constructor() public initializer {
-        OwnableUpgradeSafe.__Ownable_init();
+        OwnableUpgradeable.__Ownable_init();
         multiSend(""); // this is needed to remove slither warning
     }
 
-    function transferProxyAdminOwnership(OwnableUpgradeSafe proxyAdmin, address newOwner) external override onlyOwner {
+    function transferProxyAdminOwnership(OwnableUpgradeable proxyAdmin, address newOwner) external override onlyOwner {
         proxyAdmin.transferOwnership(newOwner);
     }
 
