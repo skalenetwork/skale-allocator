@@ -34,18 +34,11 @@
     "fullcheck": "yarn lint && yarn tsc && yarn eslint && yarn slither"
   },
   "dependencies": {
-    "@openzeppelin/cli": "^2.8.2",
     "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "3.4",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
-    "@openzeppelin/upgrades": "^2.8.0",
     "@skalenetwork/skale-manager-interfaces": "1.0.0-develop.1",
     "@typechain/hardhat": "^6.0.0",
-    "@types/chai": "^4.3.0",
-    "@types/chai-almost": "^1.0.1",
-    "@types/chai-as-promised": "^7.1.4",
-    "@types/minimist": "^1.2.2",
     "axios": "^0.25.0",
     "bignumber.js": "^9.0.2",
     "chai": "^4.3.4",
@@ -55,9 +48,7 @@
     "ethers": "^5.5.3",
     "ethers-eip712": "^0.2.0",
     "hardhat": "^2.8.0",
-    "solc": "^0.8.11",
-    "ts-node": "9.1.1",
-    "web3": "^1.7.0"
+    "solc": "^0.8.11"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",
@@ -66,6 +57,10 @@
     "@nomiclabs/hardhat-ethers": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@typechain/ethers-v5": "10.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/chai-almost": "^1.0.1",
+    "@types/chai-as-promised": "^7.1.4",
+    "@types/minimist": "^1.2.2",
     "@types/mocha": "^9.0.0",
     "@types/node": "^17.0.7",
     "@types/web3": "^1.2.2",
@@ -79,6 +74,7 @@
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.18",
     "ts-generator": "^0.1.1",
+    "ts-node": "9.1.1",
     "typechain": "8.0.0",
     "typescript": "4.5.5"
   }
