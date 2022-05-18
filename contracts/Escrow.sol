@@ -23,11 +23,11 @@
 pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/Math.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/delegation/IDelegationController.sol";
 import "./interfaces/IEscrow.sol";

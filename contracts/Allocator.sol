@@ -23,14 +23,13 @@
 pragma solidity 0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
-import "./interfaces/openzeppelin/IProxyAdmin.sol";
-import "./interfaces/IAllocator.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
+import "./interfaces/IAllocator.sol";
 import "./Escrow.sol";
 import "./Permissions.sol";
 
@@ -38,7 +37,6 @@ import "./Permissions.sol";
  * @title Allocator
  */
 contract Allocator is Permissions, IERC777Recipient, IAllocator {
-    using ClonesUpgradeable for address;
 
     uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
     uint256 constant private _MONTHS_PER_YEAR = 12;
@@ -493,8 +491,10 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     function _deployEscrow(address beneficiary) private returns (Escrow) {
         address proxyAdmin = contractManager.getContract("ProxyAdmin");
-        address escrow = contractManager.getContract("Escrow");
-        address escrowImplementation = IProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
+        TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
+            payable(contractManager.getContract("Escrow"))
+        );
+        address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
         bytes memory initializingData = abi.encodeWithSignature(
             "initialize(address,address)", address(contractManager), beneficiary
         );

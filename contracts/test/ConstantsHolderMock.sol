@@ -21,8 +21,6 @@
 
 pragma solidity 0.6.10;
 
-// import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
-
 import "../Permissions.sol";
 
 interface IConstantsHolderMock {

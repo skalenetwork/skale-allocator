@@ -21,12 +21,13 @@
 
 pragma solidity 0.6.10;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import "./utils/StringUtils.sol";
 
 interface IContractManager {
+    function initialize() external;
         function setContractsAddress(
         string calldata contractsName,
         address newContractsAddress
@@ -41,9 +42,9 @@ interface IContractManager {
  * contract contains the current mapping from contract IDs (in the form of
  * human-readable strings) to addresses.
  */
-contract ContractManager is OwnableUpgradeSafe, IContractManager {
+contract ContractManager is OwnableUpgradeable, IContractManager {
     using StringUtils for string;
-    using Address for address;
+    using AddressUpgradeable for address;
 
     // mapping of actual smart contracts addresses
     mapping (bytes32 => address) public contracts;
@@ -51,7 +52,7 @@ contract ContractManager is OwnableUpgradeSafe, IContractManager {
     event ContractUpgraded(string contractsName, address contractsAddress);
 
     function initialize() external override initializer {
-        OwnableUpgradeSafe.__Ownable_init();
+        OwnableUpgradeable.__Ownable_init();
     }
 
     /**
