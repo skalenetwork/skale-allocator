@@ -5,10 +5,10 @@ import { ethers, upgrades, network, run } from "hardhat";
 import { getAbi } from './tools/abi';
 import { verifyProxy } from './tools/verification';
 import { Manifest } from "@openzeppelin/upgrades-core";
-import { Allocator } from '../typechain-types';
 import { getVersion } from './tools/version';
 import chalk from "chalk";
 import { SkaleABIFile } from './tools/types';
+import { ContractTransaction } from 'ethers';
 
 
 export function getContractKeyInAbiFile(contract: string) {
@@ -77,7 +77,8 @@ async function main() {
 
         if (contract === "Allocator") {
             try {
-                await (await (proxy as Allocator).setVersion(version)).wait();
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                await (await proxy.setVersion(version) as ContractTransaction).wait();
                 console.log(`Set version ${version}`)
             } catch {
                 console.log(chalk.red("Failed to set skale-allocator version"));
