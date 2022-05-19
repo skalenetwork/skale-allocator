@@ -47,6 +47,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     address internal _beneficiary;
 
+    // slither-disable-next-line unused-state
     uint256 private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;

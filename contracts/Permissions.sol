@@ -35,6 +35,7 @@ import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
 contract Permissions is InitializableWithGap, AccessControlUpgradeable, IPermissions {
     using AddressUpgradeable for address;
 
+    // slither-disable-next-line uninitialized-state
     IContractManager public contractManager;
 
     /**
