@@ -81,14 +81,14 @@ contract DelegationControllerTester is Permissions, IDelegationControllerTester 
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateLockedAmount(address wallet) external override returns (uint) {
+    function getAndUpdateLockedAmount(address wallet) external view override returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 
     /**
      * @dev See ILocker.
      */
-    function getAndUpdateForbiddenForDelegationAmount(address wallet) external override returns (uint) {
+    function getAndUpdateForbiddenForDelegationAmount(address wallet) external view override returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
     }
 

@@ -35,7 +35,10 @@ contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
     uint256 public launchTimestamp;
 
     function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
-        require(block.timestamp < launchTimestamp, "Can't set network launch timestamp because network is already launched");
+        require(
+            block.timestamp < launchTimestamp,
+            "Can't set network launch timestamp because network is already launched"
+        );
         launchTimestamp = timestamp;
     }
 

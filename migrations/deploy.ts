@@ -1,19 +1,9 @@
-import {promises as fs} from 'fs';
-import {existsSync} from 'fs';
-import { Interface } from "ethers/lib/utils";
-import { ethers, upgrades, network, run } from "hardhat";
-import { getAbi } from './tools/abi';
-import { verifyProxy } from './tools/verification';
-import { Manifest } from "@openzeppelin/upgrades-core";
-import { getVersion } from './tools/version';
 import chalk from "chalk";
-import { SkaleABIFile } from './tools/types';
+import { Interface } from "ethers/lib/utils";
 import { ContractTransaction } from 'ethers';
-
-
-export function getContractKeyInAbiFile(contract: string) {
-    return contract.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();
-}
+import { promises as fs, existsSync } from 'fs';
+import { ethers, upgrades, network, run } from "hardhat";
+import { SkaleABIFile, verifyProxy, getAbi, getVersion, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
 
 async function getInitializerParameters(contract: string, contractManagerAddress: string) {
     if (["Escrow"].includes(contract)) {
@@ -30,10 +20,6 @@ function getInitializer(contract: string) {
     } else {
         return undefined;
     }
-}
-
-export async function getManifestFile(): Promise<string> {
-    return (await Manifest.forNetwork(ethers.provider)).file;
 }
 
 export const contracts = [

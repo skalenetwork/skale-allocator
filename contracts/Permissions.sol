@@ -22,7 +22,7 @@
 pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "./thirdparty/openzeppelin/InitializableWithGap.sol";
+import "./thirdparty/InitializableWithGap.sol";
 
 import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
 import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";

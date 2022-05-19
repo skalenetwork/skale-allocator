@@ -43,7 +43,7 @@ contract TimeHelpersTester is ITimeHelpers {
         return timestampToMonth(block.timestamp);
     }
 
-    function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
+    function monthToTimestamp(uint256 month) public pure override returns (uint256 timestamp) {
         uint256 year = _ZERO_YEAR;
         uint256 _month = month;
         year = year + _month / 12;

@@ -317,7 +317,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             return lockupEndTimestamp;
         }
         require(
-            block.timestamp < timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.totalVestingDuration),
+            block.timestamp < timeHelpers.monthToTimestamp(
+                beneficiaryPlan.startMonth + planParams.totalVestingDuration
+            ),
             "Vesting is over"
         );
         require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");

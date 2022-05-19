@@ -1,19 +1,15 @@
-import { contracts, getContractKeyInAbiFile } from "./deploy";
-import { createMultiSendTransaction, sendSafeTransaction } from "./tools/gnosis-safe";
-import { promises as fs, existsSync } from "fs";
-import { encodeTransaction } from "./tools/multiSend";
-import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
-import { getImplementationAddress } from "@openzeppelin/upgrades-core";
-import hre, { upgrades } from "hardhat";
-import { ethers, network } from "hardhat";
-import chalk from "chalk";
-import { getVersion } from "./tools/version";
-import { getAbi } from "./tools/abi";
-import { verify } from "./tools/verification";
-import { exec as asyncExec } from "child_process";
 import util from 'util';
-import { SkaleABIFile } from "./tools/types";
+import chalk from "chalk";
+import { contracts } from "./deploy";
+import { promises as fs, existsSync } from "fs";
+import { exec as asyncExec } from "child_process";
+import hre, { ethers, network, upgrades } from "hardhat";
+import { getImplementationAddress } from "@openzeppelin/upgrades-core";
+import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
 import { Permissions, ProxyAdmin } from "../typechain-types";
+import { SkaleABIFile, verify, getAbi, getVersion, encodeTransaction, 
+         createMultiSendTransaction, sendSafeTransaction, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
+
 const exec = util.promisify(asyncExec);
 
 

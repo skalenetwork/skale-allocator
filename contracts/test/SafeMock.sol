@@ -54,8 +54,7 @@ contract SafeMock is OwnableUpgradeable, ISafeMock {
         "EIP712Domain(uint256 chainId,address verifyingContract)"
     );
 
-    // solhint-disable-next-line comprehensive-interface
-    constructor() public initializer {
+    constructor() initializer {
         OwnableUpgradeable.__Ownable_init();
         multiSend(""); // this is needed to remove slither warning
     }

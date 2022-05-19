@@ -21,10 +21,10 @@
 
 pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
+import "./thirdparty/ERC777.sol";
 
-import "../Permissions.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
+import "../Permissions.sol";
 
 interface ISkaleTokenTester {
     function mint(
@@ -38,20 +38,17 @@ interface ISkaleTokenTester {
     function getAndUpdateSlashedAmount(address) external pure returns (uint);
 }
 
-contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
+contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
-    // solhint-disable-next-line comprehensive-interface
     constructor(
         address contractManagerAddress,
         string memory name,
         string memory symbol,
-        address[] memory defOp
-    )
-        public
+        address[] memory defOps
+    ) ERC777(name, symbol, defOps)
     {
-        ERC777Upgradeable.__ERC777_init(name, symbol, defOp);
         Permissions.initialize(contractManagerAddress);
     }
 
@@ -100,5 +97,13 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
         if (locked > 0) {
             require(balanceOf(from) >= locked + tokenId, "Token should be unlocked for transferring");
         }
+    }
+
+    function _msgData() internal view override(Context, ContextUpgradeable) returns (bytes memory) {
+        return Context._msgData();
+    }
+
+    function _msgSender() internal view override(Context, ContextUpgradeable) returns (address) {
+        return Context._msgSender();
     }
 }

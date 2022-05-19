@@ -39,8 +39,7 @@ contract DistributorMock is IERC777Recipient, IDistributorMock {
     //        wallet =>   validatorId => tokens
     mapping (address => mapping (uint256 => uint)) public approved;
 
-    // solhint-disable-next-line comprehensive-interface
-    constructor (address skaleTokenAddress) public {        
+    constructor (address skaleTokenAddress) {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
