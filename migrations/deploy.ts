@@ -28,10 +28,6 @@ export const contracts = [
 ]
 
 async function main() {
-    if (await ethers.provider.getCode("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24") === "0x") {
-        await run("erc1820");
-    }
-
     if (!existsSync(__dirname + "/../scripts/manager.json")) {
         console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
         process.exit(1);
