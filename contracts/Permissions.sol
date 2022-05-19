@@ -21,18 +21,17 @@
 
 pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "./thirdparty/InitializableWithGap.sol";
-
 import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
 import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
+
+import "./thirdparty/AccessControlUpgradeableLegacy.sol";
 
 
 /**
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
  * @author Artem Payvin
  */
-contract Permissions is InitializableWithGap, AccessControlUpgradeable, IPermissions {
+contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
     using AddressUpgradeable for address;
 
     // slither-disable-next-line uninitialized-state
@@ -58,7 +57,7 @@ contract Permissions is InitializableWithGap, AccessControlUpgradeable, IPermiss
     }
 
     function initialize(address contractManagerAddress) public virtual override initializer {
-        AccessControlUpgradeable.__AccessControl_init();
+        AccessControlUpgradeableLegacy.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);
     }
