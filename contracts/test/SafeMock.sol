@@ -19,7 +19,7 @@
     along with SKALE Manager.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -201,7 +201,7 @@ contract SafeMock is OwnableUpgradeable, ISafeMock {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPE_HASH, _getChainId(), this));
     }
 
-    function _getChainId() private pure returns (uint256) {
+    function _getChainId() private view returns (uint256) {
         uint256 id;
         // solhint-disable-next-line no-inline-assembly
         assembly {

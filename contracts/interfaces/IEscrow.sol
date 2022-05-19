@@ -20,7 +20,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity >=0.6.10 <0.9.0;
+pragma solidity >=0.8.11 <0.9.0;
 
 interface IEscrow {
     function initialize(address contractManagerAddress, address beneficiary) external;

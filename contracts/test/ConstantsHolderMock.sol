@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
 import "../Permissions.sol";
 
@@ -35,7 +35,7 @@ contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
     uint256 public launchTimestamp;
 
     function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
-        require(now < launchTimestamp, "Can't set network launch timestamp because network is already launched");
+        require(block.timestamp < launchTimestamp, "Can't set network launch timestamp because network is already launched");
         launchTimestamp = timestamp;
     }
 

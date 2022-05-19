@@ -19,9 +19,8 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "./thirdparty/openzeppelin/InitializableWithGap.sol";
 
@@ -34,7 +33,6 @@ import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
  * @author Artem Payvin
  */
 contract Permissions is InitializableWithGap, AccessControlUpgradeable, IPermissions {
-    using SafeMathUpgradeable for uint;
     using AddressUpgradeable for address;
 
     IContractManager public contractManager;

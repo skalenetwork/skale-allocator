@@ -20,11 +20,11 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -154,14 +154,14 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         }
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 locked = Math.max(
-            allocator.getFullAmount(_beneficiary).sub(vestedAmount),
+            allocator.getFullAmount(_beneficiary) - vestedAmount,
             tokenState.getAndUpdateForbiddenForDelegationAmount(address(this))
         );
         if (escrowBalance > locked) {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     _beneficiary,
-                    escrowBalance.sub(locked)
+                    escrowBalance - locked
                 ),
                 "Error of token send"
             );
@@ -190,7 +190,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     destination,
-                    escrowBalance.sub(forbiddenToSend)
+                    escrowBalance - forbiddenToSend
                 ),
                 "Error of token send"
             );

@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
 
@@ -65,8 +65,7 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
         onlyOwner
         returns (bool)
     {
-        (, uint result) = CAP.trySub(totalSupply());
-        require(amount <= result, "Amount is too big");
+        require(amount <= CAP - totalSupply(), "Amount is too big");
         _mint(
             account,
             amount,
@@ -99,7 +98,7 @@ contract SkaleTokenTester is ERC777Upgradeable, Permissions, ISkaleTokenTester {
     {
         uint256 locked = getAndUpdateLockedAmount(from);
         if (locked > 0) {
-            require(balanceOf(from) >= locked.add(tokenId), "Token should be unlocked for transferring");
+            require(balanceOf(from) >= locked + tokenId, "Token should be unlocked for transferring");
         }
     }
 }

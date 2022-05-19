@@ -19,9 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
-
-import "@openzeppelin/contracts/math/SafeMath.sol";
+pragma solidity 0.8.11;
 
 import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";
 
@@ -38,20 +36,19 @@ interface ITimeHelpers {
  * These functions are used to calculate monthly and Proof of Use epochs.
  */
 contract TimeHelpersTester is ITimeHelpers {
-    using SafeMath for uint;
 
     uint256 constant private _ZERO_YEAR = 2020;
 
     function getCurrentMonth() external view override returns (uint) {
-        return timestampToMonth(now);
+        return timestampToMonth(block.timestamp);
     }
 
     function monthToTimestamp(uint256 month) public view override returns (uint256 timestamp) {
         uint256 year = _ZERO_YEAR;
         uint256 _month = month;
-        year = year.add(_month.div(12));
-        _month = _month.mod(12);
-        _month = _month.add(1);
+        year = year + _month / 12;
+        _month = _month % 12;
+        _month = _month + 1;
         return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, _month, 1);
     }
 
@@ -60,7 +57,7 @@ contract TimeHelpersTester is ITimeHelpers {
         uint256 month;
         (year, month, ) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         require(year >= _ZERO_YEAR, "Timestamp is too far in the past");
-        month = month.sub(1).add(year.sub(_ZERO_YEAR).mul(12));
+        month = month - 1 + (year - _ZERO_YEAR) * 12;
         require(month > 0, "Timestamp is too far in the past");
         return month;
     }

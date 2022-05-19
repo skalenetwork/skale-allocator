@@ -35,9 +35,9 @@
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
-    "@openzeppelin/contracts": "3.4.0",
+    "@openzeppelin/contracts": "^4.4.2",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
-    "@openzeppelin/contracts-upgradeable": "3.4",
+    "@openzeppelin/contracts-upgradeable": "^4.4.2",
     "@openzeppelin/hardhat-upgrades": "^1.13.0",
     "@skalenetwork/skale-manager-interfaces": "1.0.0-develop.1",
     "@typechain/hardhat": "^6.0.0",

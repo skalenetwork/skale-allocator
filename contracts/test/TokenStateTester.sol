@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
 import "../Permissions.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
@@ -38,7 +38,7 @@ contract TokenStateTester is Permissions, ITokenStateTester {
         uint256 forbidden = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
-            forbidden = forbidden.add(locker.getAndUpdateForbiddenForDelegationAmount(holder));
+            forbidden = forbidden + locker.getAndUpdateForbiddenForDelegationAmount(holder);
         }
         return forbidden;
     }
@@ -47,7 +47,7 @@ contract TokenStateTester is Permissions, ITokenStateTester {
         uint256 locked = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
-            locked = locked.add(locker.getAndUpdateLockedAmount(holder));
+            locked = locked + locker.getAndUpdateLockedAmount(holder);
         }
         return locked;
     }
