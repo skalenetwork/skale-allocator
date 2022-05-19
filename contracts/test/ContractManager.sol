@@ -26,7 +26,7 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import "./utils/StringUtils.sol";
 
-interface IContractManager {
+interface IContractManagerTester {
     function initialize() external;
         function setContractsAddress(
         string calldata contractsName,
@@ -42,7 +42,7 @@ interface IContractManager {
  * contract contains the current mapping from contract IDs (in the form of
  * human-readable strings) to addresses.
  */
-contract ContractManager is OwnableUpgradeable, IContractManager {
+contract ContractManager is OwnableUpgradeable, IContractManagerTester {
     using StringUtils for string;
     using AddressUpgradeable for address;
 

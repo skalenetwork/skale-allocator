@@ -508,6 +508,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      *     if current step is 17 and vesting interval is 7 function returns 21.
      */
     function _calculateNextVestingStep(uint256 currentStep, uint256 vestingInterval) private pure returns (uint256) {
+        //slither-disable-next-line weak-prng
         return currentStep + vestingInterval - currentStep % vestingInterval;
     }
 }
