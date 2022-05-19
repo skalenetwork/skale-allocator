@@ -31,6 +31,7 @@ async function main() {
     await exec("mv contracts contracts_tmp");
     await exec(`cp -r ${deployedDir}/contracts ./`);
     await exec(`rm -r --interactive=never ${deployedDir}`)
+    await exec("sed -i 's/0.8.11/0.6.10/g' hardhat.config.ts");
     console.log("Prepare contracts");
 
     console.log("Deploy contracts");
@@ -39,6 +40,8 @@ async function main() {
 
     await exec("rm -r contracts");
     await exec("mv contracts_tmp contracts");
+    await exec("sed -i 's/0.6.10/0.8.11/g' hardhat.config.ts");
+
 
     let newManifestFilename;
     if (syncFs.existsSync(".openzeppelin/unknown-31337.json")) {
