@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { Interface } from "ethers/lib/utils";
 import { ContractTransaction } from 'ethers';
 import { promises as fs, existsSync } from 'fs';
-import { ethers, upgrades, network, run } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import { SkaleABIFile, verifyProxy, getAbi, getVersion, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
 
 async function getInitializerParameters(contract: string, contractManagerAddress: string) {
