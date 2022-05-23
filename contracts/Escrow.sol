@@ -52,8 +52,6 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     IERC1820Registry private _erc1820;
 
-    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
-
     event BeneficiaryUpdated(
         address oldValue,
         address newValue
@@ -61,8 +59,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     modifier onlyBeneficiary() virtual {
         require(
-            _msgSender() == _beneficiary ||
-            hasRole(BENEFICIARY_ROLE, _msgSender()),
+            _msgSender() == _beneficiary,
             "Message sender is not a plan beneficiary"
         );
         _;
@@ -81,8 +78,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(
-                _msgSender() == _beneficiary ||
-                hasRole(BENEFICIARY_ROLE, _msgSender()),
+                _msgSender() == _beneficiary,
                 "Message sender is not a plan beneficiary"
             );
         } else {
@@ -104,8 +100,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
     } 
 
-    function changeBeneficiary(address beneficiary) external override onlyBeneficiary {
+    function changeBeneficiaryAddress(address beneficiary) external override allow("Allocator") {
         require(beneficiary != address(0), "Beneficiary address must not be zero");
+        emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
     }
 

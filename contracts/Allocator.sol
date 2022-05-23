@@ -80,6 +80,34 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     }
 
+    function requestBeneficiaryAddress(address newBeneficiaryAddress) external override {
+        require(newBeneficiaryAddress != address(0), "Beneficiary address cannot be null");
+        require(
+            _beneficiaries[newBeneficiaryAddress].status == BeneficiaryStatus.UNKNOWN,
+            "New beneficiary address must be clean"
+        );
+        _beneficiaries[msg.sender].requestedAddress = newBeneficiaryAddress;
+    }
+
+    function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external override {
+        require(
+            msg.sender == _beneficiaries[oldBeneficiaryAddress].requestedAddress,
+            "Beneficiary address is not allowed to change"
+        );
+        _beneficiaries[msg.sender] = Beneficiary({
+            status: _beneficiaries[oldBeneficiaryAddress].status,
+            planId: _beneficiaries[oldBeneficiaryAddress].planId,
+            startMonth: _beneficiaries[oldBeneficiaryAddress].startMonth,
+            fullAmount: _beneficiaries[oldBeneficiaryAddress].fullAmount,
+            amountAfterLockup: _beneficiaries[oldBeneficiaryAddress].amountAfterLockup,
+            requestedAddress: address(0)
+        });
+        _beneficiaryToEscrow[msg.sender] = _beneficiaryToEscrow[oldBeneficiaryAddress];
+        delete _beneficiaries[oldBeneficiaryAddress];
+        delete _beneficiaryToEscrow[oldBeneficiaryAddress];
+        _beneficiaryToEscrow[msg.sender].changeBeneficiaryAddress(msg.sender);
+    }
+
     /**
      * @dev Allows Vesting manager to activate a vesting and transfer locked
      * tokens from the Allocator contract to the associated Escrow address.
@@ -192,7 +220,8 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             planId: planId,
             startMonth: startMonth,
             fullAmount: fullAmount,
-            amountAfterLockup: lockupAmount
+            amountAfterLockup: lockupAmount,
+            requestedAddress: address(0)
         });
         _beneficiaryToEscrow[beneficiary] = _deployEscrow(beneficiary);
     }

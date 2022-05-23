@@ -53,6 +53,7 @@ interface IAllocator {
         uint256 startMonth;
         uint256 fullAmount;
         uint256 amountAfterLockup;
+        address requestedAddress;
     }
 
     event PlanCreated(
@@ -82,6 +83,8 @@ interface IAllocator {
     ) external;
     function stopVesting(address beneficiary) external;
     function setVersion(string calldata newVersion) external;
+    function requestBeneficiaryAddress(address newBeneficiaryAddress) external;
+    function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external;
     function getStartMonth(address beneficiary) external view returns (uint);
     function getFinishVestingTime(address beneficiary) external view returns (uint);
     function getVestingCliffInMonth(address beneficiary) external view returns (uint);

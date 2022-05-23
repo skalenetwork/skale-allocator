@@ -24,7 +24,7 @@ pragma solidity >=0.8.11 <0.9.0;
 
 interface IEscrow {
     function initialize(address contractManagerAddress, address beneficiary) external;
-    function changeBeneficiary(address beneficiary) external;
+    function changeBeneficiaryAddress(address beneficiary) external;
     function retrieve() external;
     function retrieveAfterTermination(address destination) external;
     function delegate(
