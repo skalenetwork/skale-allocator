@@ -9,7 +9,7 @@ import {
 import { calculateLockedAmount } from "./tools/vestingCalculation";
 import { currentTime, getTimeAtDate, skipTimeToDate, skipTime } from "./tools/time";
 
-import chai from "chai";
+import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import chaiAlmost from "chai-almost";
 import { deployContractManager } from "./tools/deploy/contractManager";
@@ -19,6 +19,7 @@ import { BeneficiaryStatus, TimeUnit } from "./tools/types";
 import { deployTimeHelpersTester } from "./tools/deploy/test/timeHelpersTester";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { ethers } from "hardhat";
+import { expect } from "chai";
 
 chai.should();
 chai.use(chaiAsPromised);
@@ -283,13 +284,35 @@ describe("Allocator", () => {
             delegationId = 0;
         });
 
-        it("should allow only beneficiary to change address", async () => {
-            await escrow.connect(hacker).changeBeneficiary(hacker.address)
-                .should.be.eventually.rejectedWith("Message sender is not a plan beneficiary");
-            await escrow.connect(beneficiary).changeBeneficiary(ethers.constants.AddressZero)
-                .should.be.eventually.rejectedWith("Beneficiary address must not be zero");
+        it("should allow beneficiary to change address", async () => {
+            await allocator.connect(beneficiary).requestBeneficiaryAddress(ethers.constants.AddressZero)
+                .should.be.eventually.rejectedWith("Beneficiary address cannot be null");
+            await allocator.connect(beneficiary).requestBeneficiaryAddress(beneficiary.address)
+                .should.be.eventually.rejectedWith("New beneficiary address must be clean");
 
-            await escrow.connect(beneficiary).changeBeneficiary(beneficiary1.address);
+            const oldBeneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary.address);
+            const oldBeneficiaryEscrow = await allocator.getEscrowAddress(beneficiary.address);
+            await allocator.connect(beneficiary).requestBeneficiaryAddress(beneficiary1.address);
+
+            await allocator.connect(hacker).confirmBeneficiaryAddress(beneficiary.address)
+                .should.be.eventually.rejectedWith("Beneficiary address is not allowed to change");
+
+            const escrowFactory = await ethers.getContractFactory("Escrow");
+            escrow = (escrowFactory.attach(oldBeneficiaryEscrow)) ;
+            await expect(allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address))
+                .to.emit(escrow, 'BeneficiaryUpdated')
+                .withArgs(beneficiary.address, beneficiary1.address);
+            
+            const newBeneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary1.address);
+            const newBeneficiaryEscrow = await allocator.getEscrowAddress(beneficiary1.address);
+
+            newBeneficiaryParams.should.deep.equal(oldBeneficiaryParams);
+            newBeneficiaryEscrow.should.be.equal(oldBeneficiaryEscrow);
+
+            await allocator.getBeneficiaryPlanParams(beneficiary.address)
+                .should.be.eventually.rejectedWith("Plan beneficiary is not registered")
+            await allocator.getEscrowAddress(beneficiary.address)
+                .should.be.eventually.equal(ethers.constants.AddressZero);
         });
 
         it("should be able to cancel pending delegation request", async () => {
