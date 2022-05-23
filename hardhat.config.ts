@@ -3,6 +3,7 @@ import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
 import '@typechain/hardhat'
+import "@nomiclabs/hardhat-waffle";
 import * as dotenv from "dotenv"
 import { utils, Wallet } from "ethers";
 import { HardhatNetworkAccountUserConfig } from "hardhat/types/config";
