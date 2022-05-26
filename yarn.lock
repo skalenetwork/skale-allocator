@@ -1492,6 +1492,13 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
+"@solidity-parser/parser@^0.14.0":
+  version "0.14.1"
+  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.14.1.tgz#179afb29f4e295a77cc141151f26b3848abc3c46"
+  integrity sha512-eLjj2L6AuQjBB6s/ibwCAc0DwrR5Ge+ys+wgWo+bviU7fV2nTMQhU63CGaDKXg9iTmMxwhkyoggdIR7ZGRfMgw==
+  dependencies:
+    antlr4ts "^0.5.0-alpha.4"
+
 "@solidity-parser/parser@^0.5.2":
   version "0.5.2"
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.5.2.tgz#4d74670ead39e4f4fdab605a393ba8ea2390a2c4"
@@ -1860,11 +1867,6 @@
     web3 "1.5.3"
     web3-eth-abi "1.5.3"
 
-"@truffle/error@^0.0.14":
-  version "0.0.14"
-  resolved "https://registry.yarnpkg.com/@truffle/error/-/error-0.0.14.tgz#59683b5407bede7bddf16d80dc5592f9c5e5fa05"
-  integrity sha512-utJx+SZYoMqk8wldQG4gCVKhV8GwMJbWY7sLXFT/D8wWZTnE2peX7URFJh/cxkjTRCO328z1s2qewkhyVsu2HA==
-
 "@truffle/error@^0.0.6":
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/@truffle/error/-/error-0.0.6.tgz#75d499845b4b3a40537889e7d04c663afcaee85d"
@@ -1922,15 +1924,6 @@
     ethers "^4.0.32"
     web3 "1.5.3"
 
-"@truffle/interface-adapter@^0.5.9":
-  version "0.5.9"
-  resolved "https://registry.yarnpkg.com/@truffle/interface-adapter/-/interface-adapter-0.5.9.tgz#fa785bccf493705563297d4c6f816eb98d8c2009"
-  integrity sha512-LmzaRzA1pKChfXVnXy9AnOW0N+gugKQtUAnR1Za6KYKAtWSwRdkZo58Q03t4JkxxHDKoniNyQoaio/dhgW87xg==
-  dependencies:
-    bn.js "^5.1.3"
-    ethers "^4.0.32"
-    web3 "1.5.3"
-
 "@truffle/preserve-fs@^0.2.7":
   version "0.2.7"
   resolved "https://registry.yarnpkg.com/@truffle/preserve-fs/-/preserve-fs-0.2.7.tgz#e79b235e00425f9771c5b8eb80057d0a4b13ed71"
@@ -1977,16 +1970,7 @@
   dependencies:
     spinnies "^0.5.1"
 
-"@truffle/provider@^0.2.24":
-  version "0.2.43"
-  resolved "https://registry.yarnpkg.com/@truffle/provider/-/provider-0.2.43.tgz#823a6a331c296806773e2273b088bddcfb9757df"
-  integrity sha512-xEm6q6WWCxw7gQC6KPlY5Xgh81/VNDzHcd4C7NSD6JZ2Ii69xMjU5Po205KcfwI16XY7ibcDILFIyjXarfb0BA==
-  dependencies:
-    "@truffle/error" "^0.0.14"
-    "@truffle/interface-adapter" "^0.5.9"
-    web3 "1.5.3"
-
-"@truffle/provider@^0.2.54":
+"@truffle/provider@^0.2.24", "@truffle/provider@^0.2.54":
   version "0.2.54"
   resolved "https://registry.yarnpkg.com/@truffle/provider/-/provider-0.2.54.tgz#e34180eb3292be68ffdb8adaf7ae1c6b6611d482"
   integrity sha512-BW2bb6p7dAipUCHlRDMSswFqessXkIb8tHVRVkm6KAENIor0F4UCCPlxIzrM/ShRQ1O16jZ+0cxLMwiRWTWdLg==
@@ -10741,18 +10725,17 @@ solhint@^3.3.6:
   optionalDependencies:
     prettier "^1.14.3"
 
-solidity-coverage@^0.7.18:
-  version "0.7.18"
-  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.7.18.tgz#3dac9e0bf97aadf028d989dacdc3159c7879d9c0"
-  integrity sha512-H1UhB9QqLISJPgttaulnStUyOaJm0wZXvBGWUN9+HH3dl2hYjSmo3RBBFRm7U+dBNpPysS835XFGe+hG4ZhMrA==
+solidity-coverage@^0.7.21:
+  version "0.7.21"
+  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.7.21.tgz#20c5615a3a543086b243c2ca36e2951a75316b40"
+  integrity sha512-O8nuzJ9yXiKUx3NdzVvHrUW0DxoNVcGzq/I7NzewNO9EZE3wYAQ4l8BwcnV64r4aC/HB6Vnw/q2sF0BQHv/3fg==
   dependencies:
-    "@solidity-parser/parser" "^0.13.2"
+    "@solidity-parser/parser" "^0.14.0"
     "@truffle/provider" "^0.2.24"
     chalk "^2.4.2"
     death "^1.1.0"
     detect-port "^1.3.0"
     fs-extra "^8.1.0"
-    ganache-cli "^6.12.2"
     ghost-testrpc "^0.0.2"
     global-modules "^2.0.0"
     globby "^10.0.1"
