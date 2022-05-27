@@ -29,11 +29,10 @@ import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./interfaces/delegation/IDelegationController.sol";
-import "./interfaces/IEscrow.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
-
+import "./interfaces/IEscrow.sol";
 
 import "./Allocator.sol";
 import "./Permissions.sol";
@@ -52,6 +51,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     IERC1820Registry private _erc1820;
 
+    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
+
     event BeneficiaryUpdated(
         address oldValue,
         address newValue
@@ -59,7 +60,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     modifier onlyBeneficiary() virtual {
         require(
-            _msgSender() == _beneficiary,
+            _msgSender() == _beneficiary ||
+            hasRole(BENEFICIARY_ROLE, _msgSender()),
             "Message sender is not a plan beneficiary"
         );
         _;
@@ -78,7 +80,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(
-                _msgSender() == _beneficiary,
+                _msgSender() == _beneficiary ||
+                hasRole(BENEFICIARY_ROLE, _msgSender()),
                 "Message sender is not a plan beneficiary"
             );
         } else {
