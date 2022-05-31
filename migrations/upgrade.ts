@@ -13,11 +13,11 @@ import { SkaleABIFile, verify, getAbi, getVersion, encodeTransaction,
 const exec = util.promisify(asyncExec);
 
 
-type CustomEscrowsAction = (proxyAdmin: ProxyAdmin, proxies: string[], safeTransactions: string[]) => Promise<void>;
+type CustomEscrowsAction = (proxyAdmin: ProxyAdmin, proxies: string[], newImplementationAddress: string, safeTransactions: string[]) => Promise<void>;
 interface CustomEscrows {
     [escrow: string]: {
         oldImplementation: string
-        newImplementation: string
+        beneficiary: string
     }
 }
 
@@ -32,13 +32,11 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[], 
         production = true;
     }
 
-    let maxFeePerGasGWei = "100";
-    if (process.env.MAX_FEE_GWEI) {
-        maxFeePerGasGWei = process.env.MAX_FEE_GWEI;
-    }
-    let maxPriorityFeePerGasGWei = "1";
-    if (process.env.MAX_PRIORITY_FEE_GWEI) {
-        maxPriorityFeePerGasGWei = process.env.MAX_PRIORITY_FEE_GWEI
+    let maxFeePerGas = 100*1e9;
+    let maxPriorityFeePerGas = 1e9;
+    if (hre.network.config.gasPrice !== "auto") {
+        maxFeePerGas = hre.network.config.gasPrice;
+        maxPriorityFeePerGas = hre.network.config.gasPrice;
     }
 
     const abiFilePath = process.env.ABI;
@@ -156,7 +154,22 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[], 
             .map((line) => line.trim())
             .filter((line) => line !== "")
 
-        await upgradeCustomEscrows(proxyAdmin, proxies, safeTransactions);
+
+        console.log("Deploy implementation");
+        const escrowFactory = (await ethers.getContractFactory("Escrow")).connect(deployer);
+        const escrow = await escrowFactory.deploy({
+            maxFeePerGas: maxFeePerGas,
+            maxPriorityFeePerGas: maxPriorityFeePerGas
+        });
+        console.log("Deploy transaction:");
+        console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
+        console.log("New Escrow address:", escrow.address);
+        await escrow.deployTransaction.wait();
+        await verify("Escrow", escrow.address, []);
+
+        const newImplementationAddress = escrow.address;
+
+        await upgradeCustomEscrows(proxyAdmin, proxies, newImplementationAddress, safeTransactions);
 
         const implementations = await Promise.all(proxies.map(async (proxy) => {
             return await proxyAdmin.getProxyImplementation(proxy);
@@ -170,20 +183,6 @@ async function upgrade(targetVersion: string, contractNamesToUpgrade: string[], 
             distinctImplementations.forEach((implementation) => console.log(implementation));
             throw Error("Wrong Escrow list");
         }
-
-        console.log("Deploy implementation");
-        const escrowFactory = (await ethers.getContractFactory("Escrow")).connect(deployer);
-        const escrow = await escrowFactory.deploy({
-            maxFeePerGas: ethers.utils.parseUnits(maxFeePerGasGWei, "gwei"),
-            maxPriorityFeePerGas: ethers.utils.parseUnits(maxPriorityFeePerGasGWei, "gwei")
-        });
-        console.log("Deploy transaction:");
-        console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
-        console.log("New Escrow address:", escrow.address);
-        await escrow.deployTransaction.wait();
-        await verify("Escrow", escrow.address, []);
-
-        const newImplementationAddress = escrow.address;
 
         for (const proxy of proxies) {
             safeTransactions.push(encodeTransaction(
@@ -245,18 +244,20 @@ async function main() {
     await upgrade(
         "2.2.0",
         contracts,
-        async(proxyAdmin, proxies, safeTransactions) => {
+        async(proxyAdmin, proxies, newImplementationAddress, safeTransactions) => {
+            const escrowFactory = await ethers.getContractFactory("Escrow");
             const escrows = JSON.parse(await fs.readFile(__dirname + "/../data/customEscrows.json", "utf-8")) as CustomEscrows;
             for (const escrow in escrows) {
                 if (escrows.escrow.oldImplementation == await proxyAdmin.getProxyImplementation(escrow)) {
-                    if (escrows.escrow.newImplementation == "") {
-                        throw Error("New implementation wasn't found");
+                    if (escrows.escrow.beneficiary == "") {
+                        throw Error("Beneficiary wasn't found");
                     }
+                    const encodedReinitialize = escrowFactory.interface.encodeFunctionData("reinitialize", [escrows.escrow.beneficiary]);
                     safeTransactions.push(encodeTransaction(
                         0,
                         proxyAdmin.address,
                         0,
-                        proxyAdmin.interface.encodeFunctionData("upgrade", [escrow, escrows.escrow.newImplementation])
+                        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [escrow, newImplementationAddress, encodedReinitialize])
                     ));
                 }
                 const index = proxies.indexOf(escrow);

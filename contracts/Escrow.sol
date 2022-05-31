@@ -91,7 +91,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
             );
         }
         _;
-    }   
+    }
+
+    function reinitialize(address beneficiary) external override reinitializer(2) {
+        _setupRole(BENEFICIARY_ROLE, beneficiary);
+    }
 
     function initialize(address contractManagerAddress, address beneficiary) external override initializer {
         require(beneficiary != address(0), "Beneficiary address is not set");
