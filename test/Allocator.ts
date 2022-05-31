@@ -285,14 +285,14 @@ describe("Allocator", () => {
         });
 
         it("should allow beneficiary to change address", async () => {
-            await allocator.connect(beneficiary).requestBeneficiaryAddress(ethers.constants.AddressZero)
+            await allocator.connect(beneficiary).confirmBeneficiaryAddress(ethers.constants.AddressZero)
                 .should.be.eventually.rejectedWith("Beneficiary address cannot be null");
-            await allocator.connect(beneficiary).requestBeneficiaryAddress(beneficiary.address)
+            await allocator.connect(beneficiary).confirmBeneficiaryAddress(beneficiary.address)
                 .should.be.eventually.rejectedWith("New beneficiary address must be clean");
 
             const oldBeneficiaryParams = await allocator.getBeneficiaryPlanParams(beneficiary.address);
             const oldBeneficiaryEscrow = await allocator.getEscrowAddress(beneficiary.address);
-            await allocator.connect(beneficiary).requestBeneficiaryAddress(beneficiary1.address);
+            await allocator.connect(beneficiary).confirmBeneficiaryAddress(beneficiary1.address);
 
             await allocator.connect(hacker).confirmBeneficiaryAddress(beneficiary.address)
                 .should.be.eventually.rejectedWith("Beneficiary address is not allowed to change");

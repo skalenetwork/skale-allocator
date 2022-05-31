@@ -34,7 +34,6 @@ import "./thirdparty/AccessControlUpgradeableLegacy.sol";
 contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
     using AddressUpgradeable for address;
 
-    // slither-disable-next-line uninitialized-state
     IContractManager public contractManager;
 
     /**
