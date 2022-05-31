@@ -80,7 +80,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     }
 
-    function confirmBeneficiaryAddress(address newBeneficiaryAddress) external override {
+    function changeBeneficiaryAddress(address newBeneficiaryAddress) external override {
         require(newBeneficiaryAddress != address(0), "Beneficiary address cannot be null");
         require(
             _beneficiaries[newBeneficiaryAddress].status == BeneficiaryStatus.UNKNOWN,
