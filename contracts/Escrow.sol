@@ -46,7 +46,6 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     address internal _beneficiary;
 
-    // slither-disable-next-line unused-state
     uint256 private _availableAmountAfterTermination;
 
     IERC1820Registry private _erc1820;
@@ -57,6 +56,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         address oldValue,
         address newValue
     );
+
+    event VestingCanceled(uint vestedAmount);
 
     modifier onlyBeneficiary() virtual {
         require(
@@ -291,6 +292,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      * vesting is performed upon termination.
      */
     function cancelVesting(uint256 vestedAmount) external override allow("Allocator") {
+        emit VestingCanceled(vestedAmount);
         _availableAmountAfterTermination = vestedAmount;
     }
 }
