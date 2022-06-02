@@ -248,11 +248,11 @@ async function main() {
             const escrowFactory = await ethers.getContractFactory("Escrow");
             const escrows = JSON.parse(await fs.readFile(__dirname + "/../data/customEscrows.json", "utf-8")) as CustomEscrows;
             for (const escrow in escrows) {
-                if (escrows.escrow.oldImplementation == await proxyAdmin.getProxyImplementation(escrow)) {
-                    if (escrows.escrow.beneficiary == "") {
+                if (escrows[escrow].oldImplementation == await proxyAdmin.getProxyImplementation(escrow)) {
+                    if (escrows[escrow].beneficiary == "") {
                         throw Error("Beneficiary wasn't found");
                     }
-                    const encodedReinitialize = escrowFactory.interface.encodeFunctionData("reinitialize", [escrows.escrow.beneficiary]);
+                    const encodedReinitialize = escrowFactory.interface.encodeFunctionData("reinitialize", [escrows[escrow].beneficiary]);
                     safeTransactions.push(encodeTransaction(
                         0,
                         proxyAdmin.address,

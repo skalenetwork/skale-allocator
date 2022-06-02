@@ -122,7 +122,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         bytes calldata userData,
         bytes calldata operatorData
     )
-        external override
+        external
+        override
         allow("SkaleToken")
         // solhint-disable-next-line no-empty-blocks
     {
@@ -137,7 +138,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         bytes calldata,
         bytes calldata
     )
-        external override
+        external
+        override
         allow("SkaleToken")
         // solhint-disable-next-line no-empty-blocks
     {
@@ -219,7 +221,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         uint256 delegationPeriod,
         string calldata info
     )
-        external override
+        external
+        override
         onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
@@ -280,7 +283,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         uint256 validatorId,
         address to
     )
-        external override
+        external
+        override
         onlyActiveBeneficiaryOrVestingManager
     {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
