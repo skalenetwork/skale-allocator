@@ -22,7 +22,6 @@ git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEPLOYED_MANAGER_DIR
 
 npx ganache-cli --gasLimit 8000000 --quiet &
-GANACHE_PID=$!
 
 nvm install $DEPLOYED_WITH_NODE_VERSION
 nvm use $DEPLOYED_WITH_NODE_VERSION
@@ -64,4 +63,4 @@ mv .openzeppelin/new-mainnet.json .openzeppelin/unknown-$CHAIN_ID.json
 
 ABI=data/test.json npx hardhat run migrations/upgrade.ts --network localhost
 
-kill $GANACHE_PID
+npx kill-port 8545
