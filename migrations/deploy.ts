@@ -77,6 +77,8 @@ async function main() {
         outputObject[contractKey + "_abi"] = getAbi(artifact.interface);
     }
 
+    outputObject["contract_manager_address"] = contractManager.address;
+
     const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(outputObject.escrow_address as string);
     await contractManager.setContractsAddress("ProxyAdmin", proxyAdminAddress);
 
