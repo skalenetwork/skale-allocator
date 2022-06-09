@@ -6,9 +6,8 @@
     "strict": true,
     "target": "ES2018",
     "sourceMap": true,
+    "typeRoots": ["./node_modules/@types", "./typechain"],
+    "types": ["node"],
     "esModuleInterop": true,
-  },
-  "files": [
-    "node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts"
-  ]
+  }
 }

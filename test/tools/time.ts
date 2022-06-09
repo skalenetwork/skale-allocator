@@ -1,52 +1,29 @@
-import Web3 = require("web3");
+import { ethers } from "hardhat";
 
-let requestId = 0xd2;
-
-function responseCallback(error: Error | null, val?: any) {
-    if (error !== null) {
-        console.log(error, val);
-    }
+export async function skipTime(seconds: number) {
+    await ethers.provider.send("evm_increaseTime", [seconds]);
+    await ethers.provider.send("evm_mine", []);
 }
 
-export function skipTime(web3: Web3, seconds: number) {
-    web3.currentProvider.send(
-        {
-            id: requestId++,
-            jsonrpc: "2.0",
-            method: "evm_increaseTime",
-            params: [seconds],
-        },
-        responseCallback);
-
-    web3.currentProvider.send(
-        {
-            id: requestId++,
-            jsonrpc: "2.0",
-            method: "evm_mine",
-            params: [],
-        },
-        responseCallback);
-}
-
-export async function skipTimeToDate(web3: Web3, day: number, monthIndex: number) {
-    const timestamp = await currentTime(web3);
+export async function skipTimeToDate(day: number, monthIndex: number) {
+    const timestamp = await currentTime();
     const now = new Date(timestamp * 1000);
     const targetTime = new Date(now);
     if (monthIndex !== undefined) {
-        targetTime.setUTCMonth(monthIndex);
+        targetTime.setMonth(monthIndex);
     }
     if (day !== undefined) {
-        targetTime.setUTCDate(day);
+        targetTime.setDate(day);
     }
     if (targetTime < now) {
-        targetTime.setUTCFullYear(now.getUTCFullYear() + 1);
+        targetTime.setFullYear(now.getFullYear() + 1);
     }
     const diffInSeconds = Math.round(targetTime.getTime() / 1000) - timestamp;
-    skipTime(web3, diffInSeconds);
+    await skipTime(diffInSeconds);
 }
 
-export async function currentTime(web3: Web3) {
-    return (await web3.eth.getBlock("latest")).timestamp;
+export async function currentTime() {
+    return (await ethers.provider.getBlock("latest")).timestamp;
 }
 
 export function getTimeAtDate(day: number, monthIndex: number, year: number) {
@@ -57,8 +34,8 @@ export function getTimeAtDate(day: number, monthIndex: number, year: number) {
 
 export const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-export async function isLeapYear(web3: Web3) {
-    const timestamp = await currentTime(web3);
+export async function isLeapYear() {
+    const timestamp = await currentTime();
     const now = new Date(timestamp * 1000);
-    return now.getUTCFullYear() % 4 === 0;
+    return now.getFullYear() % 4 === 0;
 }

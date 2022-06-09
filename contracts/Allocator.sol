@@ -20,52 +20,23 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/openzeppelin/IProxyFactory.sol";
-import "./interfaces/openzeppelin/IProxyAdmin.sol";
-import "./interfaces/ITimeHelpers.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
+import "./interfaces/IAllocator.sol";
 import "./Escrow.sol";
 import "./Permissions.sol";
 
 /**
  * @title Allocator
  */
-contract Allocator is Permissions, IERC777Recipient {
-
-    enum TimeUnit {
-        DAY,
-        MONTH,
-        YEAR
-    }
-
-    enum BeneficiaryStatus {
-        UNKNOWN,
-        CONFIRMED,
-        ACTIVE,
-        TERMINATED
-    }
-
-    struct Plan {
-        uint256 totalVestingDuration; // months
-        uint256 vestingCliff; // months
-        TimeUnit vestingIntervalTimeUnit;
-        uint256 vestingInterval; // amount of days/months/years
-        bool isDelegationAllowed;
-        bool isTerminatable;
-    }
-
-    struct Beneficiary {
-        BeneficiaryStatus status;
-        uint256 planId;
-        uint256 startMonth;
-        uint256 fullAmount;
-        uint256 amountAfterLockup;
-    }
+contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
     uint256 constant private _MONTHS_PER_YEAR = 12;
@@ -83,9 +54,7 @@ contract Allocator is Permissions, IERC777Recipient {
     //       beneficiary => Escrow
     mapping (address => Escrow) private _beneficiaryToEscrow;
 
-    event PlanCreated(
-        uint256 id
-    );
+    string public version;
 
     modifier onlyVestingManager() {
         require(
@@ -103,11 +72,40 @@ contract Allocator is Permissions, IERC777Recipient {
         bytes calldata userData,
         bytes calldata operatorData
     )
-        external override
+        external
+        override
         allow("SkaleToken")
         // solhint-disable-next-line no-empty-blocks
     {
 
+    }
+
+    function changeBeneficiaryAddress(address newBeneficiaryAddress) external override {
+        require(newBeneficiaryAddress != address(0), "Beneficiary address cannot be null");
+        require(
+            _beneficiaries[newBeneficiaryAddress].status == BeneficiaryStatus.UNKNOWN,
+            "New beneficiary address must be clean"
+        );
+        _beneficiaries[msg.sender].requestedAddress = newBeneficiaryAddress;
+    }
+
+    function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external override {
+        require(
+            msg.sender == _beneficiaries[oldBeneficiaryAddress].requestedAddress,
+            "Beneficiary address is not allowed to change"
+        );
+        _beneficiaries[msg.sender] = Beneficiary({
+            status: _beneficiaries[oldBeneficiaryAddress].status,
+            planId: _beneficiaries[oldBeneficiaryAddress].planId,
+            startMonth: _beneficiaries[oldBeneficiaryAddress].startMonth,
+            fullAmount: _beneficiaries[oldBeneficiaryAddress].fullAmount,
+            amountAfterLockup: _beneficiaries[oldBeneficiaryAddress].amountAfterLockup,
+            requestedAddress: address(0)
+        });
+        _beneficiaryToEscrow[msg.sender] = _beneficiaryToEscrow[oldBeneficiaryAddress];
+        delete _beneficiaries[oldBeneficiaryAddress];
+        delete _beneficiaryToEscrow[oldBeneficiaryAddress];
+        _beneficiaryToEscrow[msg.sender].changeBeneficiaryAddress(msg.sender);
     }
 
     /**
@@ -118,7 +116,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * 
      * - Beneficiary address must be already confirmed.
      */
-    function startVesting(address beneficiary) external onlyVestingManager {
+    function startVesting(address beneficiary) external override onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMED,
             "Beneficiary has inappropriate status"
@@ -151,6 +149,7 @@ contract Allocator is Permissions, IERC777Recipient {
         bool isTerminatable
     )
         external
+        override
         onlyVestingManager
     {
         require(totalVestingDuration > 0, "Vesting duration can't be zero");
@@ -161,13 +160,13 @@ contract Allocator is Permissions, IERC777Recipient {
         if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
             uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
             require(
-                vestingDurationAfterCliff.mod(vestingInterval) == 0,
+                vestingDurationAfterCliff % vestingInterval == 0,
                 "Vesting duration can't be divided into equal intervals"
             );
         } else if (vestingIntervalTimeUnit == TimeUnit.YEAR) {
             uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
             require(
-                vestingDurationAfterCliff.mod(vestingInterval.mul(_MONTHS_PER_YEAR)) == 0,
+                vestingDurationAfterCliff % (vestingInterval * _MONTHS_PER_YEAR) == 0,
                 "Vesting duration can't be divided into equal intervals"
             );
         }
@@ -200,6 +199,7 @@ contract Allocator is Permissions, IERC777Recipient {
         uint256 lockupAmount
     )
         external
+        override
         onlyVestingManager
     {
         require(_plans.length >= planId && planId > 0, "Plan does not exist");
@@ -207,11 +207,11 @@ contract Allocator is Permissions, IERC777Recipient {
         require(_beneficiaries[beneficiary].status == BeneficiaryStatus.UNKNOWN, "Beneficiary is already added");
         if (_plans[planId - 1].vestingIntervalTimeUnit == TimeUnit.DAY) {
             uint256 vestingDurationInDays = _daysBetweenMonths(
-                startMonth.add(_plans[planId - 1].vestingCliff),
-                startMonth.add(_plans[planId - 1].totalVestingDuration)
+                startMonth + _plans[planId - 1].vestingCliff,
+                startMonth + _plans[planId - 1].totalVestingDuration
             );
             require(
-                vestingDurationInDays.mod(_plans[planId - 1].vestingInterval) == 0,
+                vestingDurationInDays % _plans[planId - 1].vestingInterval == 0,
                 "Vesting duration can't be divided into equal intervals"
             );
         }
@@ -220,7 +220,8 @@ contract Allocator is Permissions, IERC777Recipient {
             planId: planId,
             startMonth: startMonth,
             fullAmount: fullAmount,
-            amountAfterLockup: lockupAmount
+            amountAfterLockup: lockupAmount,
+            requestedAddress: address(0)
         });
         _beneficiaryToEscrow[beneficiary] = _deployEscrow(beneficiary);
     }
@@ -233,7 +234,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * 
      * - Vesting must be active.
      */
-    function stopVesting(address beneficiary) external onlyVestingManager {
+    function stopVesting(address beneficiary) external override onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE,
             "Cannot stop vesting for a non active beneficiary"
@@ -247,40 +248,52 @@ contract Allocator is Permissions, IERC777Recipient {
     }
 
     /**
+     * @dev Sets new version of contracts on schain
+     *
+     * Requirements:
+     *
+     * - `msg.sender` must be granted DEFAULT_ADMIN_ROLE
+     */
+    function setVersion(string calldata newVersion) external override onlyOwner {
+        emit VersionUpdated(version, newVersion);
+        version = newVersion;
+    }
+
+    /**
      * @dev Returns vesting start month of the beneficiary's Plan.
      */
-    function getStartMonth(address beneficiary) external view returns (uint) {
+    function getStartMonth(address beneficiary) external view override returns (uint) {
         return _beneficiaries[beneficiary].startMonth;
     }
 
     /**
      * @dev Returns the final vesting date of the beneficiary's Plan.
      */
-    function getFinishVestingTime(address beneficiary) external view returns (uint) {
+    function getFinishVestingTime(address beneficiary) external view override returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.totalVestingDuration));
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.totalVestingDuration);
     }
 
     /**
      * @dev Returns the vesting cliff period in months.
      */
-    function getVestingCliffInMonth(address beneficiary) external view returns (uint) {
+    function getVestingCliffInMonth(address beneficiary) external view override returns (uint) {
         return _plans[_beneficiaries[beneficiary].planId - 1].vestingCliff;
     }
 
     /**
      * @dev Confirms whether the beneficiary is active in the Plan.
      */
-    function isVestingActive(address beneficiary) external view returns (bool) {
+    function isVestingActive(address beneficiary) external view override returns (bool) {
         return _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE;
     }
 
     /**
      * @dev Confirms whether the beneficiary is registered in a Plan.
      */
-    function isBeneficiaryRegistered(address beneficiary) external view returns (bool) {
+    function isBeneficiaryRegistered(address beneficiary) external view override returns (bool) {
         return _beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN;
     }
 
@@ -288,7 +301,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Confirms whether the beneficiary's Plan allows all un-vested tokens to be
      * delegated.
      */
-    function isDelegationAllowed(address beneficiary) external view returns (bool) {
+    function isDelegationAllowed(address beneficiary) external view override returns (bool) {
         return _plans[_beneficiaries[beneficiary].planId - 1].isDelegationAllowed;
     }
 
@@ -296,14 +309,14 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the locked and unlocked (full) amount of tokens allocated to
      * the beneficiary address in Plan.
      */
-    function getFullAmount(address beneficiary) external view returns (uint) {
+    function getFullAmount(address beneficiary) external view override returns (uint) {
         return _beneficiaries[beneficiary].fullAmount;
     }
 
     /**
      * @dev Returns the Escrow contract by beneficiary.
      */
-    function getEscrowAddress(address beneficiary) external view returns (address) {
+    function getEscrowAddress(address beneficiary) external view override returns (address) {
         return address(_beneficiaryToEscrow[beneficiary]);
     }
 
@@ -311,29 +324,31 @@ contract Allocator is Permissions, IERC777Recipient {
      * @dev Returns the timestamp when vesting cliff ends and periodic vesting
      * begins.
      */
-    function getLockupPeriodEndTimestamp(address beneficiary) external view returns (uint) {
+    function getLockupPeriodEndTimestamp(address beneficiary) external view override returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.vestingCliff));
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.vestingCliff);
     }
 
     /**
      * @dev Returns the time of the next vesting event.
      */
-    function getTimeOfNextVest(address beneficiary) external view returns (uint) {
+    function getTimeOfNextVest(address beneficiary) external view override returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
 
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
 
-        uint256 firstVestingMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
+        uint256 firstVestingMonth = beneficiaryPlan.startMonth + planParams.vestingCliff;
         uint256 lockupEndTimestamp = timeHelpers.monthToTimestamp(firstVestingMonth);
-        if (now < lockupEndTimestamp) {
+        if (block.timestamp < lockupEndTimestamp) {
             return lockupEndTimestamp;
         }
         require(
-            now < timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)),
+            block.timestamp < timeHelpers.monthToTimestamp(
+                beneficiaryPlan.startMonth + planParams.totalVestingDuration
+            ),
             "Vesting is over"
         );
         require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");
@@ -343,31 +358,26 @@ contract Allocator is Permissions, IERC777Recipient {
             // TODO: it may be simplified if TimeHelpers contract in skale-manager is updated
             uint daysPassedBeforeCurrentMonth = _daysBetweenMonths(firstVestingMonth, currentMonth);
             uint256 currentMonthBeginningTimestamp = timeHelpers.monthToTimestamp(currentMonth);
-            uint256 daysPassedInCurrentMonth = now.sub(currentMonthBeginningTimestamp).div(_SECONDS_PER_DAY);
+            uint256 daysPassedInCurrentMonth = (block.timestamp - currentMonthBeginningTimestamp) / _SECONDS_PER_DAY;
             uint256 daysPassedBeforeNextVest = _calculateNextVestingStep(
-                daysPassedBeforeCurrentMonth.add(daysPassedInCurrentMonth),
+                daysPassedBeforeCurrentMonth + daysPassedInCurrentMonth,
                 planParams.vestingInterval
             );
-            return currentMonthBeginningTimestamp.add(
-                daysPassedBeforeNextVest
-                    .sub(daysPassedBeforeCurrentMonth)
-                    .mul(_SECONDS_PER_DAY)
-            );
+            return currentMonthBeginningTimestamp +
+                (daysPassedBeforeNextVest - daysPassedBeforeCurrentMonth) * _SECONDS_PER_DAY;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
             return timeHelpers.monthToTimestamp(
-                firstVestingMonth.add(
-                    _calculateNextVestingStep(currentMonth.sub(firstVestingMonth), planParams.vestingInterval)
-                )
+                firstVestingMonth +
+                    _calculateNextVestingStep(currentMonth - firstVestingMonth, planParams.vestingInterval)
             );
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
             return timeHelpers.monthToTimestamp(
-                firstVestingMonth.add(
+                firstVestingMonth +
                     _calculateNextVestingStep(
-                        currentMonth.sub(firstVestingMonth),
-                        planParams.vestingInterval.mul(_MONTHS_PER_YEAR)
+                        currentMonth - firstVestingMonth,
+                        planParams.vestingInterval * _MONTHS_PER_YEAR
                     )
-                )
-            );
+                );
         } else {
             revert("Vesting interval timeunit is incorrect");
         }
@@ -380,7 +390,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * 
      * - Plan must already exist.
      */
-    function getPlan(uint256 planId) external view returns (Plan memory) {
+    function getPlan(uint256 planId) external view override returns (Plan memory) {
         require(planId > 0 && planId <= _plans.length, "Plan Round does not exist");
         return _plans[planId - 1];
     }
@@ -392,7 +402,7 @@ contract Allocator is Permissions, IERC777Recipient {
      * 
      * - Beneficiary address must be registered to an Plan.
      */
-    function getBeneficiaryPlanParams(address beneficiary) external view returns (Beneficiary memory) {
+    function getBeneficiaryPlanParams(address beneficiary) external view override returns (Beneficiary memory) {
         require(_beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN, "Plan beneficiary is not registered");
         return _beneficiaries[beneficiary];
     }
@@ -406,15 +416,15 @@ contract Allocator is Permissions, IERC777Recipient {
     /**
      * @dev Calculates and returns the vested token amount.
      */
-    function calculateVestedAmount(address wallet) public view returns (uint256 vestedAmount) {
+    function calculateVestedAmount(address wallet) public view override returns (uint256 vestedAmount) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         vestedAmount = 0;
         uint256 currentMonth = timeHelpers.getCurrentMonth();
-        if (currentMonth >= beneficiaryPlan.startMonth.add(planParams.vestingCliff)) {
+        if (currentMonth >= beneficiaryPlan.startMonth + planParams.vestingCliff) {
             vestedAmount = beneficiaryPlan.amountAfterLockup;
-            if (currentMonth >= beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)) {
+            if (currentMonth >= beneficiaryPlan.startMonth + planParams.totalVestingDuration) {
                 vestedAmount = beneficiaryPlan.fullAmount;
             } else {
                 uint256 payment = _getSinglePaymentSize(
@@ -422,7 +432,7 @@ contract Allocator is Permissions, IERC777Recipient {
                     beneficiaryPlan.fullAmount,
                     beneficiaryPlan.amountAfterLockup
                 );
-                vestedAmount = vestedAmount.add(payment.mul(_getNumberOfCompletedVestingEvents(wallet)));
+                vestedAmount = vestedAmount + payment * _getNumberOfCompletedVestingEvents(wallet);
             }
         }
     }
@@ -436,28 +446,20 @@ contract Allocator is Permissions, IERC777Recipient {
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
 
-        uint256 firstVestingMonth = beneficiaryPlan.startMonth.add(planParams.vestingCliff);
-        if (now < timeHelpers.monthToTimestamp(firstVestingMonth)) {
+        uint256 firstVestingMonth = beneficiaryPlan.startMonth + planParams.vestingCliff;
+        if (block.timestamp < timeHelpers.monthToTimestamp(firstVestingMonth)) {
             return 0;
         } else {
             uint256 currentMonth = timeHelpers.getCurrentMonth();
             if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
-                return _daysBetweenMonths(firstVestingMonth, currentMonth)
-                    .add(
-                        now
-                            .sub(timeHelpers.monthToTimestamp(currentMonth))
-                            .div(_SECONDS_PER_DAY)
-                    )
-                    .div(planParams.vestingInterval);
+                return (_daysBetweenMonths(firstVestingMonth, currentMonth)
+                            + (block.timestamp - timeHelpers.monthToTimestamp(currentMonth))
+                              / _SECONDS_PER_DAY)
+                        / planParams.vestingInterval;
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-                return currentMonth
-                    .sub(firstVestingMonth)
-                    .div(planParams.vestingInterval);
+                return (currentMonth - firstVestingMonth) / planParams.vestingInterval;
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-                return currentMonth
-                    .sub(firstVestingMonth)
-                    .div(_MONTHS_PER_YEAR)
-                    .div(planParams.vestingInterval);
+                return (currentMonth - firstVestingMonth) / _MONTHS_PER_YEAR / planParams.vestingInterval;
             } else {
                 revert("Unknown time unit");
             }
@@ -472,18 +474,16 @@ contract Allocator is Permissions, IERC777Recipient {
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
             return _daysBetweenMonths(
-                beneficiaryPlan.startMonth.add(planParams.vestingCliff),
-                beneficiaryPlan.startMonth.add(planParams.totalVestingDuration)
-            ).div(planParams.vestingInterval);
+                beneficiaryPlan.startMonth + planParams.vestingCliff,
+                beneficiaryPlan.startMonth + planParams.totalVestingDuration
+            ) / planParams.vestingInterval;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return planParams.totalVestingDuration
-                .sub(planParams.vestingCliff)
-                .div(planParams.vestingInterval);
+            return (planParams.totalVestingDuration - planParams.vestingCliff)
+                   / planParams.vestingInterval;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-            return planParams.totalVestingDuration
-                .sub(planParams.vestingCliff)
-                .div(_MONTHS_PER_YEAR)
-                .div(planParams.vestingInterval);
+            return (planParams.totalVestingDuration - planParams.vestingCliff)
+                    / _MONTHS_PER_YEAR
+                    / planParams.vestingInterval;
         } else {
             revert("Unknown time unit");
         }
@@ -502,28 +502,22 @@ contract Allocator is Permissions, IERC777Recipient {
         view
         returns(uint)
     {
-        return fullAmount.sub(afterLockupPeriodAmount).div(_getNumberOfAllVestingEvents(wallet));
+        return (fullAmount - afterLockupPeriodAmount) / _getNumberOfAllVestingEvents(wallet);
     }
 
     function _deployEscrow(address beneficiary) private returns (Escrow) {
-        // TODO: replace with ProxyFactory when @openzeppelin/upgrades will be compatible with solidity 0.6
-        IProxyFactory proxyFactory = IProxyFactory(contractManager.getContract("ProxyFactory"));
-        Escrow escrow = Escrow(contractManager.getContract("Escrow"));
-        // TODO: replace with ProxyAdmin when @openzeppelin/upgrades will be compatible with solidity 0.6
-        IProxyAdmin proxyAdmin = IProxyAdmin(contractManager.getContract("ProxyAdmin"));
-
-        return Escrow(
-            proxyFactory.deploy(
-                uint256(bytes32(bytes20(beneficiary))),
-                proxyAdmin.getProxyImplementation(address(escrow)),
-                address(proxyAdmin),
-                abi.encodeWithSelector(
-                    Escrow.initialize.selector,
-                    address(contractManager),
-                    beneficiary
-                )
-            )
+        address proxyAdmin = contractManager.getContract("ProxyAdmin");
+        TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
+            payable(contractManager.getContract("Escrow"))
         );
+        address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
+        bytes memory initializingData = abi.encodeWithSignature(
+            "initialize(address,address)", address(contractManager), beneficiary
+        );
+        address beneficiaryEscrow = address(new TransparentUpgradeableProxy(
+            escrowImplementation, proxyAdmin, initializingData
+        ));
+        return Escrow(beneficiaryEscrow);
     }
 
     function _daysBetweenMonths(uint256 beginMonth, uint256 endMonth) private view returns (uint256) {
@@ -531,9 +525,9 @@ contract Allocator is Permissions, IERC777Recipient {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 beginTimestamp = timeHelpers.monthToTimestamp(beginMonth);
         uint256 endTimestamp = timeHelpers.monthToTimestamp(endMonth);
-        uint256 secondsPassed = endTimestamp.sub(beginTimestamp);
-        require(secondsPassed.mod(_SECONDS_PER_DAY) == 0, "Internal error in calendar");
-        return secondsPassed.div(_SECONDS_PER_DAY);
+        uint256 secondsPassed = endTimestamp - beginTimestamp;
+        require(secondsPassed % _SECONDS_PER_DAY == 0, "Internal error in calendar");
+        return secondsPassed / _SECONDS_PER_DAY;
     }
 
     /**
@@ -543,10 +537,7 @@ contract Allocator is Permissions, IERC777Recipient {
      *     if current step is 17 and vesting interval is 7 function returns 21.
      */
     function _calculateNextVestingStep(uint256 currentStep, uint256 vestingInterval) private pure returns (uint256) {
-        return currentStep
-            .add(vestingInterval)
-            .sub(
-                currentStep.mod(vestingInterval)
-            );
+        // slither-disable-next-line weak-prng
+        return currentStep + vestingInterval - currentStep % vestingInterval;
     }
 }

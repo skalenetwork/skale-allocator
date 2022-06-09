@@ -19,22 +19,26 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
-
-// import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+pragma solidity 0.8.11;
 
 import "../Permissions.sol";
 
+interface IConstantsHolderMock {
+    function setLaunchTimestamp(uint256 timestamp) external;
+}
 
 /**
  * @dev Interface of Delegatable Token operations.
  */
-contract ConstantsHolderMock is Permissions {
+contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
 
     uint256 public launchTimestamp;
 
-    function setLaunchTimestamp(uint256 timestamp) external onlyOwner {
-        require(now < launchTimestamp, "Can't set network launch timestamp because network is already launched");
+    function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
+        require(
+            block.timestamp < launchTimestamp,
+            "Can't set network launch timestamp because network is already launched"
+        );
         launchTimestamp = timestamp;
     }
 

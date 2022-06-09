@@ -19,17 +19,19 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../interfaces/delegation/IDistributor.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
 
+interface IDistributorMock {
+    function withdrawBounty(uint256 validatorId, address to) external;
+}
 
-
-contract DistributorMock is IDistributor, IERC777Recipient {    
+contract DistributorMock is IERC777Recipient, IDistributorMock {    
 
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     IERC20 public skaleToken;
@@ -37,7 +39,7 @@ contract DistributorMock is IDistributor, IERC777Recipient {
     //        wallet =>   validatorId => tokens
     mapping (address => mapping (uint256 => uint)) public approved;
 
-    constructor (address skaleTokenAddress) public {        
+    constructor (address skaleTokenAddress) {        
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }

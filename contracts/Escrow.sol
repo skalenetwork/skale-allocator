@@ -20,18 +20,19 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/math/Math.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Sender.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./interfaces/delegation/IDelegationController.sol";
-import "./interfaces/delegation/IDistributor.sol";
-import "./interfaces/delegation/ITokenState.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
+import "./interfaces/IEscrow.sol";
 
 import "./Allocator.sol";
 import "./Permissions.sol";
@@ -41,7 +42,7 @@ import "./Permissions.sol";
  * @title Escrow
  * @dev This contract manages funds locked by the Allocator contract.
  */
-contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
+contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     address internal _beneficiary;
 
@@ -49,13 +50,21 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
 
     IERC1820Registry private _erc1820;
 
+    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
+
     event BeneficiaryUpdated(
         address oldValue,
         address newValue
     );
 
+    event VestingCanceled(uint vestedAmount);
+
     modifier onlyBeneficiary() virtual {
-        require(_msgSender() == _beneficiary, "Message sender is not a plan beneficiary");
+        require(
+            _msgSender() == _beneficiary ||
+            hasRole(BENEFICIARY_ROLE, _msgSender()),
+            "Message sender is not a plan beneficiary"
+        );
         _;
     }
 
@@ -71,7 +80,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
     modifier onlyActiveBeneficiaryOrVestingManager() virtual {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
-            require(_msgSender() == _beneficiary, "Message sender is not beneficiary");
+            require(
+                _msgSender() == _beneficiary ||
+                hasRole(BENEFICIARY_ROLE, _msgSender()),
+                "Message sender is not a plan beneficiary"
+            );
         } else {
             require(
                 allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
@@ -79,9 +92,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
             );
         }
         _;
-    }   
+    }
 
-    function initialize(address contractManagerAddress, address beneficiary) external initializer {
+    function reinitialize(address beneficiary) external override reinitializer(2) {
+        _setupRole(BENEFICIARY_ROLE, beneficiary);
+    }
+
+    function initialize(address contractManagerAddress, address beneficiary) external override initializer {
         require(beneficiary != address(0), "Beneficiary address is not set");
         Permissions.initialize(contractManagerAddress);
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
@@ -91,6 +108,12 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
     } 
 
+    function changeBeneficiaryAddress(address beneficiary) external override allow("Allocator") {
+        require(beneficiary != address(0), "Beneficiary address must not be zero");
+        emit BeneficiaryUpdated(_beneficiary, beneficiary);
+        _beneficiary = beneficiary;
+    }
+
     function tokensReceived(
         address operator,
         address from,
@@ -99,7 +122,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         bytes calldata userData,
         bytes calldata operatorData
     )
-        external override
+        external
+        override
         allow("SkaleToken")
         // solhint-disable-next-line no-empty-blocks
     {
@@ -114,7 +138,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         bytes calldata,
         bytes calldata
     )
-        external override
+        external
+        override
         allow("SkaleToken")
         // solhint-disable-next-line no-empty-blocks
     {
@@ -126,9 +151,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * IMPORTANT: Slashed tokens are non-transferable.
      */
-    function retrieve() external onlyBeneficiary {
+    function retrieve() external override onlyBeneficiary {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
         uint256 vestedAmount = 0;
         if (allocator.isVestingActive(_beneficiary)) {
             vestedAmount = allocator.calculateVestedAmount(_beneficiary);
@@ -137,14 +162,14 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         }
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 locked = Math.max(
-            allocator.getFullAmount(_beneficiary).sub(vestedAmount),
+            allocator.getFullAmount(_beneficiary) - vestedAmount,
             tokenState.getAndUpdateForbiddenForDelegationAmount(address(this))
         );
         if (escrowBalance > locked) {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     _beneficiary,
-                    escrowBalance.sub(locked)
+                    escrowBalance - locked
                 ),
                 "Error of token send"
             );
@@ -161,9 +186,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Allocator must be active.
      */
-    function retrieveAfterTermination(address destination) external onlyVestingManager {
+    function retrieveAfterTermination(address destination) external override onlyVestingManager {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
 
         require(destination != address(0), "Destination address is not set");
         require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
@@ -173,7 +198,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
             require(
                 IERC20(contractManager.getContract("SkaleToken")).transfer(
                     destination,
-                    escrowBalance.sub(forbiddenToSend)
+                    escrowBalance - forbiddenToSend
                 ),
                 "Error of token send"
             );
@@ -197,6 +222,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
         string calldata info
     )
         external
+        override
         onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
@@ -218,7 +244,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external onlyActiveBeneficiaryOrVestingManager {
+    function requestUndelegation(uint256 delegationId) external override onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -234,7 +260,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * 
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function cancelPendingDelegation(uint delegationId) external onlyActiveBeneficiaryOrVestingManager {
+    function cancelPendingDelegation(uint delegationId) external override onlyActiveBeneficiaryOrVestingManager {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -253,7 +279,14 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * - Beneficiary or Vesting manager must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
-    function withdrawBounty(uint256 validatorId, address to) external onlyActiveBeneficiaryOrVestingManager {        
+    function withdrawBounty(
+        uint256 validatorId,
+        address to
+    )
+        external
+        override
+        onlyActiveBeneficiaryOrVestingManager
+    {        
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
@@ -262,7 +295,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, Permissions {
      * @dev Allows Allocator contract to cancel vesting of a Beneficiary. Cancel
      * vesting is performed upon termination.
      */
-    function cancelVesting(uint256 vestedAmount) external allow("Allocator") {
+    function cancelVesting(uint256 vestedAmount) external override allow("Allocator") {
+        emit VestingCanceled(vestedAmount);
         _availableAmountAfterTermination = vestedAmount;
     }
 }
