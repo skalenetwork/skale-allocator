@@ -54,7 +54,7 @@
     "solc": "^0.8.11"
   },
   "devDependencies": {
-    "@ethersproject/abi": "^5.4.7",
+    "@ethersproject/abi": "^5.6.4",
     "@ethersproject/bytes": "5.6.1",
     "@ethersproject/providers": "^5.5.0",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
