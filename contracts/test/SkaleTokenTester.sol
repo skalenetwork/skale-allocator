@@ -19,14 +19,26 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/ERC777.sol";
+import "./thirdparty/ERC777.sol";
 
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 import "../Permissions.sol";
-import "../interfaces/delegation/ITokenState.sol";
 
-contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
+interface ISkaleTokenTester {
+    function mint(
+        address account,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    ) external returns(bool);
+    function getAndUpdateLockedAmount(address wallet) external returns (uint);
+    function getAndUpdateDelegatedAmount(address) external pure returns (uint);
+    function getAndUpdateSlashedAmount(address) external pure returns (uint);
+}
+
+contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
 
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
@@ -34,11 +46,9 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
         address contractManagerAddress,
         string memory name,
         string memory symbol,
-        address[] memory defOp
-    )
-        public
+        address[] memory defOps
+    ) ERC777(name, symbol, defOps)
     {
-        ERC777UpgradeSafe.__ERC777_init(name, symbol, defOp);
         Permissions.initialize(contractManagerAddress);
     }
 
@@ -48,11 +58,11 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
         bytes memory userData,
         bytes memory operatorData
     )
-        external
+        external override
         onlyOwner
         returns (bool)
     {
-        require(amount <= CAP.sub(totalSupply()), "Amount is too big");
+        require(amount <= CAP - totalSupply(), "Amount is too big");
         _mint(
             account,
             amount,
@@ -63,16 +73,16 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
         return true;
     }
 
-    function getAndUpdateDelegatedAmount(address) pure external returns (uint) {
+    function getAndUpdateDelegatedAmount(address) external pure override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateSlashedAmount(address) pure external returns (uint) {
+    function getAndUpdateSlashedAmount(address) external pure override returns (uint) {
         return 0;
     }
 
-    function getAndUpdateLockedAmount(address wallet) public returns (uint) {
-        ITokenState tokenState = ITokenState(contractManager.getContract("TokenState"));
+    function getAndUpdateLockedAmount(address wallet) public override returns (uint) {
+        ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
         return tokenState.getAndUpdateLockedAmount(wallet);
     }
 
@@ -85,7 +95,15 @@ contract SkaleTokenTester is ERC777UpgradeSafe, Permissions {
     {
         uint256 locked = getAndUpdateLockedAmount(from);
         if (locked > 0) {
-            require(balanceOf(from) >= locked.add(tokenId), "Token should be unlocked for transferring");
+            require(balanceOf(from) >= locked + tokenId, "Token should be unlocked for transferring");
         }
+    }
+
+    function _msgData() internal view override(Context, ContextUpgradeable) returns (bytes memory) {
+        return Context._msgData();
+    }
+
+    function _msgSender() internal view override(Context, ContextUpgradeable) returns (address) {
+        return Context._msgSender();
     }
 }

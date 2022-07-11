@@ -19,13 +19,18 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
 import "../Permissions.sol";
-import "../interfaces/delegation/ITokenState.sol";
-import "./interfaces/ILocker.sol";
+import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
-contract TokenStateTester is Permissions, ITokenState {
+interface ITokenStateTester {
+    function getAndUpdateForbiddenForDelegationAmount(address holder) external returns (uint);
+    function getAndUpdateLockedAmount(address holder) external returns (uint);
+    function addLocker(string memory locker) external;
+}
+
+contract TokenStateTester is Permissions, ITokenStateTester {
 
     string[] private _lockers;
 
@@ -33,7 +38,7 @@ contract TokenStateTester is Permissions, ITokenState {
         uint256 forbidden = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
-            forbidden = forbidden.add(locker.getAndUpdateForbiddenForDelegationAmount(holder));
+            forbidden = forbidden + locker.getAndUpdateForbiddenForDelegationAmount(holder);
         }
         return forbidden;
     }
@@ -42,7 +47,7 @@ contract TokenStateTester is Permissions, ITokenState {
         uint256 locked = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
             ILocker locker = ILocker(contractManager.getContract(_lockers[i]));
-            locked = locked.add(locker.getAndUpdateLockedAmount(holder));
+            locked = locked + locker.getAndUpdateLockedAmount(holder);
         }
         return locked;
     }
@@ -59,7 +64,7 @@ contract TokenStateTester is Permissions, ITokenState {
      *
      * @param locker string name of contract to add to locker
      */
-    function addLocker(string memory locker) public onlyOwner {
+    function addLocker(string memory locker) public override onlyOwner {
         _lockers.push(locker);
     }
 }

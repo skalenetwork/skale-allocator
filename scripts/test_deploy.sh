@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 
+set -e
+
+export NVM_DIR=~/.nvm;
+source $NVM_DIR/nvm.sh;
+
+
+DEPLOYED_WITH_NODE_VERSION="lts/erbium"
+CURRENT_NODE_VERSION=$(nvm current)
+
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git
 echo "Skale manager cloned"
 npx ganache-cli --gasLimit 8000000 --quiet &
-GANACHE_PID=$!
 
 cd skale-manager
+nvm install $DEPLOYED_WITH_NODE_VERSION
+nvm use $DEPLOYED_WITH_NODE_VERSION
 yarn install
-npx oz push --network test --force || exit $?
-NODE_OPTIONS="--max-old-space-size=4096" PRODUCTION=true npx truffle migrate --network test || exit $?
-cp data/test.json ../scripts/manager.json
+PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+cp data/skale-manager-*-abi.json ../scripts/manager.json
 cd ..
-sudo rm -r skale-manager
+rm -r --interactive=never skale-manager
 
-NODE_OPTIONS="--max-old-space-size=4096" PRODUCTION=true npx truffle migrate --network test || exit $?
-sleep 5
-kill $GANACHE_PID
+nvm use $CURRENT_NODE_VERSION
+
+NODE_OPTIONS="--max-old-space-size=4096" npx hardhat run migrations/deploy.ts --network localhost
+
+npx kill-port 8545

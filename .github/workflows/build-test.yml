@@ -36,6 +36,11 @@ jobs:
       with:
         python-version: 3.8
 
+    - name: Set up NODE JS
+      uses: actions/setup-node@v2
+      with:
+        node-version: 16
+
     - name: Install project
       run: yarn install
 
@@ -45,7 +50,7 @@ jobs:
     - name: Show slither version
       run: slither --version
 
-    - name: lint
+    - name: Lint
       run: yarn fullcheck
 
     - name: Test deployment
@@ -53,3 +58,7 @@ jobs:
 
     - name: Run tests
       run: ./scripts/coverage.sh
+
+    - name: Test upgrade
+      run: ./scripts/test_upgrade.sh
+    

@@ -19,21 +19,20 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.6.10;
+pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
+import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
+import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
 
-import "./interfaces/IContractManager.sol";
+import "./thirdparty/AccessControlUpgradeableLegacy.sol";
 
 
 /**
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
  * @author Artem Payvin
  */
-contract Permissions is AccessControlUpgradeSafe {
-    using SafeMath for uint;
-    using Address for address;
+contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
+    using AddressUpgradeable for address;
 
     IContractManager public contractManager;
 
@@ -56,8 +55,8 @@ contract Permissions is AccessControlUpgradeSafe {
         _;
     }
 
-    function initialize(address contractManagerAddress) public virtual initializer {
-        AccessControlUpgradeSafe.__AccessControl_init();
+    function initialize(address contractManagerAddress) public virtual override initializer {
+        AccessControlUpgradeableLegacy.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);
     }

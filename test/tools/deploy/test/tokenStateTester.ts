@@ -1,17 +1,13 @@
-import { ContractManagerInstance,
-    TokenStateTesterContract } from "../../../../types/truffle-contracts";
+import { ContractManager, TokenStateTester } from "../../../../typechain-types";
+import { defaultDeploy, deployFunctionFactory } from "./../factory";
 
-const TokenState: TokenStateTesterContract = artifacts.require("./TokenStateTester");
-const name = "TokenState";
-
-export async function deployTokenStateTester(contractManager: ContractManagerInstance) {
-    try {
-        const address = await contractManager.getContract(name);
-        return TokenState.at(address);
-    } catch (e) {
-        const tokenState = await TokenState.new();
-        await tokenState.initialize(contractManager.address);
-        await contractManager.setContractsAddress(name, tokenState.address);
+export const deployTokenStateTester = deployFunctionFactory(
+    "TokenStateTester",
+    undefined,
+    async(contractManager: ContractManager) => {
+        const tokenState = await defaultDeploy("TokenStateTester", contractManager);
+        await contractManager.setContractsAddress("TokenState", tokenState.address);
         return tokenState;
     }
-}
+) as  (contractManager: ContractManager) => Promise<TokenStateTester>;
+
