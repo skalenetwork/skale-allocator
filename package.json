@@ -38,7 +38,7 @@
     "@openzeppelin/contracts": "^4.7.0",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^4.4.2",
-    "@openzeppelin/hardhat-upgrades": "^1.13.0",
+    "@openzeppelin/hardhat-upgrades": "^1.18.1",
     "@skalenetwork/skale-manager-interfaces": "1.0.0-develop.1",
     "@skalenetwork/upgrade-tools": "^1.0.0",
     "@typechain/hardhat": "^6.0.0",
