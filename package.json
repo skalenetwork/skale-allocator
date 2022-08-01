@@ -41,7 +41,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.13.0",
     "@skalenetwork/skale-manager-interfaces": "1.0.0-develop.1",
     "@skalenetwork/upgrade-tools": "^1.0.0",
-    "@typechain/hardhat": "^6.0.0",
+    "@typechain/hardhat": "^6.1.2",
     "axios": "^0.27.2",
     "bignumber.js": "^9.0.2",
     "chai": "^4.3.6",
