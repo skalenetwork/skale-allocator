@@ -10,13 +10,6 @@ import { upgrade, verify, SkaleABIFile, encodeTransaction, getContractKeyInAbiFi
 
 const exec = util.promisify(asyncExec);
 
-interface CustomEscrows {
-    [escrow: string]: {
-        oldImplementation: string
-        beneficiary: string
-    }
-}
-
 async function getAllocator(abi: SkaleABIFile) : Promise<Allocator> {
     return ((await ethers.getContractFactory("Allocator")).attach(
         abi[getContractKeyInAbiFile("Allocator") + "_address"] as string
@@ -42,38 +35,10 @@ export async function setNewVersion(safeTransactions: string[], abi: SkaleABIFil
     ));
 }
 
-async function upgradeCustomEscrows(
-    proxyAdmin: ProxyAdmin,
-    proxies: string[],
-    newImplementationAddress: string,
-    safeTransactions: string[]
-) : Promise<void> {
-    const escrowFactory = await ethers.getContractFactory("Escrow");
-    const escrows = JSON.parse(await fs.readFile(__dirname + "/../data/customEscrows.json", "utf-8")) as CustomEscrows;
-    for (const escrow in escrows) {
-        if (escrows[escrow].oldImplementation == await proxyAdmin.getProxyImplementation(escrow)) {
-            if (escrows[escrow].beneficiary == "") {
-                throw Error("Beneficiary wasn't found");
-            }
-            const encodedReinitialize = escrowFactory.interface.encodeFunctionData("reinitialize", [escrows[escrow].beneficiary]);
-            safeTransactions.push(encodeTransaction(
-                0,
-                proxyAdmin.address,
-                0,
-                proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [escrow, newImplementationAddress, encodedReinitialize])
-            ));
-        }
-        const index = proxies.indexOf(escrow);
-        if (~index) {
-            proxies.splice(index, 1);
-        }
-    }
-}
-
 async function main() {
     await upgrade(
         "skale-allocator",
-        "2.2.0",
+        "2.2.2",
         getDeployedVersion,
         setNewVersion,
         contracts,
@@ -144,15 +109,12 @@ async function main() {
 
                 const newImplementationAddress = escrow.address;
 
-                await upgradeCustomEscrows(proxyAdmin, proxies, newImplementationAddress, safeTransactions);
-
                 const implementations = await Promise.all(proxies.map(async (proxy) => {
                     return await proxyAdmin.getProxyImplementation(proxy);
                 }));
 
                 const distinctImplementations = [...new Set(implementations)];
-                // change to !== 1 after upgrade
-                if (distinctImplementations.length !== 2) {
+                if (distinctImplementations.length !== 1) {
                     console.log("Upgraded Escrows have different implementations. Check if Escrow list is correct.");
                     console.log("Present implementations:");
                     distinctImplementations.forEach((implementation) => console.log(implementation));

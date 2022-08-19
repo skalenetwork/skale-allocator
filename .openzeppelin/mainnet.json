@@ -1,5 +1,18 @@
 {
   "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x9B1E4A9Fe5142346E1C51907f0583e6aC663b8A0"
+  },
+  "proxies": [
+    {
+      "address": "0xB575c158399227b6ef4Dcfb05AA3bCa30E12a7ba",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x7A7d709332d10786adCf35FD83608F656a7b4a30",
+      "kind": "transparent"
+    }
+  ],
   "impls": {
     "208947e8884ae4cd582d1c45c987b785d9facff0e299fee0f9f4735edc11cb9d": {
       "address": "0xD940dEFBc9944CE705FC4226c8688BcD599A2a38",
@@ -552,19 +565,519 @@
           }
         }
       }
-    }
-  },
-  "proxies": [
-    {
-      "address": "0xB575c158399227b6ef4Dcfb05AA3bCa30E12a7ba",
-      "kind": "transparent"
     },
-    {
-      "address": "0x7A7d709332d10786adCf35FD83608F656a7b4a30",
-      "kind": "transparent"
+    "51e92c6a818dd793f0f31e5066588824d475cae194f62937f95cf2876a14e1c1": {
+      "address": "0xd4eE2B5993dfb823D439737831e78774Ce3f8952",
+      "txHash": "0xb7d67c4b1d6089e0ddc7b6c05e713ba6267f58c71e8fd6d8ec31d901ed18d910",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "______gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "InitializableWithGap",
+            "src": "contracts/thirdparty/InitializableWithGap.sol:9"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)8800_storage)",
+            "contract": "AccessControlUpgradeableLegacy",
+            "src": "contracts/thirdparty/AccessControlUpgradeableLegacy.sol:58"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "AccessControlUpgradeableLegacy",
+            "src": "contracts/thirdparty/AccessControlUpgradeableLegacy.sol:193"
+          },
+          {
+            "label": "contractManager",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_contract(IContractManager)3219",
+            "contract": "Permissions",
+            "src": "contracts/Permissions.sol:37"
+          },
+          {
+            "label": "_erc1820",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_contract(IERC1820Registry)2745",
+            "contract": "Allocator",
+            "src": "contracts/Allocator.sol:44"
+          },
+          {
+            "label": "_plans",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_array(t_struct(Plan)6010_storage)dyn_storage",
+            "contract": "Allocator",
+            "src": "contracts/Allocator.sol:47"
+          },
+          {
+            "label": "_beneficiaries",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_mapping(t_address,t_struct(Beneficiary)6024_storage)",
+            "contract": "Allocator",
+            "src": "contracts/Allocator.sol:52"
+          },
+          {
+            "label": "_beneficiaryToEscrow",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_mapping(t_address,t_contract(Escrow)5870)",
+            "contract": "Allocator",
+            "src": "contracts/Allocator.sol:55"
+          },
+          {
+            "label": "version",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_string_storage",
+            "contract": "Allocator",
+            "src": "contracts/Allocator.sol:57"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Plan)6010_storage)dyn_storage": {
+            "label": "struct IAllocator.Plan[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(Escrow)5870": {
+            "label": "contract Escrow",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IContractManager)3219": {
+            "label": "contract IContractManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC1820Registry)2745": {
+            "label": "contract IERC1820Registry",
+            "numberOfBytes": "20"
+          },
+          "t_enum(BeneficiaryStatus)5996": {
+            "label": "enum IAllocator.BeneficiaryStatus",
+            "members": [
+              "UNKNOWN",
+              "CONFIRMED",
+              "ACTIVE",
+              "TERMINATED"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_enum(TimeUnit)5991": {
+            "label": "enum IAllocator.TimeUnit",
+            "members": [
+              "DAY",
+              "MONTH",
+              "YEAR"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_contract(Escrow)5870)": {
+            "label": "mapping(address => contract Escrow)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Beneficiary)6024_storage)": {
+            "label": "mapping(address => struct IAllocator.Beneficiary)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)8800_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeableLegacy.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AddressSet)862_storage": {
+            "label": "struct EnumerableSetUpgradeable.AddressSet",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)561_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Beneficiary)6024_storage": {
+            "label": "struct IAllocator.Beneficiary",
+            "members": [
+              {
+                "label": "status",
+                "type": "t_enum(BeneficiaryStatus)5996",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "planId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "startMonth",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "fullAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "amountAfterLockup",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "requestedAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "5"
+              }
+            ],
+            "numberOfBytes": "192"
+          },
+          "t_struct(Plan)6010_storage": {
+            "label": "struct IAllocator.Plan",
+            "members": [
+              {
+                "label": "totalVestingDuration",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "vestingCliff",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "vestingIntervalTimeUnit",
+                "type": "t_enum(TimeUnit)5991",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "vestingInterval",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "isDelegationAllowed",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "isTerminatable",
+                "type": "t_bool",
+                "offset": 1,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(RoleData)8800_storage": {
+            "label": "struct AccessControlUpgradeableLegacy.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_struct(AddressSet)862_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Set)561_storage": {
+            "label": "struct EnumerableSetUpgradeable.Set",
+            "members": [
+              {
+                "label": "_values",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_indexes",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "757bce87d79243484b27d7c7f746551912401047757e5e2a123b4b385f3002e6": {
+      "address": "0x172B0fb75c281B05DB9264DBD9724a54cC5A4f67",
+      "txHash": "0x41be320a1ad7db925e26be5258c5e95c4068a9e9c420921888350b354dac6989",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "______gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "InitializableWithGap",
+            "src": "contracts/thirdparty/InitializableWithGap.sol:9"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)5685_storage)",
+            "contract": "AccessControlUpgradeableLegacy",
+            "src": "contracts/thirdparty/AccessControlUpgradeableLegacy.sol:58"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "AccessControlUpgradeableLegacy",
+            "src": "contracts/thirdparty/AccessControlUpgradeableLegacy.sol:193"
+          },
+          {
+            "label": "contractManager",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_contract(IContractManager)2620",
+            "contract": "Permissions",
+            "src": "contracts/Permissions.sol:37"
+          },
+          {
+            "label": "_beneficiary",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_address",
+            "contract": "Escrow",
+            "src": "contracts/Escrow.sol:47"
+          },
+          {
+            "label": "_availableAmountAfterTermination",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_uint256",
+            "contract": "Escrow",
+            "src": "contracts/Escrow.sol:49"
+          },
+          {
+            "label": "_erc1820",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_contract(IERC1820Registry)2458",
+            "contract": "Escrow",
+            "src": "contracts/Escrow.sol:51"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IContractManager)2620": {
+            "label": "contract IContractManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC1820Registry)2458": {
+            "label": "contract IERC1820Registry",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)5685_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeableLegacy.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AddressSet)738_storage": {
+            "label": "struct EnumerableSetUpgradeable.AddressSet",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)437_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(RoleData)5685_storage": {
+            "label": "struct AccessControlUpgradeableLegacy.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_struct(AddressSet)738_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Set)437_storage": {
+            "label": "struct EnumerableSetUpgradeable.Set",
+            "members": [
+              {
+                "label": "_values",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_indexes",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
     }
-  ],
-  "admin": {
-    "address": "0x9B1E4A9Fe5142346E1C51907f0583e6aC663b8A0"
   }
 }
