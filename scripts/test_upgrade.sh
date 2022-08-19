@@ -37,7 +37,6 @@ cd $GITHUB_WORKSPACE
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 
-nvm use $CURRENT_NODE_VERSION
 ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
 
 ABI="data/$ABI_FILENAME" npx hardhat run migrations/upgrade.ts --network localhost
