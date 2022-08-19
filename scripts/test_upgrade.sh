@@ -7,11 +7,16 @@ then
     GITHUB_WORKSPACE="$(dirname "$(dirname "$(realpath "$0")")")"
 fi
 
+export NVM_DIR=~/.nvm;
+source $NVM_DIR/nvm.sh;
 
 DEPLOYED_ALLOCATOR_TAG=$(cat $GITHUB_WORKSPACE/DEPLOYED)
 DEPLOYED_ALLOCATOR_VERSION=$(echo $DEPLOYED_ALLOCATOR_TAG | cut -d '-' -f 1)
 DEPLOYED_ALLOCATOR_DIR=$GITHUB_WORKSPACE/deployed-skale-allocator/
 DEPLOYED_MANAGER_DIR=$GITHUB_WORKSPACE/deployed-skale-manager/
+
+DEPLOYED_WITH_NODE_VERSION="lts/gallium"
+CURRENT_NODE_VERSION=$(nvm current)
 
 
 git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale-allocator.git $DEPLOYED_ALLOCATOR_DIR
@@ -19,6 +24,8 @@ git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEP
 
 npx ganache-cli --gasLimit 8000000 --quiet &
 
+nvm install $DEPLOYED_WITH_NODE_VERSION
+nvm use $DEPLOYED_WITH_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
@@ -36,6 +43,8 @@ cd $GITHUB_WORKSPACE
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
+
+nvm use $CURRENT_NODE_VERSION
 
 ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
 
