@@ -35,32 +35,17 @@ cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
-NODE_OPTIONS="--max-old-space-size=4096" npx truffle migrate --network test
-previous_deployments=($GITHUB_WORKSPACE/.openzeppelin/dev-*.json)
-if [ -e "${previous_deployments[0]}" ];
-then
-    rm $GITHUB_WORKSPACE/.openzeppelin/dev-*.json
-fi
-cp .openzeppelin/dev-*.json $GITHUB_WORKSPACE/.openzeppelin
-cp .openzeppelin/project.json $GITHUB_WORKSPACE/.openzeppelin
-cp data/test.json $GITHUB_WORKSPACE/data
+npx hardhat run migrations/deploy.ts --network localhost
+cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
+cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
 cd $GITHUB_WORKSPACE
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 
 nvm use $CURRENT_NODE_VERSION
+ABI_FILENAME="skale-manager-$DEPLOYED_VERSION-localhost-abi.json"
 
-NETWORK_ID=$(ls -a .openzeppelin | grep dev | cut -d '-' -f 2 | cut -d '.' -f 1)
-CHAIN_ID=1337
-
-mv .openzeppelin/dev-$NETWORK_ID.json .openzeppelin/mainnet.json
-
-npx migrate-oz-cli-project
-MANIFEST=.openzeppelin/mainnet.json VERSION=$DEPLOYED_ALLOCATOR_TAG npx hardhat run scripts/update_manifest.ts --network localhost
-
-mv .openzeppelin/new-mainnet.json .openzeppelin/unknown-$CHAIN_ID.json
-
-ABI=data/test.json npx hardhat run migrations/upgrade.ts --network localhost
+ABI="data/$ABI_FILENAME" npx hardhat run migrations/upgrade.ts --network localhost
 
 npx kill-port 8545
