@@ -1,8 +1,8 @@
 require('dotenv').config();
 
 module.exports = {    
-    compileCommand: 'npx buidler compile',
-    testCommand: 'npx buidler test',
+    compileCommand: 'npx hardhat compile',
+    testCommand: 'npx hardhat test',
     norpc: true,
     skipFiles: ['thirdparty/', 'test/'],
     copyPackages: ['@openzeppelin/contracts'],

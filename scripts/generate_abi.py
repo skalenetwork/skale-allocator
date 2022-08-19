@@ -44,7 +44,6 @@ def main():
         snake_name = camel_to_snake(name)
         result[snake_name + '_address'] = address
         result[snake_name + '_abi'] = abi
-    result['proxy_factory_address'] = network_file['proxyFactory']['address']
     result['proxy_admin_address'] = network_file['proxyAdmin']['address']
     result['contract_manager_abi'] = manager_file['contract_manager_abi']
     result['contract_manager_address'] = manager_file['contract_manager_address']
