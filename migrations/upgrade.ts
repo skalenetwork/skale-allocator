@@ -114,7 +114,6 @@ async function main() {
                 }));
 
                 const distinctImplementations = [...new Set(implementations)];
-                // change to !== 1 after upgrade
                 if (distinctImplementations.length !== 1) {
                     console.log("Upgraded Escrows have different implementations. Check if Escrow list is correct.");
                     console.log("Present implementations:");
