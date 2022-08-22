@@ -51,7 +51,7 @@
     "ethers": "5.6.9",
     "ethers-eip712": "^0.2.0",
     "hardhat": "^2.10.1",
-    "solc": "^0.8.15"
+    "solc": "^0.8.16"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",
