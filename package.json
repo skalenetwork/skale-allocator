@@ -51,7 +51,7 @@
     "ethers": "5.6.9",
     "ethers-eip712": "^0.2.0",
     "hardhat": "^2.10.1",
-    "solc": "^0.8.15"
+    "solc": "^0.8.16"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",
@@ -68,7 +68,7 @@
     "@types/node": "^18.6.1",
     "@types/web3": "^1.2.2",
     "@typescript-eslint/eslint-plugin": "^5.33.1",
-    "@typescript-eslint/parser": "^5.33.0",
+    "@typescript-eslint/parser": "^5.34.0",
     "codecov": "^3.8.3",
     "dotenv": "^16.0.0",
     "elliptic": "^6.5.4",
