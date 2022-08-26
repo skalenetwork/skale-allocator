@@ -34,7 +34,7 @@
     "fullcheck": "yarn lint && yarn tsc && yarn eslint && yarn slither"
   },
   "dependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.1.0",
+    "@nomiclabs/hardhat-ethers": "^2.1.1",
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
