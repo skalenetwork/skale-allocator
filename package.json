@@ -48,7 +48,7 @@
     "chai-almost": "^1.0.1",
     "chai-as-promised": "^7.1.1",
     "ethereumjs-tx": "2.1.2",
-    "ethers": "5.6.9",
+    "ethers": "5.7.1",
     "ethers-eip712": "^0.2.0",
     "hardhat": "^2.10.1",
     "solc": "^0.8.16"
