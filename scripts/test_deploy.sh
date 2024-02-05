@@ -6,7 +6,7 @@ export NVM_DIR=~/.nvm;
 source $NVM_DIR/nvm.sh;
 
 
-DEPLOYED_WITH_NODE_VERSION="lts/erbium"
+DEPLOYED_WITH_NODE_VERSION="lts/hydrogen"
 CURRENT_NODE_VERSION=$(nvm current)
 
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git

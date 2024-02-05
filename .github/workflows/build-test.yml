@@ -1,6 +1,10 @@
 name: Build and test
 on: [push, pull_request]
 
+env:
+  NODE_VERSION: 18
+  PYTHON_VERSION: 3.9
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -10,36 +14,19 @@ jobs:
       PRODUCTION: false
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
-
-    - uses: actions/cache@v2
-      id: yarn-cache
-      with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
 
     - name: Set up NODE JS
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'yarn'
 
     - name: Install project
       run: yarn install
@@ -56,9 +43,12 @@ jobs:
     - name: Test deployment
       run: ./scripts/test_deploy.sh
 
+    - name: Test upgrade
+      run: ./scripts/test_upgrade.sh
+
+    - name: Test ABI generation
+      run: npx hardhat run scripts/generateAbi.ts
+
     - name: Run tests
       run: ./scripts/coverage.sh
 
-    - name: Test upgrade
-      run: ./scripts/test_upgrade.sh
-    
