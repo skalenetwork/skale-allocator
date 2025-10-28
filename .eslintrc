@@ -25,6 +25,8 @@
     "coverage/**",
     "docs/**",
     "typechain-types/**",
+    "types-package/",
+    "typechain-output/",
     "scripts/update_manifest.ts"
   ]
 }

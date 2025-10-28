@@ -50,9 +50,13 @@ coverage.json
 .coverage_cache/
 .coverage_contracts/
 
-# Typescript staff
+# Typescript stuff
 types/
 typechain-types/
+typechain-output/
+
+# Types package (generated)
+types-package/
 
 # OpenZeppelin
 .openzeppelin/dev-*.json
