@@ -40,6 +40,9 @@ jobs:
     - name: Lint
       run: yarn fullcheck
 
+    - name: Test generate-types package
+      run: yarn buildTypes
+
     - name: Test deployment
       run: ./scripts/test_deploy.sh
 
