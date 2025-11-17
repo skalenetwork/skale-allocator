@@ -106,4 +106,8 @@ contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
     function _msgSender() internal view override(Context, ContextUpgradeable) returns (address) {
         return Context._msgSender();
     }
+
+    function _contextSuffixLength() internal view override(Context, ContextUpgradeable) returns (uint256) {
+        return Context._contextSuffixLength();
+    }
 }
