@@ -34,16 +34,16 @@ contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
 
     uint256 public launchTimestamp;
 
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+    }
+
     function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
         require(
             block.timestamp < launchTimestamp,
             "Can't set network launch timestamp because network is already launched"
         );
         launchTimestamp = timestamp;
-    }
-
-    function initialize(address contractManagerAddress) public override initializer {
-        Permissions.initialize(contractManagerAddress);
     }
 
 }
