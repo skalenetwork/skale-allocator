@@ -94,10 +94,6 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         _;
     }
 
-    function reinitialize(address beneficiary) external override reinitializer(2) {
-        _setupRole(BENEFICIARY_ROLE, beneficiary);
-    }
-
     function initialize(address contractManagerAddress, address beneficiary) external override initializer {
         require(beneficiary != address(0), "Beneficiary address is not set");
         Permissions.initialize(contractManagerAddress);
@@ -106,7 +102,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensSender"), address(this));
-    } 
+    }
 
     function changeBeneficiaryAddress(address beneficiary) external override allow("Allocator") {
         require(beneficiary != address(0), "Beneficiary address must not be zero");
@@ -148,7 +144,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     /**
      * @dev Allows Beneficiary to retrieve vested tokens from the Escrow contract.
-     * 
+     *
      * IMPORTANT: Slashed tokens are non-transferable.
      */
     function retrieve() external override onlyBeneficiary {
@@ -178,12 +174,12 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     /**
      * @dev Allows Vesting Manager to retrieve remaining transferrable escrow balance
-     * after beneficiary's termination. 
-     * 
+     * after beneficiary's termination.
+     *
      * IMPORTANT: Slashed tokens are non-transferable.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Allocator must be active.
      */
     function retrieveAfterTermination(address destination) external override onlyVestingManager {
@@ -207,9 +203,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     /**
      * @dev Allows Beneficiary to propose a delegation to a validator.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary must be active.
      * - Beneficiary must have sufficient delegatable tokens.
      * - If trusted list is enabled, validator must be a member of the trusted
@@ -228,7 +224,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(allocator.isDelegationAllowed(_beneficiary), "Delegation is not allowed");
         require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");
-        
+
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -236,12 +232,12 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     }
 
     /**
-     * @dev Allows Beneficiary and Vesting manager to request undelegation. Only 
-     * Vesting manager can request undelegation after beneficiary is deactivated 
+     * @dev Allows Beneficiary and Vesting manager to request undelegation. Only
+     * Vesting manager can request undelegation after beneficiary is deactivated
      * (after beneficiary termination).
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
     function requestUndelegation(uint256 delegationId) external override onlyActiveBeneficiaryOrVestingManager {
@@ -252,12 +248,12 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     }
 
     /**
-     * @dev Allows Beneficiary and Vesting manager to cancel a delegation proposal. Only 
-     * Vesting manager can request undelegation after beneficiary is deactivated 
+     * @dev Allows Beneficiary and Vesting manager to cancel a delegation proposal. Only
+     * Vesting manager can request undelegation after beneficiary is deactivated
      * (after beneficiary termination).
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
     function cancelPendingDelegation(uint delegationId) external override onlyActiveBeneficiaryOrVestingManager {
@@ -271,11 +267,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      * @dev Allows Beneficiary and Vesting manager to withdraw earned bounty. Only
      * Vesting manager can withdraw bounty to Allocator contract after beneficiary
      * is deactivated.
-     * 
+     *
      * IMPORTANT: Withdraws are only possible after 90 day initial network lock.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary or Vesting manager must be `msg.sender`.
      * - Beneficiary must be active when Beneficiary is `msg.sender`.
      */
@@ -286,7 +282,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         external
         override
         onlyActiveBeneficiaryOrVestingManager
-    {        
+    {
         IDistributor distributor = IDistributor(contractManager.getContract("Distributor"));
         distributor.withdrawBounty(validatorId, to);
     }
