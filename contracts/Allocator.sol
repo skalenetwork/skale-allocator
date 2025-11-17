@@ -111,9 +111,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Allows Vesting manager to activate a vesting and transfer locked
      * tokens from the Allocator contract to the associated Escrow address.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary address must be already confirmed.
      */
     function startVesting(address beneficiary) external override onlyVestingManager {
@@ -133,9 +133,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     /**
      * @dev Allows Vesting manager to define and add a Plan.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Vesting cliff period must be less than or equal to the full period.
      * - Vesting step time unit must be in days, months, or years.
      * - Total vesting duration must equal vesting cliff plus entire vesting schedule.
@@ -170,7 +170,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
                 "Vesting duration can't be divided into equal intervals"
             );
         }
-        
+
         _plans.push(Plan({
             totalVestingDuration: totalVestingDuration,
             vestingCliff: vestingCliff,
@@ -184,9 +184,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     /**
      * @dev Allows Vesting manager to register a beneficiary to a Plan.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Plan must already exist.
      * - The vesting amount must be less than or equal to the full allocation.
      * - The beneficiary address must not already be included in the any other Plan.
@@ -229,9 +229,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Allows Vesting manager to terminate vesting of a Escrow. Performed when
      * a beneficiary is terminated.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Vesting must be active.
      */
     function stopVesting(address beneficiary) external override onlyVestingManager {
@@ -352,7 +352,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             "Vesting is over"
         );
         require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");
-        
+
         uint256 currentMonth = timeHelpers.getCurrentMonth();
         if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
             // TODO: it may be simplified if TimeHelpers contract in skale-manager is updated
@@ -385,9 +385,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     /**
      * @dev Returns the Plan parameters.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Plan must already exist.
      */
     function getPlan(uint256 planId) external view override returns (Plan memory) {
@@ -397,9 +397,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     /**
      * @dev Returns the Plan parameters for a beneficiary address.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Beneficiary address must be registered to an Plan.
      */
     function getBeneficiaryPlanParams(address beneficiary) external view override returns (Beneficiary memory) {
@@ -442,7 +442,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      */
     function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-        
+
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
 
@@ -510,7 +510,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
             payable(contractManager.getContract("Escrow"))
         );
-        address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
+        address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(ITransparentUpgradeableProxy(address(escrow)));
         bytes memory initializingData = abi.encodeWithSignature(
             "initialize(address,address)", address(contractManager), beneficiary
         );
