@@ -2,7 +2,7 @@ name: Build and test
 on: [push, pull_request]
 
 env:
-  NODE_VERSION: 18
+  NODE_VERSION: '20.x'
   PYTHON_VERSION: 3.9
 
 jobs:
