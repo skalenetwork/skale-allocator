@@ -4,7 +4,7 @@ set -e
 
 if [ -z $GITHUB_WORKSPACE ]
 then
-    GITHUB_WORKSPACE="$(dirname "$(dirname "$(realpath "$0")")")"
+    GITHUB_WORKSPACE="$(git rev-parse --show-toplevel)"
 fi
 
 export NVM_DIR=~/.nvm;
@@ -15,7 +15,8 @@ DEPLOYED_ALLOCATOR_VERSION=$(echo $DEPLOYED_ALLOCATOR_TAG | cut -d '-' -f 1)
 DEPLOYED_ALLOCATOR_DIR=$GITHUB_WORKSPACE/deployed-skale-allocator/
 DEPLOYED_MANAGER_DIR=$GITHUB_WORKSPACE/deployed-skale-manager/
 
-DEPLOYED_WITH_NODE_VERSION="lts/hydrogen"
+SKALE_MANAGER_NODE_VERSION="18.x"
+DEPLOYED_ALLOCATOR_NODE_VERSION="16.x"
 CURRENT_NODE_VERSION=$(nvm current)
 
 
@@ -24,8 +25,8 @@ git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEP
 
 npx ganache-cli --gasLimit 8000000 --quiet &
 
-nvm install $DEPLOYED_WITH_NODE_VERSION
-nvm use $DEPLOYED_WITH_NODE_VERSION
+nvm install $SKALE_MANAGER_NODE_VERSION
+nvm use $SKALE_MANAGER_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
@@ -33,6 +34,8 @@ PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
 cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
 
+nvm install $DEPLOYED_ALLOCATOR_NODE_VERSION
+nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
