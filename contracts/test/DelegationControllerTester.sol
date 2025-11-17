@@ -48,6 +48,10 @@ contract DelegationControllerTester is Permissions, IDelegationControllerTester 
     mapping (address => uint) private _locked;
     Delegation[] private _delegations;
 
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+    }
+
     function delegate(
         uint256 ,
         uint256 amount,
@@ -90,10 +94,6 @@ contract DelegationControllerTester is Permissions, IDelegationControllerTester 
      */
     function getAndUpdateForbiddenForDelegationAmount(address wallet) external view override returns (uint) {
         return _getAndUpdateLockedAmount(wallet);
-    }
-
-    function initialize(address contractManagerAddress) public override initializer {
-        Permissions.initialize(contractManagerAddress);
     }
 
     function _getAndUpdateLockedAmount(address wallet) private view returns (uint) {
