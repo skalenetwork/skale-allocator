@@ -34,6 +34,11 @@ contract TokenStateTester is Permissions, ITokenStateTester {
 
     string[] private _lockers;
 
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+        addLocker("DelegationController");
+    }
+
     function getAndUpdateForbiddenForDelegationAmount(address holder) external override returns (uint) {
         uint256 forbidden = 0;
         for (uint256 i = 0; i < _lockers.length; ++i) {
@@ -50,11 +55,6 @@ contract TokenStateTester is Permissions, ITokenStateTester {
             locked = locked + locker.getAndUpdateLockedAmount(holder);
         }
         return locked;
-    }
-
-    function initialize(address contractManagerAddress) public override initializer {
-        Permissions.initialize(contractManagerAddress);
-        addLocker("DelegationController");
     }
 
     /**
