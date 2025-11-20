@@ -64,12 +64,6 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         _;
     }
 
-    function initialize(address contractManagerAddress) public override initializer {
-        Permissions.initialize(contractManagerAddress);
-        _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-        _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
-    }
-
     function tokensReceived(
         address operator,
         address from,
@@ -413,6 +407,11 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         return _beneficiaries[beneficiary];
     }
 
+    function initialize(address contractManagerAddress) public override initializer {
+        Permissions.initialize(contractManagerAddress);
+        _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+        _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
+    }
 
     /**
      * @dev Calculates and returns the vested token amount.
@@ -508,7 +507,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
     function _deployEscrow(address beneficiary) private returns (Escrow) {
         address proxyAdmin = contractManager.getContract("ProxyAdmin");
-        ITransparentUpgradeableProxy escrow = ITransparentUpgradeableProxy(
+        TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
             payable(contractManager.getContract("Escrow"))
         );
         address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
