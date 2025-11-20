@@ -407,6 +407,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         return _beneficiaries[beneficiary];
     }
 
+    // solhint-disable-next-line ordering
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
         _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
