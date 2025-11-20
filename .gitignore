@@ -58,3 +58,10 @@ typechain-types/
 .openzeppelin/dev-*.json
 .openzeppelin/unknown-*.json
 .openzeppelin/.session
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
