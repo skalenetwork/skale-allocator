@@ -1549,6 +1549,7 @@ __metadata:
     chai-as-promised: "npm:^7.1.1"
     chalk: "npm:^5.6.2"
     codecov: "npm:^3.8.3"
+    debug: "npm:^4.3.7"
     dotenv: "npm:^16.0.0"
     elliptic: "npm:^6.5.4"
     eslint: "npm:^8.20.0"
@@ -1559,6 +1560,7 @@ __metadata:
     ganache-cli: "npm:^6.12.2"
     hardhat: "npm:^2.11.0"
     kill-port: "npm:^2.0.1"
+    minimist: "npm:^1.2.8"
     solc: "npm:^0.8.16"
     solhint: "npm:^3.3.6"
     solidity-coverage: "npm:^0.8.0"
@@ -4643,7 +4645,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:^4.3.5":
+"debug@npm:^4.3.5, debug@npm:^4.3.7":
   version: 4.4.3
   resolution: "debug@npm:4.4.3"
   dependencies:
@@ -9334,7 +9336,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:^1.2.7":
+"minimist@npm:^1.2.7, minimist@npm:^1.2.8":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 10c0/19d3fcdca050087b84c2029841a093691a91259a47def2f18222f41e7645a0b7c44ef4b40e88a1e58a40c84d2ef0ee6047c55594d298146d0eb3f6b737c20ce6
