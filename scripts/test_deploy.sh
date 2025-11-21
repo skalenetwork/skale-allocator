@@ -16,7 +16,7 @@ yarn ganache-cli --gasLimit 8000000 --quiet &
 cd skale-manager
 nvm install $DEPLOYED_WITH_NODE_VERSION
 nvm use $DEPLOYED_WITH_NODE_VERSION
-yarn install
+yarn install --no-immutable
 PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
 cp data/skale-manager-*-abi.json ../scripts/manager.json
 cd ..
