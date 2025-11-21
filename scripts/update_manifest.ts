@@ -13,7 +13,7 @@ export function getContractKeyInAbiFile(contract: string) {
 async function main() {
     if (!process.env.MANIFEST || !process.env.VERSION) {
         console.log("Example of usage:");
-        console.log("MANIFEST=.openzeppelin/mainnet.json VERSION=2.2.0-stable.0 npx hardhat run scripts/update_manifest.json.ts --network localhost")
+        console.log("MANIFEST=.openzeppelin/mainnet.json VERSION=2.2.0-stable.0 yarn hardhat run scripts/update_manifest.json.ts --network localhost")
         console.log();
         console.log("IMPORTANT! openzeppelin-cli-export.json must correspond the manifest file");
         process.exit(1);
@@ -36,7 +36,7 @@ async function main() {
 
     console.log("Deploy contracts");
     await exec(`rm .openzeppelin/unknown-31337.json || rm .openzeppelin/unknown-1337.json || true`);
-    await exec(`VERSION=${version} npx hardhat run migrations/deploy.ts --network localhost`);
+    await exec(`VERSION=${version} yarn hardhat run migrations/deploy.ts --network localhost`);
 
     await exec("rm -r contracts");
     await exec("mv contracts_tmp contracts");
