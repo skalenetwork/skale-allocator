@@ -23,14 +23,14 @@ CURRENT_NODE_VERSION=$(nvm current)
 git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale-allocator.git $DEPLOYED_ALLOCATOR_DIR
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEPLOYED_MANAGER_DIR
 
-npx ganache-cli --gasLimit 8000000 --quiet &
+yarn ganache-cli --gasLimit 8000000 --quiet &
 
 nvm install $SKALE_MANAGER_NODE_VERSION
 nvm use $SKALE_MANAGER_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
-PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
 cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
 
@@ -39,7 +39,7 @@ nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
-VERSION=$DEPLOYED_ALLOCATOR_VERSION npx hardhat run migrations/deploy.ts --network localhost
+VERSION=$DEPLOYED_ALLOCATOR_VERSION yarn hardhat run migrations/deploy.ts --network localhost
 cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
 cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
 cd $GITHUB_WORKSPACE
@@ -51,6 +51,6 @@ nvm use $CURRENT_NODE_VERSION
 
 ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
 
-ABI="data/$ABI_FILENAME" npx hardhat run migrations/upgrade.ts --network localhost
+ABI="data/$ABI_FILENAME" yarn hardhat run migrations/upgrade.ts --network localhost
 
-npx kill-port 8545
+yarn kill-port 8545
