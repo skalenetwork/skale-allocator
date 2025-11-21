@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-module.exports = {    
-    compileCommand: 'npx hardhat compile',
-    testCommand: 'npx hardhat test',
+module.exports = {
+    compileCommand: 'yarn hardhat compile',
+    testCommand: 'yarn hardhat test',
     norpc: true,
     skipFiles: ['thirdparty/', 'test/'],
     copyPackages: ['@openzeppelin/contracts'],
