@@ -20,11 +20,10 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity >=0.8.11 <0.9.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.26;
+
 
 interface IAllocator {
-
     enum TimeUnit {
         DAY,
         MONTH,
@@ -56,14 +55,9 @@ interface IAllocator {
         address requestedAddress;
     }
 
-    event PlanCreated(
-        uint256 id
-    );
+    event PlanCreated(uint256 indexed id);
 
-    event VersionUpdated(
-        string oldVersion,
-        string newVersion
-    );
+    event VersionUpdated(string oldVersion, string newVersion);
 
     function startVesting(address beneficiary) external;
     function addPlan(
@@ -81,21 +75,22 @@ interface IAllocator {
         uint256 fullAmount,
         uint256 lockupAmount
     ) external;
+
     function stopVesting(address beneficiary) external;
     function setVersion(string calldata newVersion) external;
     function changeBeneficiaryAddress(address newBeneficiaryAddress) external;
     function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external;
-    function getStartMonth(address beneficiary) external view returns (uint);
-    function getFinishVestingTime(address beneficiary) external view returns (uint);
-    function getVestingCliffInMonth(address beneficiary) external view returns (uint);
-    function isVestingActive(address beneficiary) external view returns (bool);
-    function isBeneficiaryRegistered(address beneficiary) external view returns (bool);
-    function isDelegationAllowed(address beneficiary) external view returns (bool);
-    function getFullAmount(address beneficiary) external view returns (uint);
-    function getEscrowAddress(address beneficiary) external view returns (address);
-    function getLockupPeriodEndTimestamp(address beneficiary) external view returns (uint);
-    function getTimeOfNextVest(address beneficiary) external view returns (uint);
-    function getPlan(uint256 planId) external view returns (Plan memory);
-    function getBeneficiaryPlanParams(address beneficiary) external view returns (Beneficiary memory);
+    function getStartMonth(address beneficiary) external view returns (uint256 startMonth);
+    function getFinishVestingTime(address beneficiary) external view returns (uint256 finishTime);
+    function getVestingCliffInMonth(address beneficiary) external view returns (uint256 cliff);
+    function isVestingActive(address beneficiary) external view returns (bool isActive);
+    function isBeneficiaryRegistered(address beneficiary) external view returns (bool isRegistered);
+    function isDelegationAllowed(address beneficiary) external view returns (bool isAllowed);
+    function getFullAmount(address beneficiary) external view returns (uint256 amount);
+    function getEscrowAddress(address beneficiary) external view returns (address escrowAddress);
+    function getLockupPeriodEndTimestamp(address beneficiary) external view returns (uint256 timestamp);
+    function getTimeOfNextVest(address beneficiary) external view returns (uint256 timestamp);
+    function getPlan(uint256 planId) external view returns (Plan memory plan);
+    function getBeneficiaryPlanParams(address beneficiary) external view returns (Beneficiary memory beneficiaryPlan);
     function calculateVestedAmount(address wallet) external view returns (uint256 vestedAmount);
 }
