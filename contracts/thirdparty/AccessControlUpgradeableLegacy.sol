@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -37,16 +37,17 @@ import "./InitializableWithGap.sol";
  * roles. More complex role relationships can be created by using
  * {_setRoleAdmin}.
  */
-abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, ContextUpgradeable, IAccessControlUpgradeableLegacy {
+abstract contract AccessControlUpgradeableLegacy is
+    InitializableWithGap,
+    ContextUpgradeable,
+    IAccessControlUpgradeableLegacy
+{
     function __AccessControl_init() internal initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
     }
 
-    function __AccessControl_init_unchained() internal initializer {
-
-
-    }
+    function __AccessControl_init_unchained() internal initializer {}
 
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
@@ -55,14 +56,17 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
         bytes32 adminRole;
     }
 
-    mapping (bytes32 => RoleData) private _roles;
+    mapping(bytes32 => RoleData) private _roles;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     /**
      * @dev Returns `true` if `account` has been granted `role`.
      */
-    function hasRole(bytes32 role, address account) public view override returns (bool) {
+    function hasRole(
+        bytes32 role,
+        address account
+    ) public view override returns (bool) {
         return _roles[role].members.contains(account);
     }
 
@@ -70,7 +74,9 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * @dev Returns the number of accounts that have `role`. Can be used
      * together with {getRoleMember} to enumerate all bearers of a role.
      */
-    function getRoleMemberCount(bytes32 role) public view override returns (uint256) {
+    function getRoleMemberCount(
+        bytes32 role
+    ) public view override returns (uint256) {
         return _roles[role].members.length();
     }
 
@@ -86,7 +92,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * https://forum.openzeppelin.com/t/iterating-over-elements-on-enumerableset-in-openzeppelin-contracts/2296[forum post]
      * for more information.
      */
-    function getRoleMember(bytes32 role, uint256 index) public view override returns (address) {
+    function getRoleMember(
+        bytes32 role,
+        uint256 index
+    ) public view override returns (address) {
         return _roles[role].members.at(index);
     }
 
@@ -111,7 +120,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * - the caller must have ``role``'s admin role.
      */
     function grantRole(bytes32 role, address account) public virtual override {
-        require(hasRole(_roles[role].adminRole, _msgSender()), "AccessControl: sender must be an admin to grant");
+        require(
+            hasRole(_roles[role].adminRole, _msgSender()),
+            "AccessControl: sender must be an admin to grant"
+        );
 
         _grantRole(role, account);
     }
@@ -126,7 +138,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * - the caller must have ``role``'s admin role.
      */
     function revokeRole(bytes32 role, address account) public virtual override {
-        require(hasRole(_roles[role].adminRole, _msgSender()), "AccessControl: sender must be an admin to revoke");
+        require(
+            hasRole(_roles[role].adminRole, _msgSender()),
+            "AccessControl: sender must be an admin to revoke"
+        );
 
         _revokeRole(role, account);
     }
@@ -145,8 +160,14 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      *
      * - the caller must be `account`.
      */
-    function renounceRole(bytes32 role, address account) public virtual override {
-        require(account == _msgSender(), "AccessControl: can only renounce roles for self");
+    function renounceRole(
+        bytes32 role,
+        address account
+    ) public virtual override {
+        require(
+            account == _msgSender(),
+            "AccessControl: can only renounce roles for self"
+        );
 
         _revokeRole(role, account);
     }
