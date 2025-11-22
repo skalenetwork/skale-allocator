@@ -20,10 +20,13 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity >=0.8.11 <0.9.0;
+pragma solidity ^0.8.26;
 
 interface IEscrow {
-    function initialize(address contractManagerAddress, address beneficiary) external;
+    function initialize(
+        address contractManagerAddress,
+        address beneficiary
+    ) external;
     function changeBeneficiaryAddress(address beneficiary) external;
     function retrieve() external;
     function retrieveAfterTermination(address destination) external;
@@ -34,7 +37,7 @@ interface IEscrow {
         string calldata info
     ) external;
     function requestUndelegation(uint256 delegationId) external;
-    function cancelPendingDelegation(uint delegationId) external;
+    function cancelPendingDelegation(uint256 delegationId) external;
     function withdrawBounty(uint256 validatorId, address to) external;
     function cancelVesting(uint256 vestedAmount) external;
 }
