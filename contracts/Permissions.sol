@@ -19,13 +19,21 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
-import "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
-import "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
+import {
+    AddressUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import {
+    IContractManager
+} from "@skalenetwork/skale-manager-interfaces/IContractManager.sol";
+import {
+    IPermissions
+} from "@skalenetwork/skale-manager-interfaces/IPermissions.sol";
 
-import "./thirdparty/AccessControlUpgradeableLegacy.sol";
-
+import {
+    AccessControlUpgradeableLegacy
+} from "./thirdparty/AccessControlUpgradeableLegacy.sol";
 
 /**
  * @title Permissions - connected module for Upgradeable approach, knows ContractManager
@@ -36,11 +44,16 @@ contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
 
     IContractManager public contractManager;
 
+    error CallerNotOwner();
+    error InvalidSender();
+    error ContractManagerAddressNotSet();
+    error AddressNotContract();
+
     /**
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(_isOwner(), "Caller is not the owner");
+        require(_isOwner(), CallerNotOwner());
         _;
     }
 
@@ -50,24 +63,43 @@ contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
      */
     modifier allow(string memory contractName) {
         require(
-            contractManager.getContract(contractName) == msg.sender || _isOwner(),
-            "Message sender is invalid");
+            contractManager.getContract(contractName) == msg.sender ||
+                _isOwner(),
+            InvalidSender()
+        );
         _;
     }
 
-    function initialize(address contractManagerAddress) public virtual override initializer {
+    /**
+     * @notice Initializes the contract
+     * @param contractManagerAddress Address of the Contract Manager
+     */
+    function initialize(
+        address contractManagerAddress
+    ) public virtual override initializer {
         AccessControlUpgradeableLegacy.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);
     }
 
-    function _isOwner() internal view returns (bool) {
+    /**
+     * @notice Checks if the caller is the owner
+     * @return isOwner True if the caller is the owner
+     */
+    function _isOwner() internal view returns (bool isOwner) {
         return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+    /**
+     * @notice Sets the Contract Manager address
+     * @param contractManagerAddress Address of the Contract Manager
+     */
     function _setContractManager(address contractManagerAddress) private {
-        require(contractManagerAddress != address(0), "ContractManager address is not set");
-        require(contractManagerAddress.isContract(), "Address is not contract");
+        require(
+            contractManagerAddress != address(0),
+            ContractManagerAddressNotSet()
+        );
+        require(contractManagerAddress.isContract(), AddressNotContract());
         contractManager = IContractManager(contractManagerAddress);
     }
 }
