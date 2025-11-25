@@ -20,18 +20,28 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
-import "./interfaces/IAllocator.sol";
-import "./Escrow.sol";
-import "./Permissions.sol";
+import {
+    ProxyAdmin
+} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    IERC777Recipient
+} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import {
+    IERC1820Registry
+} from "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import {
+    ITimeHelpers
+} from "@skalenetwork/skale-manager-interfaces/delegation/ITimeHelpers.sol";
+import {Escrow} from "./Escrow.sol";
+import {IAllocator} from "./interfaces/IAllocator.sol";
+import {Permissions} from "./Permissions.sol";
 
 /**
  * @title Allocator
