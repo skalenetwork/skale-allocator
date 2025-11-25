@@ -65,6 +65,29 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     mapping (address => Escrow) private _beneficiaryToEscrow;
 
     string public version;
+    error CallerNotVestingManager();
+    error BeneficiaryAddressNull();
+    error BeneficiaryAddressNotClean();
+    error BeneficiaryChangeNotAllowed();
+    error BeneficiaryStatusInappropriate();
+    error TokenTransferFailed();
+    error VestingDurationZero();
+    error VestingIntervalZero();
+    error CliffPeriodExceedsDuration();
+    error VestingDurationNotDivisible();
+    error PlanDoesNotExist();
+    error IncorrectAmounts();
+    error BeneficiaryAlreadyAdded();
+    error BeneficiaryNotActive();
+    error PlanNotTerminatable();
+    error VestingIsOver();
+    error VestingStopped();
+    error IncorrectVestingIntervalTimeUnit();
+    error PlanRoundDoesNotExist();
+    error BeneficiaryNotRegistered();
+    error UnknownTimeUnit();
+    error CalendarInternalError();
+    error InvalidMonthRange();
 
     modifier onlyVestingManager() {
         require(
