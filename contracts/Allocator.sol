@@ -538,23 +538,24 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns the number of total vesting events.
      */
-    function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint) {
+    function _getNumberOfAllVestingEvents(address wallet) internal view returns (uint256 count) {
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
-            return _daysBetweenMonths(
-                beneficiaryPlan.startMonth + planParams.vestingCliff,
-                beneficiaryPlan.startMonth + planParams.totalVestingDuration
-            ) / planParams.vestingInterval;
+            return
+                _daysBetweenMonths(
+                    beneficiaryPlan.startMonth + planParams.vestingCliff,
+                    beneficiaryPlan.startMonth + planParams.totalVestingDuration
+                ) / planParams.vestingInterval;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return (planParams.totalVestingDuration - planParams.vestingCliff)
-                   / planParams.vestingInterval;
+            return (planParams.totalVestingDuration - planParams.vestingCliff) / planParams.vestingInterval;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-            return (planParams.totalVestingDuration - planParams.vestingCliff)
-                    / _MONTHS_PER_YEAR
-                    / planParams.vestingInterval;
+            return
+                (planParams.totalVestingDuration - planParams.vestingCliff) /
+                _MONTHS_PER_YEAR /
+                planParams.vestingInterval;
         } else {
-            revert("Unknown time unit");
+            revert UnknownTimeUnit();
         }
     }
 
