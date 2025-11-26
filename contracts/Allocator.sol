@@ -328,21 +328,21 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns the vesting cliff period in months.
      */
-    function getVestingCliffInMonth(address beneficiary) external view override returns (uint) {
+    function getVestingCliffInMonth(address beneficiary) external view override returns (uint256 cliff) {
         return _plans[_beneficiaries[beneficiary].planId - 1].vestingCliff;
     }
 
     /**
      * @dev Confirms whether the beneficiary is active in the Plan.
      */
-    function isVestingActive(address beneficiary) external view override returns (bool) {
+    function isVestingActive(address beneficiary) external view override returns (bool isActive) {
         return _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE;
     }
 
     /**
      * @dev Confirms whether the beneficiary is registered in a Plan.
      */
-    function isBeneficiaryRegistered(address beneficiary) external view override returns (bool) {
+    function isBeneficiaryRegistered(address beneficiary) external view override returns (bool isRegistered) {
         return _beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN;
     }
 
@@ -350,22 +350,23 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      * @dev Confirms whether the beneficiary's Plan allows all un-vested tokens to be
      * delegated.
      */
-    function isDelegationAllowed(address beneficiary) external view override returns (bool) {
-        return _plans[_beneficiaries[beneficiary].planId - 1].isDelegationAllowed;
+    function isDelegationAllowed(address beneficiary) external view override returns (bool isAllowed) {
+        return
+            _plans[_beneficiaries[beneficiary].planId - 1].isDelegationAllowed;
     }
 
     /**
      * @dev Returns the locked and unlocked (full) amount of tokens allocated to
      * the beneficiary address in Plan.
      */
-    function getFullAmount(address beneficiary) external view override returns (uint) {
+    function getFullAmount(address beneficiary) external view override returns (uint256 amount) {
         return _beneficiaries[beneficiary].fullAmount;
     }
 
     /**
      * @dev Returns the Escrow contract by beneficiary.
      */
-    function getEscrowAddress(address beneficiary) external view override returns (address) {
+    function getEscrowAddress(address beneficiary) external view override returns (address escrowAddress) {
         return address(_beneficiaryToEscrow[beneficiary]);
     }
 
@@ -373,11 +374,14 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      * @dev Returns the timestamp when vesting cliff ends and periodic vesting
      * begins.
      */
-    function getLockupPeriodEndTimestamp(address beneficiary) external view override returns (uint) {
+    function getLockupPeriodEndTimestamp(address beneficiary) external view override returns (uint256 timestamp) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.vestingCliff);
+        return
+            timeHelpers.monthToTimestamp(
+                beneficiaryPlan.startMonth + planParams.vestingCliff
+            );
     }
 
     /**
