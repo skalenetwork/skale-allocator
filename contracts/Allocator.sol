@@ -276,14 +276,16 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     function stopVesting(address beneficiary) external override onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.ACTIVE,
-            "Cannot stop vesting for a non active beneficiary"
+            BeneficiaryNotActive()
         );
         require(
             _plans[_beneficiaries[beneficiary].planId - 1].isTerminatable,
-            "Can't stop vesting for beneficiary with this plan"
+            PlanNotTerminatable()
         );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.TERMINATED;
-        Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(calculateVestedAmount(beneficiary));
+        Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(
+            calculateVestedAmount(beneficiary)
+        );
     }
 
     /**
