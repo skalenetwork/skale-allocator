@@ -387,29 +387,30 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns the time of the next vesting event.
      */
-    function getTimeOfNextVest(address beneficiary) external view override returns (uint) {
+    function getTimeOfNextVest(address beneficiary) external view override returns (uint256 timestamp) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-
         uint256 firstVestingMonth = beneficiaryPlan.startMonth + planParams.vestingCliff;
         uint256 lockupEndTimestamp = timeHelpers.monthToTimestamp(firstVestingMonth);
         if (block.timestamp < lockupEndTimestamp) {
             return lockupEndTimestamp;
         }
         require(
-            block.timestamp < timeHelpers.monthToTimestamp(
-                beneficiaryPlan.startMonth + planParams.totalVestingDuration
-            ),
-            "Vesting is over"
+            block.timestamp <
+                timeHelpers.monthToTimestamp(
+                    beneficiaryPlan.startMonth + planParams.totalVestingDuration
+                ),
+            VestingIsOver()
         );
-        require(beneficiaryPlan.status != BeneficiaryStatus.TERMINATED, "Vesting was stopped");
-
+        require(
+            beneficiaryPlan.status != BeneficiaryStatus.TERMINATED,
+            VestingStopped()
+        );
         uint256 currentMonth = timeHelpers.getCurrentMonth();
         if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
             // TODO: it may be simplified if TimeHelpers contract in skale-manager is updated
-            uint daysPassedBeforeCurrentMonth = _daysBetweenMonths(firstVestingMonth, currentMonth);
+            uint256 daysPassedBeforeCurrentMonth = _daysBetweenMonths(firstVestingMonth, currentMonth);
             uint256 currentMonthBeginningTimestamp = timeHelpers.monthToTimestamp(currentMonth);
             uint256 daysPassedInCurrentMonth = (block.timestamp - currentMonthBeginningTimestamp) / _SECONDS_PER_DAY;
             uint256 daysPassedBeforeNextVest = _calculateNextVestingStep(
@@ -419,20 +420,22 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             return currentMonthBeginningTimestamp +
                 (daysPassedBeforeNextVest - daysPassedBeforeCurrentMonth) * _SECONDS_PER_DAY;
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
-            return timeHelpers.monthToTimestamp(
-                firstVestingMonth +
-                    _calculateNextVestingStep(currentMonth - firstVestingMonth, planParams.vestingInterval)
+            uint256 nextVestingMonthOffset = _calculateNextVestingStep(
+                currentMonth - firstVestingMonth,
+                planParams.vestingInterval
             );
+            return timeHelpers.monthToTimestamp(firstVestingMonth + nextVestingMonthOffset);
         } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
-            return timeHelpers.monthToTimestamp(
-                firstVestingMonth +
-                    _calculateNextVestingStep(
-                        currentMonth - firstVestingMonth,
-                        planParams.vestingInterval * _MONTHS_PER_YEAR
-                    )
+            return
+                timeHelpers.monthToTimestamp(
+                    firstVestingMonth +
+                        _calculateNextVestingStep(
+                            currentMonth - firstVestingMonth,
+                            planParams.vestingInterval * _MONTHS_PER_YEAR
+                        )
                 );
         } else {
-            revert("Vesting interval timeunit is incorrect");
+            revert IncorrectVestingIntervalTimeUnit();
         }
     }
 
