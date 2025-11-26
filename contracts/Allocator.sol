@@ -570,12 +570,15 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     )
         internal
         view
-        returns(uint)
+        returns (uint256 amount)
     {
         return (fullAmount - afterLockupPeriodAmount) / _getNumberOfAllVestingEvents(wallet);
     }
 
-    function _deployEscrow(address beneficiary) private returns (Escrow) {
+    /**
+     * @dev Deploys a new Escrow contract for a beneficiary.
+     */
+    function _deployEscrow(address beneficiary) private returns (Escrow escrowContract) {
         address proxyAdmin = contractManager.getContract("ProxyAdmin");
         TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
             payable(contractManager.getContract("Escrow"))
@@ -584,9 +587,13 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         bytes memory initializingData = abi.encodeWithSignature(
             "initialize(address,address)", address(contractManager), beneficiary
         );
-        address beneficiaryEscrow = address(new TransparentUpgradeableProxy(
-            escrowImplementation, proxyAdmin, initializingData
-        ));
+        address beneficiaryEscrow = address(
+            new TransparentUpgradeableProxy(
+                escrowImplementation,
+                proxyAdmin,
+                initializingData
+            )
+        );
         return Escrow(beneficiaryEscrow);
     }
 
