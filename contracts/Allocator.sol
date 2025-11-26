@@ -597,13 +597,16 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         return Escrow(beneficiaryEscrow);
     }
 
-    function _daysBetweenMonths(uint256 beginMonth, uint256 endMonth) private view returns (uint256) {
-        assert(beginMonth <= endMonth);
+    /**
+     * @dev Calculates the number of days between two months.
+     */
+    function _daysBetweenMonths(uint256 beginMonth, uint256 endMonth) private view returns (uint256 daysCount) {
+        assert(!(beginMonth > endMonth));
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         uint256 beginTimestamp = timeHelpers.monthToTimestamp(beginMonth);
         uint256 endTimestamp = timeHelpers.monthToTimestamp(endMonth);
         uint256 secondsPassed = endTimestamp - beginTimestamp;
-        require(secondsPassed % _SECONDS_PER_DAY == 0, "Internal error in calendar");
+        require(secondsPassed % _SECONDS_PER_DAY == 0, CalendarInternalError());
         return secondsPassed / _SECONDS_PER_DAY;
     }
 
@@ -613,8 +616,14 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      *     if current step is 5 and vesting interval is 7 function returns 7.
      *     if current step is 17 and vesting interval is 7 function returns 21.
      */
-    function _calculateNextVestingStep(uint256 currentStep, uint256 vestingInterval) private pure returns (uint256) {
-        // slither-disable-next-line weak-prng
+    function _calculateNextVestingStep(
+        uint256 currentStep,
+        uint256 vestingInterval
+    )
+        private
+        pure
+        returns (uint256 nextStep)
+    {
         return currentStep + vestingInterval - currentStep % vestingInterval;
     }
 }
