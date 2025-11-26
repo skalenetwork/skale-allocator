@@ -509,28 +509,28 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns the number of vesting events that have completed.
      */
-    function _getNumberOfCompletedVestingEvents(address wallet) internal view returns (uint) {
+    function _getNumberOfCompletedVestingEvents(
+        address wallet
+    ) internal view returns (uint256 count) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
-
         Beneficiary memory beneficiaryPlan = _beneficiaries[wallet];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-
         uint256 firstVestingMonth = beneficiaryPlan.startMonth + planParams.vestingCliff;
         if (block.timestamp < timeHelpers.monthToTimestamp(firstVestingMonth)) {
             return 0;
         } else {
             uint256 currentMonth = timeHelpers.getCurrentMonth();
             if (planParams.vestingIntervalTimeUnit == TimeUnit.DAY) {
-                return (_daysBetweenMonths(firstVestingMonth, currentMonth)
-                            + (block.timestamp - timeHelpers.monthToTimestamp(currentMonth))
-                              / _SECONDS_PER_DAY)
-                        / planParams.vestingInterval;
+                return
+                    (_daysBetweenMonths(firstVestingMonth, currentMonth) +
+                        (block.timestamp - timeHelpers.monthToTimestamp(currentMonth)) / _SECONDS_PER_DAY
+                    ) / planParams.vestingInterval;
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.MONTH) {
                 return (currentMonth - firstVestingMonth) / planParams.vestingInterval;
             } else if (planParams.vestingIntervalTimeUnit == TimeUnit.YEAR) {
                 return (currentMonth - firstVestingMonth) / _MONTHS_PER_YEAR / planParams.vestingInterval;
             } else {
-                revert("Unknown time unit");
+                revert UnknownTimeUnit();
             }
         }
     }
