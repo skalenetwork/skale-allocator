@@ -446,8 +446,11 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      *
      * - Plan must already exist.
      */
-    function getPlan(uint256 planId) external view override returns (Plan memory) {
-        require(planId > 0 && planId <= _plans.length, "Plan Round does not exist");
+    function getPlan(uint256 planId) external view override returns (Plan memory plan) {
+        require(
+            !(planId == 0 || planId > _plans.length),
+            PlanRoundDoesNotExist()
+        );
         return _plans[planId - 1];
     }
 
@@ -458,8 +461,18 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      *
      * - Beneficiary address must be registered to an Plan.
      */
-    function getBeneficiaryPlanParams(address beneficiary) external view override returns (Beneficiary memory) {
-        require(_beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN, "Plan beneficiary is not registered");
+    function getBeneficiaryPlanParams(
+        address beneficiary
+    )
+        external
+        view
+        override
+        returns (Beneficiary memory beneficiaryPlan)
+    {
+        require(
+            _beneficiaries[beneficiary].status != BeneficiaryStatus.UNKNOWN,
+            BeneficiaryNotRegistered()
+        );
         return _beneficiaries[beneficiary];
     }
 
