@@ -183,33 +183,38 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         override
         onlyVestingManager
     {
-        require(totalVestingDuration > 0, "Vesting duration can't be zero");
-        require(vestingInterval > 0, "Vesting interval can't be zero");
-        require(totalVestingDuration >= vestingCliff, "Cliff period exceeds total vesting duration");
+        require(totalVestingDuration != 0, VestingDurationZero());
+        require(vestingInterval != 0, VestingIntervalZero());
+        require(
+            !(totalVestingDuration < vestingCliff),
+            CliffPeriodExceedsDuration()
+        );
         // can't check if vesting interval in days is correct because it depends on startMonth
         // This check is in connectBeneficiaryToPlan
         if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
             uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
             require(
                 vestingDurationAfterCliff % vestingInterval == 0,
-                "Vesting duration can't be divided into equal intervals"
+                VestingDurationNotDivisible()
             );
         } else if (vestingIntervalTimeUnit == TimeUnit.YEAR) {
             uint256 vestingDurationAfterCliff = totalVestingDuration - vestingCliff;
             require(
                 vestingDurationAfterCliff % (vestingInterval * _MONTHS_PER_YEAR) == 0,
-                "Vesting duration can't be divided into equal intervals"
+                VestingDurationNotDivisible()
             );
         }
 
-        _plans.push(Plan({
-            totalVestingDuration: totalVestingDuration,
-            vestingCliff: vestingCliff,
-            vestingIntervalTimeUnit: vestingIntervalTimeUnit,
-            vestingInterval: vestingInterval,
-            isDelegationAllowed: canDelegate,
-            isTerminatable: isTerminatable
-        }));
+        _plans.push(
+            Plan({
+                totalVestingDuration: totalVestingDuration,
+                vestingCliff: vestingCliff,
+                vestingIntervalTimeUnit: vestingIntervalTimeUnit,
+                vestingInterval: vestingInterval,
+                isDelegationAllowed: canDelegate,
+                isTerminatable: isTerminatable
+            })
+        );
         emit PlanCreated(_plans.length);
     }
 
