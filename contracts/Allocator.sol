@@ -91,7 +91,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     modifier onlyVestingManager() {
         require(
             hasRole(VESTING_MANAGER_ROLE, _msgSender()),
-            "Message sender is not a vesting manager"
+            CallerNotVestingManager()
         );
         _;
     }
@@ -107,16 +107,15 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         external
         override
         allow("SkaleToken")
-        // solhint-disable-next-line no-empty-blocks
-    {
-
-    }
+    // solhint-disable-next-line no-empty-blocks
+    {}
 
     function changeBeneficiaryAddress(address newBeneficiaryAddress) external override {
-        require(newBeneficiaryAddress != address(0), "Beneficiary address cannot be null");
+        require(newBeneficiaryAddress != address(0), BeneficiaryAddressNull());
         require(
-            _beneficiaries[newBeneficiaryAddress].status == BeneficiaryStatus.UNKNOWN,
-            "New beneficiary address must be clean"
+            _beneficiaries[newBeneficiaryAddress].status ==
+                BeneficiaryStatus.UNKNOWN,
+            BeneficiaryAddressNotClean()
         );
         _beneficiaries[msg.sender].requestedAddress = newBeneficiaryAddress;
     }
@@ -124,7 +123,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external override {
         require(
             msg.sender == _beneficiaries[oldBeneficiaryAddress].requestedAddress,
-            "Beneficiary address is not allowed to change"
+            BeneficiaryChangeNotAllowed()
         );
         _beneficiaries[msg.sender] = Beneficiary({
             status: _beneficiaries[oldBeneficiaryAddress].status,
@@ -151,7 +150,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     function startVesting(address beneficiary) external override onlyVestingManager {
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.CONFIRMED,
-            "Beneficiary has inappropriate status"
+            BeneficiaryStatusInappropriate()
         );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.ACTIVE;
         require(
@@ -159,7 +158,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
                 address(_beneficiaryToEscrow[beneficiary]),
                 _beneficiaries[beneficiary].fullAmount
             ),
-            "Error of token sending"
+            TokenTransferFailed()
         );
     }
 
