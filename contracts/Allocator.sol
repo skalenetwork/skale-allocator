@@ -238,9 +238,12 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         override
         onlyVestingManager
     {
-        require(_plans.length >= planId && planId > 0, "Plan does not exist");
-        require(fullAmount >= lockupAmount, "Incorrect amounts");
-        require(_beneficiaries[beneficiary].status == BeneficiaryStatus.UNKNOWN, "Beneficiary is already added");
+        require(!(planId == 0 || planId > _plans.length), PlanDoesNotExist());
+        require(!(fullAmount < lockupAmount), IncorrectAmounts());
+        require(
+            _beneficiaries[beneficiary].status == BeneficiaryStatus.UNKNOWN,
+            BeneficiaryAlreadyAdded()
+        );
         if (_plans[planId - 1].vestingIntervalTimeUnit == TimeUnit.DAY) {
             uint256 vestingDurationInDays = _daysBetweenMonths(
                 startMonth + _plans[planId - 1].vestingCliff,
@@ -248,7 +251,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             );
             require(
                 vestingDurationInDays % _plans[planId - 1].vestingInterval == 0,
-                "Vesting duration can't be divided into equal intervals"
+                VestingDurationNotDivisible()
             );
         }
         _beneficiaries[beneficiary] = Beneficiary({
