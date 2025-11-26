@@ -491,9 +491,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
         vestedAmount = 0;
         uint256 currentMonth = timeHelpers.getCurrentMonth();
-        if (currentMonth >= beneficiaryPlan.startMonth + planParams.vestingCliff) {
+        if (!(currentMonth < beneficiaryPlan.startMonth + planParams.vestingCliff)) {
             vestedAmount = beneficiaryPlan.amountAfterLockup;
-            if (currentMonth >= beneficiaryPlan.startMonth + planParams.totalVestingDuration) {
+            if (!(currentMonth < beneficiaryPlan.startMonth + planParams.totalVestingDuration)) {
                 vestedAmount = beneficiaryPlan.fullAmount;
             } else {
                 uint256 payment = _getSinglePaymentSize(
