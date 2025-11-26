@@ -48,21 +48,20 @@ import {Permissions} from "./Permissions.sol";
  */
 contract Allocator is Permissions, IERC777Recipient, IAllocator {
 
-    uint256 constant private _SECONDS_PER_DAY = 24 * 60 * 60;
-    uint256 constant private _MONTHS_PER_YEAR = 12;
+    uint256 private constant _SECONDS_PER_DAY = 24 * 60 * 60;
+    uint256 private constant _MONTHS_PER_YEAR = 12;
+    bytes32 public constant VESTING_MANAGER_ROLE = keccak256("VESTING_MANAGER_ROLE");
+
 
     IERC1820Registry private _erc1820;
 
     // array of Plan configs
     Plan[] private _plans;
 
-    bytes32 public constant VESTING_MANAGER_ROLE = keccak256("VESTING_MANAGER_ROLE");
+    // beneficiary => beneficiary plan params
+    mapping(address beneficiary => Beneficiary plan) private _beneficiaries;
 
-    //       beneficiary => beneficiary plan params
-    mapping (address => Beneficiary) private _beneficiaries;
-
-    //       beneficiary => Escrow
-    mapping (address => Escrow) private _beneficiaryToEscrow;
+    mapping(address beneficiary => Escrow escrowContract) private _beneficiaryToEscrow;
 
     string public version;
     error CallerNotVestingManager();
