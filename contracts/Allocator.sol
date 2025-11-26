@@ -303,18 +303,26 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns vesting start month of the beneficiary's Plan.
      */
-    function getStartMonth(address beneficiary) external view override returns (uint) {
+    function getStartMonth(address beneficiary)
+        external
+        view
+        override
+        returns (uint256 startMonth)
+    {
         return _beneficiaries[beneficiary].startMonth;
     }
 
     /**
      * @dev Returns the final vesting date of the beneficiary's Plan.
      */
-    function getFinishVestingTime(address beneficiary) external view override returns (uint) {
+    function getFinishVestingTime(address beneficiary) external view override returns (uint256 finishTime) {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.totalVestingDuration);
+        return
+            timeHelpers.monthToTimestamp(
+                beneficiaryPlan.startMonth + planParams.totalVestingDuration
+            );
     }
 
     /**
