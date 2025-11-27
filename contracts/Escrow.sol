@@ -288,7 +288,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function cancelPendingDelegation(uint256 delegationId)
+    function cancelPendingDelegation(
+        uint256 delegationId
+    )
         external
         override
         onlyActiveBeneficiaryOrVestingManager
