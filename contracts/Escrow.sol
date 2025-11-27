@@ -115,7 +115,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     }
 
     function initialize(address contractManagerAddress, address beneficiary) external override initializer {
-        require(beneficiary != address(0), "Beneficiary address is not set");
+        require(beneficiary != address(0), BeneficiaryAddressZero());
         Permissions.initialize(contractManagerAddress);
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
@@ -125,7 +125,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     }
 
     function changeBeneficiaryAddress(address beneficiary) external override allow("Allocator") {
-        require(beneficiary != address(0), "Beneficiary address must not be zero");
+        require(beneficiary != address(0), BeneficiaryAddressZero());
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
     }
