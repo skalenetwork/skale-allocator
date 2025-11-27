@@ -268,7 +268,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external override onlyActiveBeneficiaryOrVestingManager {
+    function requestUndelegation(uint256 delegationId)
+        external
+        override
+        onlyActiveBeneficiaryOrVestingManager
+    {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
