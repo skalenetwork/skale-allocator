@@ -184,7 +184,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
                     _beneficiary,
                     escrowBalance - locked
                 ),
-                "Error of token send"
+                TokenTransferFailed()
             );
         }
     }
