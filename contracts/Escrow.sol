@@ -20,23 +20,33 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    IERC777Recipient
+} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import {
+    IERC777Sender
+} from "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+import {
+    IERC1820Registry
+} from "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
-import "./interfaces/IEscrow.sol";
+import {
+    IDelegationController
+} from "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
+import {
+    IDistributor
+} from "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
+import {
+    ILocker
+} from "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
-import "./Allocator.sol";
-import "./Permissions.sol";
-
+import {Allocator} from "./Allocator.sol";
+import {IEscrow} from "./interfaces/IEscrow.sol";
+import {Permissions} from "./Permissions.sol";
 
 /**
  * @title Escrow
