@@ -141,10 +141,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         external
         override
         allow("SkaleToken")
-        // solhint-disable-next-line no-empty-blocks
-    {
+    // solhint-disable-next-line no-empty-blocks
+    {}
 
-    }
 
     function tokensToSend(
         address,
