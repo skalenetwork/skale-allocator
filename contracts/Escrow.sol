@@ -53,6 +53,7 @@ import {Permissions} from "./Permissions.sol";
  * @dev This contract manages funds locked by the Allocator contract.
  */
 contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
+    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
 
     address internal _beneficiary;
 
@@ -60,11 +61,10 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     IERC1820Registry private _erc1820;
 
-    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
 
     event BeneficiaryUpdated(
-        address oldValue,
-        address newValue
+        address indexed oldValue,
+        address indexed newValue
     );
 
     event VestingCanceled(uint vestedAmount);
