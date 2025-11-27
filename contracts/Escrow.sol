@@ -83,8 +83,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     modifier onlyBeneficiary() virtual {
         require(
             _msgSender() == _beneficiary ||
-            hasRole(BENEFICIARY_ROLE, _msgSender()),
-            "Message sender is not a plan beneficiary"
+                hasRole(BENEFICIARY_ROLE, _msgSender()),
+            CallerNotBeneficiary()
         );
         _;
     }
@@ -93,7 +93,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(
             allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
-            "Message sender is not a vesting manager"
+            CallerNotVestingManager()
         );
         _;
     }
