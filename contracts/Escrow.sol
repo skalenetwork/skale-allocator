@@ -203,8 +203,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
 
-        require(destination != address(0), "Destination address is not set");
-        require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
+        require(destination != address(0), DestinationAddressNotSet());
+        require(!allocator.isVestingActive(_beneficiary), VestingIsActive());
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -213,7 +213,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
                     destination,
                     escrowBalance - forbiddenToSend
                 ),
-                "Error of token send"
+                TokenTransferFailed()
             );
         }
     }
