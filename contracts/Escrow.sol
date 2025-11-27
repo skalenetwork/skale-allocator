@@ -102,14 +102,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(
-                _msgSender() == _beneficiary ||
-                hasRole(BENEFICIARY_ROLE, _msgSender()),
-                "Message sender is not a plan beneficiary"
+                _msgSender() == _beneficiary || hasRole(BENEFICIARY_ROLE, _msgSender()),
+                CallerNotBeneficiary()
             );
         } else {
             require(
                 allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
-                "Message sender is not authorized"
+                CallerNotAuthorized()
             );
         }
         _;
