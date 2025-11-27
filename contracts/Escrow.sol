@@ -146,20 +146,18 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
 
     function tokensToSend(
-        address,
-        address,
+        address operator,
+        address from,
         address to,
-        uint256,
-        bytes calldata,
-        bytes calldata
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
     )
         external
         override
         allow("SkaleToken")
-        // solhint-disable-next-line no-empty-blocks
-    {
-
-    }
+    // solhint-disable-next-line no-empty-blocks
+    {}
 
     /**
      * @dev Allows Beneficiary to retrieve vested tokens from the Escrow contract.
