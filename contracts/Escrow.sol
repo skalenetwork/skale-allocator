@@ -67,7 +67,18 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         address indexed newValue
     );
 
-    event VestingCanceled(uint vestedAmount);
+    event VestingCanceled(uint256 indexed vestedAmount);
+
+    error CallerNotBeneficiary();
+    error CallerNotVestingManager();
+    error CallerNotAuthorized();
+    error BeneficiaryAddressNotSet();
+    error BeneficiaryAddressZero();
+    error TokenTransferFailed();
+    error DestinationAddressNotSet();
+    error VestingIsActive();
+    error DelegationNotAllowed();
+    error BeneficiaryNotActive();
 
     modifier onlyBeneficiary() virtual {
         require(
