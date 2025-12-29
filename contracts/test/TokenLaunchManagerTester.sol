@@ -19,18 +19,16 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
 // import "@openzeppelin/contracts-ethereum-package/contracts/access/AccessControl.sol";
 
 import "../Permissions.sol";
 
-
 /**
  * @dev Interface of Delegatable Token operations.
  */
 contract TokenLaunchManagerTester is Permissions {
-
     bytes32 public constant SELLER_ROLE = keccak256("SELLER_ROLE");
 
     function initialize(address contractManagerAddress) public override initializer {
