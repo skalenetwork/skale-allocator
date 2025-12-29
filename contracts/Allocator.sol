@@ -580,7 +580,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      */
     function _deployEscrow(address beneficiary) private returns (Escrow escrowContract) {
         address proxyAdmin = contractManager.getContract("ProxyAdmin");
-        TransparentUpgradeableProxy escrow = TransparentUpgradeableProxy(
+        ITransparentUpgradeableProxy escrow = ITransparentUpgradeableProxy(
             payable(contractManager.getContract("Escrow"))
         );
         address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
