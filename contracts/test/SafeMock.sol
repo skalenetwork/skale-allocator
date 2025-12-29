@@ -19,7 +19,7 @@
     along with SKALE Manager.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -44,7 +44,6 @@ interface ISafeMock {
 }
 
 contract SafeMock is OwnableUpgradeable, ISafeMock {
-
     bool public constant IS_SAFE_MOCK = true;
     bytes32 public constant SAFE_TX_TYPE_HASH = keccak256(
         "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,"
@@ -61,10 +60,6 @@ contract SafeMock is OwnableUpgradeable, ISafeMock {
 
     function transferProxyAdminOwnership(OwnableUpgradeable proxyAdmin, address newOwner) external override onlyOwner {
         proxyAdmin.transferOwnership(newOwner);
-    }
-
-    function destroy() external override onlyOwner {
-        selfdestruct(payable(msg.sender));
     }
 
     /// @dev Sends multiple transactions and reverts all if one fails.
@@ -86,7 +81,7 @@ contract SafeMock is OwnableUpgradeable, ISafeMock {
             // solhint-disable-next-line no-empty-blocks
             for { } lt(i, length) { } {
                 // First byte of the data is the operation.
-                // We shift by 248 bits (256 - 8 [operation byte]) it right 
+                // We shift by 248 bits (256 - 8 [operation byte]) it right
                 // since mload will always load 32 bytes (a word).
                 // This will also zero out unused data.
                 let operation := shr(0xf8, mload(add(transactions, i)))

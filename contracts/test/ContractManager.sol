@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
@@ -47,7 +47,7 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
     using AddressUpgradeable for address;
 
     // mapping of actual smart contracts addresses
-    mapping (bytes32 => address) public contracts;
+    mapping(bytes32 => address) public contracts;
 
     event ContractUpgraded(string contractsName, address contractsAddress);
 
@@ -57,11 +57,11 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
 
     /**
      * @dev Allows Owner to add contract to mapping of actual contract addresses
-     * 
+     *
      * Emits a {ContractUpgraded} event.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Contract address is non-zero.
      * - Contract address is not already added.
      * - Contract contains code.
@@ -87,9 +87,9 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
 
     /**
      * @dev Returns the contract address of a given contract name.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Contract mapping must exist.
      */
     function getContract(string calldata name) external view override returns (address contractAddress) {
