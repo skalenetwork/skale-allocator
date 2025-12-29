@@ -19,11 +19,12 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
 import "./thirdparty/ERC777.sol";
 
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "../Permissions.sol";
 
 interface ISkaleTokenTester {
@@ -32,14 +33,13 @@ interface ISkaleTokenTester {
         uint256 amount,
         bytes memory userData,
         bytes memory operatorData
-    ) external returns(bool);
+    ) external returns (bool);
     function getAndUpdateLockedAmount(address wallet) external returns (uint);
     function getAndUpdateDelegatedAmount(address) external pure returns (uint);
     function getAndUpdateSlashedAmount(address) external pure returns (uint);
 }
 
 contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
-
     uint256 public constant CAP = 7 * 1e9 * (10 ** 18); // the maximum amount of tokens that can ever be created
 
     constructor(
@@ -47,8 +47,7 @@ contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
         string memory name,
         string memory symbol,
         address[] memory defOps
-    ) ERC777(name, symbol, defOps)
-    {
+    ) ERC777(name, symbol, defOps) {
         Permissions.initialize(contractManagerAddress);
     }
 
@@ -99,12 +98,30 @@ contract SkaleTokenTester is ERC777, Permissions, ISkaleTokenTester {
         }
     }
 
-    function _msgData() internal view override(Context, ContextUpgradeable) returns (bytes memory) {
+    function _msgData()
+        internal
+        view
+        override(Context, ContextUpgradeable)
+        returns (bytes calldata)
+    {
         return Context._msgData();
     }
 
-    function _msgSender() internal view override(Context, ContextUpgradeable) returns (address) {
-        return Context._msgSender();
+    function _contextSuffixLength()
+        internal
+        view
+        override(Context, ContextUpgradeable)
+        returns (uint256)
+    {
+        return Context._contextSuffixLength();
     }
 
+    function _msgSender()
+        internal
+        view
+        override(Context, ContextUpgradeable)
+        returns (address)
+    {
+        return Context._msgSender();
+    }
 }

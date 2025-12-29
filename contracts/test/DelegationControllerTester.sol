@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.26;
 
 import "../Permissions.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
@@ -32,9 +32,9 @@ interface IDelegationControllerTester {
         uint256 amount;
     }
     function delegate(
-        uint256 ,
+        uint256,
         uint256 amount,
-        uint256 ,
+        uint256,
         string calldata
     ) external;
     function requestUndelegation(uint256 delegationId) external;
@@ -49,9 +49,9 @@ contract DelegationControllerTester is Permissions, IDelegationControllerTester 
     Delegation[] private _delegations;
 
     function delegate(
-        uint256 ,
+        uint256,
         uint256 amount,
-        uint256 ,
+        uint256,
         string calldata
     )
         external override
