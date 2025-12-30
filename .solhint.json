@@ -1,6 +1,8 @@
 {
   "extends": "solhint:all",
   "rules": {
+    "foundry-test-functions": "off",
+    "foundry-test-function-naming": "off",
     "not-rely-on-time": "off",
     "duplicated-imports": "error",
     "comprehensive-interface": "error",
