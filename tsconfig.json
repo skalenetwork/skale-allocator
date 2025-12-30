@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
-    "lib": ["ES2018", "DOM"],
     "module": "CommonJS",
     "moduleResolution": "node",
     "strict": true,
-    "target": "ES2018",
+    "target": "ES2020",
     "sourceMap": true,
     "typeRoots": ["./node_modules/@types", "./typechain"],
     "types": ["node"],
