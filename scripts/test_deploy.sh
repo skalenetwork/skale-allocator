@@ -9,7 +9,7 @@ source $NVM_DIR/nvm.sh;
 DEPLOYED_WITH_NODE_VERSION="lts/hydrogen"
 CURRENT_NODE_VERSION=$(nvm current)
 
-git clone --branch stable https://github.com/skalenetwork/skale-manager.git
+git clone https://github.com/skalenetwork/skale-manager.git
 echo "Skale manager cloned"
 HARDHAT_NODE_SESSION="hardhat-node"
 yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
@@ -19,12 +19,12 @@ nvm install $DEPLOYED_WITH_NODE_VERSION
 nvm use $DEPLOYED_WITH_NODE_VERSION
 yarn install
 PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
-cp data/skale-manager-*-abi.json ../scripts/manager.json
+export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 cd ..
 rm -r --interactive=never skale-manager
 
 nvm use $CURRENT_NODE_VERSION
 
-NODE_OPTIONS="--max-old-space-size=4096" npx hardhat run migrations/deploy.ts --network localhost
+SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS npx hardhat run migrations/deploy.ts --network localhost
 
 yarn pm2 stop "$HARDHAT_NODE_SESSION"
