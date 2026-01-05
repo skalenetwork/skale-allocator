@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.1.1",
-    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/contracts": "4.8.2",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
     "@openzeppelin/hardhat-upgrades": "^1.13.0",
@@ -50,7 +50,7 @@
     "ethereumjs-tx": "2.1.2",
     "ethers": "5.7.2",
     "ethers-eip712": "^0.2.0",
-    "hardhat": "^2.10.1",
+    "hardhat": "^2.11.0",
     "solc": "^0.8.16"
   },
   "devDependencies": {
@@ -77,10 +77,11 @@
     "ganache-cli": "^6.12.2",
     "kill-port": "^2.0.1",
     "solhint": "^3.3.6",
-    "solidity-coverage": "^0.7.18",
+    "solidity-coverage": "^0.8.0",
     "ts-generator": "^0.1.1",
     "ts-node": "10.9.1",
     "typechain": "8.1.0",
     "typescript": "4.7.4"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
