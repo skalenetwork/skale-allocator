@@ -580,10 +580,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      */
     function _deployEscrow(address beneficiary) private returns (Escrow escrowContract) {
         address proxyAdmin = contractManager.getContract("ProxyAdmin");
-        ITransparentUpgradeableProxy escrow = ITransparentUpgradeableProxy(
-            payable(contractManager.getContract("Escrow"))
-        );
-        address escrowImplementation = ProxyAdmin(proxyAdmin).getProxyImplementation(escrow);
+        address escrowImplementation = contractManager.getContract("EscrowImplementation");
         bytes memory initializingData = abi.encodeWithSignature(
             "initialize(address,address)", address(contractManager), beneficiary
         );
