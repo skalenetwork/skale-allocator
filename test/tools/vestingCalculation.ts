@@ -17,56 +17,56 @@ function differenceInYears(date1: Date, date2: Date) {
 }
 
 export function calculateVestedAmount(
-    currentTimestamp: number,
-    startTimestamp: number,
-    vestingCliff: number,
-    totalVestingDuration: number,
+    currentTimestamp: bigint | number,
+    startTimestamp: bigint | number,
+    vestingCliff: bigint,
+    totalVestingDuration: bigint,
     vestingIntervalTimeUnit: TimeUnit,
-    vestingInterval: number,
-    tokensAmount: number,
-    tokensAmountAfterCliff: number) {
+    vestingInterval: bigint,
+    tokensAmount: bigint,
+    tokensAmountAfterCliff: bigint): bigint {
 
-        const begin = new Date(startTimestamp * 1000);
-        if (begin.getUTCHours() !== 0 || begin.getUTCMinutes() !== 0 || begin.getUTCSeconds() !== 0 || begin.getUTCMilliseconds() !== 0) {
-            throw Error("Start timestamp is not a beggining of a month");
-        }
-
-        const cliffEnd = new Date(begin);
-        cliffEnd.setMonth(begin.getMonth() + vestingCliff);
-
-        const end = new Date(begin);
-        end.setMonth(begin.getMonth() + totalVestingDuration);
-
-        const current = new Date(currentTimestamp * 1000);
-
-        if (current < cliffEnd) {
-            return 0;
-        } else if (current >= end) {
-            return tokensAmount;
-        } else {
-            let totalIntervalsNumber;
-            let passedIntervalsNumber;
-            if (vestingIntervalTimeUnit === TimeUnit.DAY) {
-                totalIntervalsNumber = Math.floor(differenceInDays(cliffEnd, end) / vestingInterval);
-                passedIntervalsNumber = Math.floor(differenceInDays(cliffEnd, current <= end ? current : end) / vestingInterval);
-            } else if (vestingIntervalTimeUnit === TimeUnit.MONTH) {
-                totalIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, end) / vestingInterval);
-                passedIntervalsNumber = Math.floor(differenceInMonths(cliffEnd, current <= end ? current : end) / vestingInterval);
-            } else if (vestingIntervalTimeUnit === TimeUnit.YEAR) {
-                totalIntervalsNumber = Math.floor(differenceInYears(cliffEnd, end) / vestingInterval);
-                passedIntervalsNumber = Math.floor(differenceInYears(cliffEnd, current <= end ? current : end) / vestingInterval);
-            } else {
-                throw new Error("Unknown time unit");
-            }
-            if (totalIntervalsNumber > 0) {
-                return tokensAmountAfterCliff + Math.floor((tokensAmount - tokensAmountAfterCliff) / totalIntervalsNumber) * passedIntervalsNumber;
-            } else {
-                return tokensAmountAfterCliff;
-            }
-        }
+    const begin = new Date(Number(startTimestamp) * 1000);
+    if (begin.getUTCHours() !== 0 || begin.getUTCMinutes() !== 0 || begin.getUTCSeconds() !== 0 || begin.getUTCMilliseconds() !== 0) {
+        throw Error("Start timestamp is not a beggining of a month");
     }
 
-export function calculateLockedAmount(time: number, startDate: number, lockupPeriod: number, fullPeriod: number, fullAmount: number, lockupAmount: number, vestPeriod: number, vestTime: number) {
-    return fullAmount - calculateVestedAmount(time, startDate, lockupPeriod, fullPeriod, vestPeriod, vestTime, fullAmount, lockupAmount);
+    const cliffEnd = new Date(begin);
+    cliffEnd.setMonth(begin.getMonth() + Number(vestingCliff));
+
+    const end = new Date(begin);
+    end.setMonth(begin.getMonth() + Number(totalVestingDuration));
+
+    const current = new Date(Number(currentTimestamp) * 1000);
+
+    if (current < cliffEnd) {
+        return 0n;
+    } else if (current >= end) {
+        return tokensAmount;
+    } else {
+        let totalIntervalsNumber: bigint;
+        let passedIntervalsNumber: bigint;
+        const vestingIntervalNum = Number(vestingInterval);
+        if (vestingIntervalTimeUnit === TimeUnit.DAY) {
+            totalIntervalsNumber = BigInt(Math.floor(differenceInDays(cliffEnd, end) / vestingIntervalNum));
+            passedIntervalsNumber = BigInt(Math.floor(differenceInDays(cliffEnd, current <= end ? current : end) / vestingIntervalNum));
+        } else if (vestingIntervalTimeUnit === TimeUnit.MONTH) {
+            totalIntervalsNumber = BigInt(Math.floor(differenceInMonths(cliffEnd, end) / vestingIntervalNum));
+            passedIntervalsNumber = BigInt(Math.floor(differenceInMonths(cliffEnd, current <= end ? current : end) / vestingIntervalNum));
+        } else if (vestingIntervalTimeUnit === TimeUnit.YEAR) {
+            totalIntervalsNumber = BigInt(Math.floor(differenceInYears(cliffEnd, end) / vestingIntervalNum));
+            passedIntervalsNumber = BigInt(Math.floor(differenceInYears(cliffEnd, current <= end ? current : end) / vestingIntervalNum));
+        } else {
+            throw new Error("Unknown time unit");
+        }
+        if (totalIntervalsNumber > 0n) {
+            return tokensAmountAfterCliff + (tokensAmount - tokensAmountAfterCliff) / totalIntervalsNumber * passedIntervalsNumber;
+        } else {
+            return tokensAmountAfterCliff;
+        }
+    }
 }
 
+export function calculateLockedAmount(time: number | bigint, startDate: number | bigint, lockupPeriod: bigint, fullPeriod: bigint, fullAmount: bigint, lockupAmount: bigint, vestPeriod: TimeUnit, vestTime: bigint): bigint {
+    return fullAmount - calculateVestedAmount(time, startDate, lockupPeriod, fullPeriod, vestPeriod, vestTime, fullAmount, lockupAmount);
+}
