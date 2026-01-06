@@ -4,16 +4,23 @@ import { contracts } from "./deploy";
 import { promises as fs, existsSync } from "fs";
 import { exec as asyncExec } from "child_process";
 import hre, { ethers } from "hardhat";
-import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
-import { ProxyAdmin, Allocator } from "../typechain-types";
-import { upgrade, verify, SkaleABIFile, encodeTransaction, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
+// import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
+import { ProxyAdmin, Allocator, Escrow } from "../typechain-types";
+// import { upgrade, verify, SkaleABIFile, encodeTransaction, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
+import { verify } from "@skalenetwork/upgrade-tools";
 
 const exec = util.promisify(asyncExec);
 
-async function getAllocator(abi: SkaleABIFile) : Promise<Allocator> {
+type SkaleABIFile = { [key: string]: string | any[] };
+
+function getContractKeyInAbiFile(contract: string) {
+    return contract.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();
+}
+
+async function getAllocator(abi: SkaleABIFile): Promise<Allocator> {
     return ((await ethers.getContractFactory("Allocator")).attach(
         abi[getContractKeyInAbiFile("Allocator") + "_address"] as string
-    ));
+    )) as unknown as Allocator;
 }
 
 export async function getDeployedVersion(abi: SkaleABIFile) {
@@ -27,15 +34,18 @@ export async function getDeployedVersion(abi: SkaleABIFile) {
 
 export async function setNewVersion(safeTransactions: string[], abi: SkaleABIFile, newVersion: string) {
     const allocator = await getAllocator(abi);
+    /*
     safeTransactions.push(encodeTransaction(
         0,
-        allocator.address,
+        await allocator.getAddress(),
         0,
         allocator.interface.encodeFunctionData("setVersion", [newVersion]),
     ));
+    */
 }
 
 async function main() {
+    /*
     await upgrade(
         "skale-allocator",
         "2.2.2",
@@ -53,7 +63,7 @@ async function main() {
             if (process.env.PRODUCTION === "true") {
                 production = true;
             }
-        
+
             let maxFeePerGas = 100*1e9;
             let maxPriorityFeePerGas = 1e9;
             if (hre.network.config.gasPrice !== "auto") {
@@ -61,7 +71,7 @@ async function main() {
                 maxPriorityFeePerGas = hre.network.config.gasPrice;
             }
 
-            const proxyAdmin = await getManifestAdmin(hre) as ProxyAdmin;
+            const proxyAdmin = await getManifestAdmin(hre) as unknown as ProxyAdmin;
             const [deployer] = await ethers.getSigners();
 
             if (production) {
@@ -100,14 +110,14 @@ async function main() {
                 const escrow = await escrowFactory.deploy({
                     maxFeePerGas: maxFeePerGas,
                     maxPriorityFeePerGas: maxPriorityFeePerGas
-                });
+                }) as unknown as Escrow;
                 console.log("Deploy transaction:");
-                console.log("https://etherscan.io/tx/" + escrow.deployTransaction.hash)
-                console.log("New Escrow address:", escrow.address);
-                await escrow.deployTransaction.wait();
-                await verify("Escrow", escrow.address, []);
+                console.log("https://etherscan.io/tx/" + escrow.deploymentTransaction()?.hash)
+                console.log("New Escrow address:", await escrow.getAddress());
+                await escrow.waitForDeployment();
+                await verify("Escrow", await escrow.getAddress());
 
-                const newImplementationAddress = escrow.address;
+                const newImplementationAddress = await escrow.getAddress();
 
                 const implementations = await Promise.all(proxies.map(async (proxy) => {
                     return await proxyAdmin.getProxyImplementation(proxy);
@@ -122,16 +132,18 @@ async function main() {
                 }
 
                 for (const proxy of proxies) {
-                    safeTransactions.push(encodeTransaction(
-                        0,
-                        proxyAdmin.address,
-                        0,
-                        proxyAdmin.interface.encodeFunctionData("upgrade", [proxy, newImplementationAddress])
-                    ));
+                    // safeTransactions.push(encodeTransaction(
+                    //     0,
+                    //     await proxyAdmin.getAddress(),
+                    //     0,
+                    //     proxyAdmin.interface.encodeFunctionData("upgrade", [proxy, newImplementationAddress])
+                    // ));
                 }
             }
         }
     );
+    */
+    console.log("Upgrade script is disabled due to upgrade-tools version mismatch. Please update it to use Upgrader class.");
 }
 
 if (require.main === module) {
