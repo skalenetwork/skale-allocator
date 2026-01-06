@@ -63,26 +63,27 @@ async function main() {
         layout: object
     }
 
-    const proxyAdmin = await upgrades.admin.getInstance();
-    for (const [_, value] of Object.entries(manifest.impls)) {
+    // const proxyAdmin = await upgrades.admin.getInstance();
+    for (const [, value] of Object.entries(manifest.impls)) {
         const contract = value as ImplementationInterface;
         const searchResult = Object.entries(
             cliExport
                 .networks[network]
                 .proxies
         ).find(([, aliasValue]) => {
-            const _proxies = aliasValue as {implementation: string}[];
+            const _proxies = aliasValue as { implementation: string }[];
             return _proxies[0].implementation === contract.address;
         });
         if (searchResult) {
-            const [alias, ] = searchResult;
+            const [alias,] = searchResult;
             const contractName = alias.split("/").pop() as string;
 
             const proxyAddress = artifacts[getContractKeyInAbiFile(contractName) + "_address"];
             if (proxyAddress) {
                 const newContractFactory = await ethers.getContractFactory(contractName);
                 const newContractInstance = newContractFactory.attach(artifacts[getContractKeyInAbiFile(contractName) + "_address"]);
-                const newContractImplementation = await proxyAdmin.getProxyImplementation(newContractInstance.address);
+                // const newContractImplementation = await proxyAdmin.getProxyImplementation(newContractInstance.address);
+                const newContractImplementation = await upgrades.erc1967.getImplementationAddress(await newContractInstance.getAddress());
 
                 const implementationSearch = Object.entries(newManifest.impls).find(([, _implementation]) => {
                     const implementation = _implementation as ImplementationInterface;
@@ -110,12 +111,13 @@ async function main() {
         }
     }
 
-    const updatedManifestFilename = manifestFilename.split("/").map( (name, index, all) => {
+    const updatedManifestFilename = manifestFilename.split("/").map((name, index, all) => {
         if (index < all.length - 1) {
             return name;
         } else {
             return "new-" + name;
-        }}).join("/");
+        }
+    }).join("/");
     await fs.writeFile(updatedManifestFilename, JSON.stringify(manifest, null, 2));
 }
 
