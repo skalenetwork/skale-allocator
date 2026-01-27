@@ -3,28 +3,14 @@ import { ethers } from "hardhat";
 import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v5";
 import axios from "axios";
 
-interface Explorer {
-    url: string;
-    hostedBy: string;
-}
-
-interface ChainData {
-    name: string;
-    explorers: Explorer[];
-}
-
 interface ChainsResponse {
-    [key: string]: ChainData;
-}
-
-interface EscrowItem {
-    to?: {
-        hash: string;
+    [key: string]: {
+        explorers: { url: string }[];
     };
 }
 
 interface EscrowResponse {
-    items: EscrowItem[];
+    items: { to: { hash: string } }[];
     next_page_params: Record<string, unknown> | null;
 }
 
@@ -89,11 +75,9 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
         });
         const items = response.data.items || [];
         items.forEach((item) => {
-            if (item.to?.hash) {
-                escrowAddresses.push(ethers.utils.getAddress(item.to.hash));
-            }
+            escrowAddresses.push(ethers.utils.getAddress(item.to.hash));
         });
-        console.log(`Fetched ${escrowAddresses.length} escrow addresses`);
+        console.log(`Fetched ${escrowAddresses.length} escrows`);
         nextPageParams = response.data.next_page_params;
     } while (nextPageParams);
 
@@ -101,7 +85,7 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
 }
 
 async function validateEscrows(escrowAddresses: string[]) {
-    console.log("Validating escrow addresses...")
+    console.log("Validating escrows...")
     await Promise.all(escrowAddresses.map(async (address) => {
         const code = await ethers.provider.getCode(address);
         if (code === "0x") {
@@ -109,7 +93,7 @@ async function validateEscrows(escrowAddresses: string[]) {
             throw Error("Wrong Escrow list: found non-contract address");
         }
     }));
-    console.log("Escrow addresses validated successfully");
+    console.log("Escrows validated successfully");
 }
 
 export async function fetchEscrowAddresses() {
@@ -129,7 +113,7 @@ export async function fetchEscrowAddresses() {
 async function main() {
     const escrowAddresses = await fetchEscrowAddresses();
 
-    console.log(chalk.green(`\nFound ${escrowAddresses.length} escrow addresses:`));
+    console.log(chalk.green(`\nFound ${escrowAddresses.length} escrows:`));
     escrowAddresses.forEach((address, index) => {
         console.log(`${index + 1}. ${address}`);
     });
