@@ -1,7 +1,7 @@
 import chalk from "chalk";
-import {ethers} from "hardhat";
-import {skaleContracts, Instance} from "@skalenetwork/skale-contracts-ethers-v5";
-import axios, { Axios, AxiosResponse } from "axios";
+import { ethers } from "hardhat";
+import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v5";
+import axios from "axios";
 
 
 async function getSkaleManagerInstance() {
@@ -26,8 +26,22 @@ async function getSkaleAllocatorInstance() {
     return await project.getInstance(process.env.SKALE_ALLOCATOR_ADDRESS);
 }
 
+interface Explorer {
+    url: string;
+    hostedBy: string;
+}
+
+interface ChainData {
+    name: string;
+    explorers: Explorer[];
+}
+
+interface ChainsResponse {
+    [key: string]: ChainData;
+}
+
 async function getExplorerUrl(chainId: number) {
-    const response = await axios.get("https://chains.blockscout.com/api/chains");
+    const response = await axios.get<ChainsResponse>("https://chains.blockscout.com/api/chains");
     const chainData = response.data[chainId.toString()];
     if (!chainData || !chainData.explorers || chainData.explorers.length === 0) {
         throw new Error(`No explorer found for chain ID ${chainId}`);
@@ -36,18 +50,29 @@ async function getExplorerUrl(chainId: number) {
     return apiUrl;
 }
 
-function serializeParams(params: any): string {
+function serializeParams(params: Record<string, unknown>): string {
     return Object.entries(params)
-        .filter(([_, value]) => value !== undefined)
+        .filter(([, value]) => value !== undefined)
         .map(([key, value]) => value === null
             ? `${key}=null`
             : `${key}=${encodeURIComponent(String(value))}`)
         .join('&');
 }
 
+interface EscrowItem {
+    to?: {
+        hash: string;
+    };
+}
+
+interface EscrowResponse {
+    items: EscrowItem[];
+    next_page_params: Record<string, unknown> | null;
+}
+
 async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocatorAddress: string) {
     const escrowAddresses: string[] = [];
-    let nextPageParams = null;
+    let nextPageParams: Record<string, unknown> | null = null;
 
     const baseParams = {
         transaction_types: 'ERC-20',
@@ -56,19 +81,20 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
         token_contract_symbols_to_include: 'SKL',
         from_address_hashes_to_include: allocatorAddress
     }
-
+    console.log("Fetching escrow addresses...")
     do {
-        const params: any = {...baseParams, ...nextPageParams};
-        const response = await axios.get(`${apiUrl}/advanced-filters`, {
+        const params: Record<string, unknown> = { ...baseParams, ...nextPageParams };
+        const response = await axios.get<EscrowResponse>(`${apiUrl}/advanced-filters`, {
             params,
             paramsSerializer: serializeParams
         });
         const items = response.data.items || [];
-        items.forEach((item: any) => {
+        items.forEach((item) => {
             if (item.to?.hash) {
                 escrowAddresses.push(ethers.utils.getAddress(item.to.hash));
             }
         });
+        console.log(`Fetched ${escrowAddresses.length} escrow addresses`);
         nextPageParams = response.data.next_page_params;
     } while (nextPageParams);
 
@@ -76,13 +102,15 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
 }
 
 async function validateEscrows(escrowAddresses: string[]) {
-    for (const address of escrowAddresses) {
+    console.log("Validating escrow addresses...")
+    await Promise.all(escrowAddresses.map(async (address) => {
         const code = await ethers.provider.getCode(address);
         if (code === "0x") {
             console.error(`Error: ${address} is not a contract address`);
             throw Error("Wrong Escrow list: found non-contract address");
         }
-    }
+    }));
+    console.log("Escrow addresses validated successfully");
 }
 
 export async function fetchEscrowAddresses() {
@@ -96,7 +124,6 @@ export async function fetchEscrowAddresses() {
     const escrowAddresses = await getEscrowAddresses(apiUrl, skaleToken.address, allocator.address);
 
     await validateEscrows(escrowAddresses);
-
     return escrowAddresses;
 }
 
