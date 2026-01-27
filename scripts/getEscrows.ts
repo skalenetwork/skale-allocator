@@ -3,6 +3,30 @@ import { ethers } from "hardhat";
 import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v5";
 import axios from "axios";
 
+interface Explorer {
+    url: string;
+    hostedBy: string;
+}
+
+interface ChainData {
+    name: string;
+    explorers: Explorer[];
+}
+
+interface ChainsResponse {
+    [key: string]: ChainData;
+}
+
+interface EscrowItem {
+    to?: {
+        hash: string;
+    };
+}
+
+interface EscrowResponse {
+    items: EscrowItem[];
+    next_page_params: Record<string, unknown> | null;
+}
 
 async function getSkaleManagerInstance() {
     if (!process.env.SKALE_MANAGER_ADDRESS) {
@@ -26,20 +50,6 @@ async function getSkaleAllocatorInstance() {
     return await project.getInstance(process.env.SKALE_ALLOCATOR_ADDRESS);
 }
 
-interface Explorer {
-    url: string;
-    hostedBy: string;
-}
-
-interface ChainData {
-    name: string;
-    explorers: Explorer[];
-}
-
-interface ChainsResponse {
-    [key: string]: ChainData;
-}
-
 async function getExplorerUrl(chainId: number) {
     const response = await axios.get<ChainsResponse>("https://chains.blockscout.com/api/chains");
     const chainData = response.data[chainId.toString()];
@@ -57,17 +67,6 @@ function serializeParams(params: Record<string, unknown>): string {
             ? `${key}=null`
             : `${key}=${encodeURIComponent(String(value))}`)
         .join('&');
-}
-
-interface EscrowItem {
-    to?: {
-        hash: string;
-    };
-}
-
-interface EscrowResponse {
-    items: EscrowItem[];
-    next_page_params: Record<string, unknown> | null;
 }
 
 async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocatorAddress: string) {
