@@ -1131,7 +1131,7 @@
     proper-lockfile "^4.1.1"
     solidity-ast "^0.4.15"
 
-"@renovatebot/pep440@^3.0.20", "@renovatebot/pep440@^4.2.1":
+"@renovatebot/pep440@^4.1.0":
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/@renovatebot/pep440/-/pep440-4.2.1.tgz#41182c943be779687b9daddb4f16294f61009001"
   integrity sha512-2FK1hF93Fuf1laSdfiEmJvSJPVIDHEUTz68D3Fi9s0IZrrpaEcj6pTFBTbYvsgC5du4ogrtf5re7yMMvrKNgkw==
@@ -1295,21 +1295,22 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@skalenetwork/skale-contracts-ethers-v5@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@skalenetwork/skale-contracts-ethers-v5/-/skale-contracts-ethers-v5-1.0.1.tgz#a30cc1e48850dc79f0d1e9bf5195fdf3970788f6"
-  integrity sha512-4MHHFEE1YUqpKsRKSpa2rpSqQOQDadOEWreK7ZpS7VFb2pKmdsmRpBUgFDE88oH7asp3mAeEiuBGTUo6WO1y6A==
+"@skalenetwork/skale-contracts-ethers-v5@2.0.0-develop.6":
+  version "2.0.0-develop.6"
+  resolved "https://registry.yarnpkg.com/@skalenetwork/skale-contracts-ethers-v5/-/skale-contracts-ethers-v5-2.0.0-develop.6.tgz#e6b98d3d070e4bc28047ce637145da88da37ca94"
+  integrity sha512-W94tJq2smhbvlCnqwu6S9uw/aNM1p27abMt/aLdVY6XozcEdNS/jFFJJ5VCEU7Bdo//3FStOlrbEMIIS5RDusQ==
   dependencies:
-    "@skalenetwork/skale-contracts" "1.0.1"
+    "@skalenetwork/skale-contracts" "2.0.0-develop.6"
     ethers "^5.7.2"
 
-"@skalenetwork/skale-contracts@1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@skalenetwork/skale-contracts/-/skale-contracts-1.0.1.tgz#8d96981b43f4e4cf0b727786d5ee4cfbd67cf376"
-  integrity sha512-Wqi6zKPdfcsQGQVoSv0S0ojQMKFKx2abrsX3IT7r11beLuOJ/C7wcSIikJhpeS0p4SQdU30EM+iZOKPAOgVvWQ==
+"@skalenetwork/skale-contracts@2.0.0-develop.6":
+  version "2.0.0-develop.6"
+  resolved "https://registry.yarnpkg.com/@skalenetwork/skale-contracts/-/skale-contracts-2.0.0-develop.6.tgz#6bccba8b259a4df5de93d4956c18f4592b5c3715"
+  integrity sha512-+n3TQDgiqK7D7yhRnz3+U7dvd4/8QWsn8hm7CHIMs+I0obs5tDP9eCoCZBNObVDeX1aItrW32VYeTvcJuqIrkA==
   dependencies:
-    "@renovatebot/pep440" "^3.0.20"
+    "@renovatebot/pep440" "^4.1.0"
     axios "^1.4.0"
+    dotenv "^16.5.0"
     semver "^7.6.0"
 
 "@skalenetwork/skale-manager-interfaces@1.0.0":
@@ -3806,6 +3807,11 @@ dotenv@^16.0.0:
   version "16.0.1"
   resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.0.1.tgz#8f8f9d94876c35dac989876a5d3a82a267fdce1d"
   integrity sha512-1K6hR6wtk2FviQ4kEiSjFiH5rpzEVi8WW0x96aztHVMhEspNpc4DVOUTEHtEva5VThQ8IaBX1Pe4gSzpVVUsKQ==
+
+dotenv@^16.5.0:
+  version "16.6.1"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.6.1.tgz#773f0e69527a8315c7285d5ee73c4459d20a8020"
+  integrity sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==
 
 dotignore@~0.1.2:
   version "0.1.2"
