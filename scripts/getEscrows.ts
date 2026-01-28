@@ -87,10 +87,12 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
 async function validateEscrows(escrowAddresses: string[]) {
     console.log("Validating escrows...")
     await Promise.all(escrowAddresses.map(async (address) => {
-        const code = await ethers.provider.getCode(address);
-        if (code === "0x") {
-            console.error(`Error: ${address} is not a contract address`);
-            throw Error("Wrong Escrow list: found non-contract address");
+        try {
+            const escrow = await ethers.getContractAt("Escrow", address);
+            await escrow.BENEFICIARY_ROLE();
+        } catch (e) {
+            console.error(`Error: ${address} is not a valid Escrow contract`);
+            throw Error(`Wrong Escrow list: ${address} is not a valid Escrow contract`);
         }
     }));
     console.log("Escrows validated successfully");
