@@ -25,6 +25,7 @@
     "coverage/**",
     "docs/**",
     "typechain-types/**",
-    "scripts/update_manifest.ts"
+    "scripts/update_manifest.ts",
+    "venv/**"
   ]
 }
