@@ -16,7 +16,7 @@ import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
 import { BeneficiaryStatus, TimeUnit } from "./tools/types";
 import { deployTimeHelpersTester } from "./tools/deploy/test/timeHelpersTester";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 
 chai.should();
@@ -117,7 +117,7 @@ describe("Allocator", () => {
     });
 
     it("should stop cancelable vesting after start", async () => {
-        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.false;
+        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.eql(false);
 
         await allocator.connect(vestingManager).addPlan(6, 36, TimeUnit.MONTH, 6, false, true);
 
@@ -129,11 +129,11 @@ describe("Allocator", () => {
         const tokensAfterLockup = 1e5;
 
         await allocator.connect(vestingManager).connectBeneficiaryToPlan(beneficiary.address, 1, vestingStartMonth, totalTokens, tokensAfterLockup);
-        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.true;
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.false;
+        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.eql(true);
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(false);
 
         await allocator.connect(vestingManager).startVesting(beneficiary.address);
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.true;
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(true);
 
         await skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
         // 12 month after plan start
@@ -141,11 +141,11 @@ describe("Allocator", () => {
         const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
 
         await allocator.connect(vestingManager).stopVesting(beneficiary.address);
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.false;
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(false);
 
         await expect(allocator.connect(vestingManager).startVesting(beneficiary.address))
             .to.be.revertedWithCustomError(allocator, "BeneficiaryStatusInappropriate");
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.false;
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(false);
 
         const escrowFactory = await ethers.getContractFactory("Escrow");
         const escrow = escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address));
@@ -163,8 +163,8 @@ describe("Allocator", () => {
             .should.be.equal(totalTokens - vested);
     });
 
-    it("should not stop uncancelable vesting after start", async () => {
-        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.false;
+    it("should not stop un-cancelable vesting after start", async () => {
+        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.eql(false);
 
         await allocator.connect(vestingManager).addPlan(6, 36, TimeUnit.MONTH, 6, false, false);
 
@@ -176,11 +176,11 @@ describe("Allocator", () => {
         const tokensAfterLockup = 1e5;
 
         await allocator.connect(vestingManager).connectBeneficiaryToPlan(beneficiary.address, 1, vestingStartMonth, totalTokens, tokensAfterLockup);
-        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.true;
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.false;
+        expect(await allocator.isBeneficiaryRegistered(beneficiary.address)).to.be.eql(true);
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(false);
 
         await allocator.connect(vestingManager).startVesting(beneficiary.address);
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.true;
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(true);
 
         await skipTime(vestingStartTimestamp + 12 * month - currentTimestamp);
         // 12 month after plan start
@@ -188,12 +188,12 @@ describe("Allocator", () => {
         const vested = Math.floor(tokensAfterLockup + (totalTokens - tokensAfterLockup) * 6 / 30);
 
         await expect(allocator.connect(vestingManager).stopVesting(beneficiary.address))
-            .to.be.revertedWithCustomError(allocator, "PlanNotTerminatable");
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.true;
+            .to.be.revertedWithCustomError(allocator, "PlanNotTerminable");
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(true);
 
         await expect(allocator.connect(vestingManager).startVesting(beneficiary.address))
             .to.be.revertedWithCustomError(allocator, "BeneficiaryStatusInappropriate");
-        expect(await allocator.isVestingActive(beneficiary.address)).to.be.true;
+        expect(await allocator.isVestingActive(beneficiary.address)).to.be.eql(true);
 
         const escrowFactory = await ethers.getContractFactory("Escrow");
         const escrow = escrowFactory.attach(await allocator.getEscrowAddress(beneficiary.address));

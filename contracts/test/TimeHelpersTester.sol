@@ -19,6 +19,8 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// cspell:words Bokky Poo Bahs
+
 pragma solidity ^0.8.26;
 
 import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";

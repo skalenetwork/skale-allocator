@@ -4,6 +4,9 @@ import { promises as fs } from "fs";
 import * as syncFs from "fs";
 import { ManifestData } from "@openzeppelin/upgrades-core";
 import util from 'util';
+
+// cspell:words impls
+
 const exec = util.promisify(asyncExec);
 
 export function getContractKeyInAbiFile(contract: string) {
@@ -102,7 +105,7 @@ async function main() {
                 throw Error(`Contract ${contractName} was not deployed`);
             }
         } else {
-            const layout = contract.layout as any;
+            const layout = contract.layout as { storage: { contract: string }[] };
             if (layout.storage[layout.storage.length - 1].contract === "ContractManager") {
                 continue;
             } else {

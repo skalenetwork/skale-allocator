@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# cspell:words tokentx contractaddress apikey KHTML
+
 import requests
 import json
 import os
@@ -9,7 +11,7 @@ mainnet_url = 'https://api.etherscan.io/api'
 rinkeby_url = 'https://api-rinkeby.etherscan.io/api'
 
 def main():
-    if os.environ['NETWORK'] == 'mainnet': 
+    if os.environ['NETWORK'] == 'mainnet':
         r = requests.get('https://raw.githubusercontent.com/skalenetwork/skale-network/master/releases/mainnet/skale-allocator/2.2.0/skale-allocator-2.2.0-mainnet-abi.json')
         allocator_abi = r.json()
         url = mainnet_url
@@ -23,8 +25,8 @@ def main():
         skale_token_address = manager_abi['skale_token_address']
     else:
         raise KeyError('Set NETWORK type or ABI filepath')
-    
-    
+
+
     payload = {
         'module': 'account',
         'action': 'tokentx',

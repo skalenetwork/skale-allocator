@@ -23,11 +23,7 @@
 pragma solidity ^0.8.26;
 
 import {
-    ProxyAdmin
-} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
+    TransparentUpgradeableProxy
 } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -78,7 +74,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     error IncorrectAmounts();
     error BeneficiaryAlreadyAdded();
     error BeneficiaryNotActive();
-    error PlanNotTerminatable();
+    error PlanNotTerminable();
     error VestingIsOver();
     error VestingStopped();
     error IncorrectVestingIntervalTimeUnit();
@@ -177,7 +173,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         TimeUnit vestingIntervalTimeUnit, // 0 - day 1 - month 2 - year
         uint256 vestingInterval, // months or days or years
         bool canDelegate, // can beneficiary delegate all un-vested tokens
-        bool isTerminatable
+        bool isTerminable
     )
         external
         override
@@ -212,7 +208,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
                 vestingIntervalTimeUnit: vestingIntervalTimeUnit,
                 vestingInterval: vestingInterval,
                 isDelegationAllowed: canDelegate,
-                isTerminatable: isTerminatable
+                isTerminable: isTerminable
             })
         );
         emit PlanCreated(_plans.length);
@@ -279,8 +275,8 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             BeneficiaryNotActive()
         );
         require(
-            _plans[_beneficiaries[beneficiary].planId - 1].isTerminatable,
-            PlanNotTerminatable()
+            _plans[_beneficiaries[beneficiary].planId - 1].isTerminable,
+            PlanNotTerminable()
         );
         _beneficiaries[beneficiary].status = BeneficiaryStatus.TERMINATED;
         Escrow(_beneficiaryToEscrow[beneficiary]).cancelVesting(

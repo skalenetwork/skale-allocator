@@ -28,7 +28,7 @@ interface IConstantsHolderMock {
 }
 
 /**
- * @dev Interface of Delegatable Token operations.
+ * @dev Interface of Delegable Token operations.
  */
 contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
     uint256 public launchTimestamp;

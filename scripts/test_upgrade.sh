@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# cspell:words toplevel
+
 set -e
 
 if [ -z $GITHUB_WORKSPACE ]

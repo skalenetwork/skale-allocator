@@ -1,10 +1,9 @@
 import chalk from "chalk";
-import { Contract, Interface } from "ethers";
-import { ContractTransaction } from 'ethers';
-import { promises as fs, existsSync } from 'fs';
+import { Contract } from "ethers";
+import { promises as fs } from 'fs';
 import { ethers, upgrades, network } from "hardhat";
-import { verifyProxy, getAbi, getVersion } from "@skalenetwork/upgrade-tools";
-import { Allocator, ContractManager } from "../typechain-types";
+import { verifyProxy, getVersion } from "@skalenetwork/upgrade-tools";
+import { ContractManager } from "../typechain-types";
 import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
 
 

@@ -28,7 +28,7 @@ export function calculateVestedAmount(
 
     const begin = new Date(Number(startTimestamp) * 1000);
     if (begin.getUTCHours() !== 0 || begin.getUTCMinutes() !== 0 || begin.getUTCSeconds() !== 0 || begin.getUTCMilliseconds() !== 0) {
-        throw Error("Start timestamp is not a beggining of a month");
+        throw Error("Start timestamp is not a beginning of a month");
     }
 
     const cliffEnd = new Date(begin);

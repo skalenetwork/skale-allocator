@@ -1,17 +1,16 @@
-import util from 'util';
-import chalk from "chalk";
-import { contracts } from "./deploy";
-import { promises as fs, existsSync } from "fs";
-import { exec as asyncExec } from "child_process";
-import hre, { ethers } from "hardhat";
+//import util from 'util';
+//import chalk from "chalk";
+//import { contracts } from "./deploy";
+//import { promises as fs, existsSync } from "fs";
+//import { exec as asyncExec } from "child_process";
+//import { ethers } from "hardhat";
 // import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
-import { ProxyAdmin, Allocator, Escrow } from "../typechain-types";
+//import { Allocator } from "../typechain-types";
 // import { upgrade, verify, SkaleABIFile, encodeTransaction, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
-import { verify } from "@skalenetwork/upgrade-tools";
 
-const exec = util.promisify(asyncExec);
-
+/*
 type SkaleABIFile = { [key: string]: string | any[] };
+
 
 function getContractKeyInAbiFile(contract: string) {
     return contract.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();
@@ -34,15 +33,16 @@ export async function getDeployedVersion(abi: SkaleABIFile) {
 
 export async function setNewVersion(safeTransactions: string[], abi: SkaleABIFile, newVersion: string) {
     const allocator = await getAllocator(abi);
-    /*
+
     safeTransactions.push(encodeTransaction(
         0,
         await allocator.getAddress(),
         0,
         allocator.interface.encodeFunctionData("setVersion", [newVersion]),
     ));
-    */
+
 }
+*/
 
 async function main() {
     /*

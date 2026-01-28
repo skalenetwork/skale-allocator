@@ -43,7 +43,7 @@ interface IAllocator {
         TimeUnit vestingIntervalTimeUnit;
         uint256 vestingInterval; // amount of days/months/years
         bool isDelegationAllowed;
-        bool isTerminatable;
+        bool isTerminable;
     }
 
     struct Beneficiary {
@@ -66,7 +66,7 @@ interface IAllocator {
         TimeUnit vestingIntervalTimeUnit, // 0 - day 1 - month 2 - year
         uint256 vestingInterval, // months or days or years
         bool canDelegate, // can beneficiary delegate all un-vested tokens
-        bool isTerminatable
+        bool isTerminable
     ) external;
     function connectBeneficiaryToPlan(
         address beneficiary,

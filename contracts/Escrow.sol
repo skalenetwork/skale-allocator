@@ -224,7 +224,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      * Requirements:
      *
      * - Beneficiary must be active.
-     * - Beneficiary must have sufficient delegatable tokens.
+     * - Beneficiary must have sufficient delegable tokens.
      * - If trusted list is enabled, validator must be a member of the trusted
      * list.
      */

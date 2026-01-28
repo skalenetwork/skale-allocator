@@ -26,7 +26,7 @@ pragma solidity ^0.8.26;
 import "../Permissions.sol";
 
 /**
- * @dev Interface of Delegatable Token operations.
+ * @dev Interface of Delegable Token operations.
  */
 contract TokenLaunchManagerTester is Permissions {
     bytes32 public constant SELLER_ROLE = keccak256("SELLER_ROLE");

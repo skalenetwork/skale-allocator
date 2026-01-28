@@ -1,9 +1,10 @@
 import { ethers, upgrades } from "hardhat";
 import { ContractManager } from "../../../typechain-types";
+import { BaseContract } from "ethers";
 
 async function defaultDeploy(contractName: string, contractManager: ContractManager) {
     const contractFactory = await ethers.getContractFactory(contractName);
-    return await upgrades.deployProxy(contractFactory, [await contractManager.getAddress()]);
+    return (await upgrades.deployProxy(contractFactory, [await contractManager.getAddress()])) as BaseContract;
 }
 
 async function defaultDeployWithConstructor(

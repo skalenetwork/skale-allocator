@@ -22,10 +22,17 @@
       "name": "Vadim Yavorsky",
       "url": "https://github.com/yavrsky",
       "githubUsername": "yavrsky"
+    },
+    {
+      "name": "Eduardo Vasques",
+      "url": "https://github.com/eduv09",
+      "githubUsername": "eduv09"
     }
   ],
   "scripts": {
     "compile": "npx hardhat clean && npx hardhat compile",
+    "coverage": "npx hardhat coverage --solcoverjs .solcover.js",
+    "cspell": "npx cspell .",
     "hooks": "git config core.hooksPath .githooks || true",
     "no-hooks": "git config core.hooksPath .git/hooks",
     "lint": "npx solhint \"contracts/**/*.sol\"",
@@ -33,22 +40,19 @@
     "test": "yarn tsc && npx hardhat test",
     "tsc": "tsc --noEmit",
     "eslint": "npx eslint --cache --ext .js,.jsx,.ts,.tsx .",
-    "slither": "venv/bin/slither .",
-    "fullcheck": "yarn lint && yarn tsc && yarn eslint && yarn slither"
+    "slither": "slither .",
+    "fullCheck": "yarn cspell && yarn lint && yarn tsc && yarn eslint && yarn slither"
   },
   "dependencies": {
-    "@nomicfoundation/hardhat-ethers": "^3.0.6",
-    "@openzeppelin/contracts": "4.9.6",
-    "@openzeppelin/contracts-upgradeable": "4.9.6",
-    "@openzeppelin/hardhat-upgrades": "^3.1.1",
-    "@skalenetwork/skale-manager-interfaces": "1.0.0",
-    "@skalenetwork/upgrade-tools": "^4.0.0-develop.3",
-    "@typechain/hardhat": "^6.1.6",
-    "axios": "^1.6.0",
-    "chai": "^4.3.10",
-    "chai-as-promised": "^7.1.1",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
+    "@skalenetwork/skale-manager-interfaces": "3.2.0",
+    "@skalenetwork/upgrade-tools": "^4.0.0-develop.8",
+    "@typechain/hardhat": "^9.1.0",
     "ethers": "^6.15.0",
-    "hardhat": "^2.26.0"
+    "hardhat": "^2.28.0"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",
@@ -62,19 +66,20 @@
     "@types/minimist": "^1.2.5",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.0",
-    "codecov": "^3.8.3",
-    "dotenv": "^16.3.1",
-    "elliptic": "^6.5.4",
+    "axios": "^1.7.4",
+    "chai": "^4.5.0",
+    "chai-as-promised": "^7.1.1",
+    "cspell": "^7.3.8",
+    "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
     "pm2": "^6.0.14",
     "solhint": "^6.0.2",
-    "solidity-coverage": "^0.8.5",
-    "ts-generator": "^0.1.1",
+    "solidity-coverage": "^0.8.13",
     "ts-node": "^10.9.1",
     "typechain": "^8.3.2",
-    "typescript": "^5.3.2",
-    "typescript-eslint": "^8.48.0"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
