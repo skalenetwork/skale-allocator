@@ -1131,10 +1131,10 @@
     proper-lockfile "^4.1.1"
     solidity-ast "^0.4.15"
 
-"@renovatebot/pep440@^3.0.20":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@renovatebot/pep440/-/pep440-3.1.0.tgz#05667d19b2fb865dee4ebf114dc89765f132c4b1"
-  integrity sha512-Tx/wEv92j3HmFwlqfNp8Pq/BMJPVk8c5so/Ae8eHccceBeeZx4QDuLf6RYfXJ6kvw8H05K1KPoZSsigLQA7Rqg==
+"@renovatebot/pep440@^3.0.20", "@renovatebot/pep440@^4.2.1":
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/@renovatebot/pep440/-/pep440-4.2.1.tgz#41182c943be779687b9daddb4f16294f61009001"
+  integrity sha512-2FK1hF93Fuf1laSdfiEmJvSJPVIDHEUTz68D3Fi9s0IZrrpaEcj6pTFBTbYvsgC5du4ogrtf5re7yMMvrKNgkw==
 
 "@resolver-engine/core@^0.3.3":
   version "0.3.3"
