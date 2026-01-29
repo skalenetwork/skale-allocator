@@ -49,8 +49,8 @@ nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
-VERSION=$DEPLOYED_ALLOCATOR_VERSION yarn hardhat run migrations/deploy.ts --network localhost
-export SKALE_ALLOCATOR_ADDRESS=$(cat data/skale-allocator-*-contracts.json | jq -r .SkaleAllocator)
+DEPLOY_OUTPUT=$(VERSION=$DEPLOYED_ALLOCATOR_VERSION yarn hardhat run migrations/deploy.ts --network localhost)
+export SKALE_ALLOCATOR_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "Register Allocator" | tail -1 | sed 's/.*Register Allocator => //')
 cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
 cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
 cd $GITHUB_WORKSPACE
