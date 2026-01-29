@@ -39,7 +39,7 @@ nvm use $SKALE_MANAGER_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
-PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+VERSION="1.12.0" PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
 export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
 cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
