@@ -49,11 +49,13 @@ nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
-DEPLOY_OUTPUT=$(VERSION=$DEPLOYED_ALLOCATOR_VERSION yarn hardhat run migrations/deploy.ts --network localhost)
+DEPLOY_OUTPUT=$(VERSION=$DEPLOYED_ALLOCATOR_VERSION npx hardhat run migrations/deploy.ts --network localhost)
 export SKALE_ALLOCATOR_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "Register Allocator" | tail -1 | sed 's/.*Register Allocator => //')
 cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
 cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
 cd $GITHUB_WORKSPACE
+# Remove OpenZeppelin temp files from deploying skale-manager, might need to remove in the future releases
+rm -r /tmp/openzeppelin-upgrades/
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
