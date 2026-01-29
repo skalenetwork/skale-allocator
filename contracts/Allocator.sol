@@ -20,6 +20,8 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// cspell:words prng
+
 pragma solidity ^0.8.26;
 
 import {
