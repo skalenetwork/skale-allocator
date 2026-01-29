@@ -170,7 +170,7 @@ async function main() {
 
     const escrowAddresses: string[] = [];
     // Always add first mock escrow
-    escrowAddresses.push(...await contractManager.getContract("Escrow"));
+    escrowAddresses.push(await contractManager.getContract("Escrow"));
     try {
         const remoteEscrowAddresses = await fetchEscrowAddresses();
         escrowAddresses.push(...remoteEscrowAddresses);
