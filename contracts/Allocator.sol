@@ -617,6 +617,8 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         pure
         returns (uint256 nextStep)
     {
+        // Unavoidable use of weak PRNG
+        // solhint-disable-next-line weak-prng
         return currentStep + vestingInterval - currentStep % vestingInterval;
     }
 }
