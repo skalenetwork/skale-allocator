@@ -62,7 +62,5 @@ rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 
 nvm use $CURRENT_NODE_VERSION
 
-ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
-
 SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS SKALE_ALLOCATOR_ADDRESS=$SKALE_ALLOCATOR_ADDRESS
     npx hardhat run migrations/upgrade.ts --network localhost
