@@ -137,7 +137,7 @@ async function main() {
     const skaleManagerProject = network.getProject("skale-manager");
     const skaleManagerInstance = await skaleManagerProject.getInstance(process.env.SKALE_MANAGER_ADDRESS);
     const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
-    const allocatorAddress = await contractManager.getContract("SkaleAllocator");
+    const allocatorAddress = await contractManager.getContract("Allocator");
     if (allocatorAddress.toLowerCase() !== process.env.SKALE_ALLOCATOR_ADDRESS.toLowerCase()) {
         throw new Error(`SKALE_ALLOCATOR_ADDRESS (${process.env.SKALE_ALLOCATOR_ADDRESS}) does not match ContractManager record (${allocatorAddress})`);
     }
@@ -149,7 +149,7 @@ async function main() {
     console.log(`Current Allocator version: ${currentVersion}`);
     console.log(`Expected Version: ${fromVersion}`);
 
-    if (currentVersion !== fromVersion) {
+    if (!currentVersion.includes(fromVersion)) {
         throw new Error(`Allocator version (${currentVersion}) does not match expected version (${fromVersion})`);
     }
     const transactions: Transaction[] = [];
