@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { ethers } from "hardhat";
-import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v5";
+import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
 import axios from "axios";
 
 interface ChainsResponse {
@@ -36,7 +36,8 @@ async function getSkaleAllocatorInstance() {
     return await project.getInstance(process.env.SKALE_ALLOCATOR_ADDRESS);
 }
 
-async function getExplorerUrl(chainId: number) {
+async function getExplorerUrl(chainId: bigint | number): Promise<string> {
+    chainId = Number(chainId);
     const response = await axios.get<ChainsResponse>("https://chains.blockscout.com/api/chains");
     const chainData = response.data[chainId.toString()];
     if (!chainData || !chainData.explorers || chainData.explorers.length === 0) {
@@ -75,7 +76,7 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
         });
         const items = response.data.items || [];
         items.forEach((item) => {
-            escrowAddresses.push(ethers.utils.getAddress(item.to.hash));
+            escrowAddresses.push(ethers.getAddress(item.to.hash));
         });
         console.log(`Fetched ${escrowAddresses.length} escrows`);
         nextPageParams = response.data.next_page_params;
@@ -90,8 +91,9 @@ async function validateEscrows(escrowAddresses: string[]) {
         try {
             const escrow = await ethers.getContractAt("Escrow", address);
             await escrow.BENEFICIARY_ROLE();
-        } catch (e) {
+        } catch (error) {
             console.error(`Error: ${address} is not a valid Escrow contract`);
+            console.error(error);
             throw Error(`Wrong Escrow list: ${address} is not a valid Escrow contract`);
         }
     }));
@@ -106,7 +108,7 @@ export async function fetchEscrowAddresses() {
     const chainId = (await ethers.provider.getNetwork()).chainId;
 
     const apiUrl = await getExplorerUrl(chainId);
-    const escrowAddresses = await getEscrowAddresses(apiUrl, skaleToken.address, allocator.address);
+    const escrowAddresses = await getEscrowAddresses(apiUrl, await skaleToken.getAddress(), await allocator.getAddress());
 
     await validateEscrows(escrowAddresses);
     return escrowAddresses;

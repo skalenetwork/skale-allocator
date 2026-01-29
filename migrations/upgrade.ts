@@ -1,127 +1,209 @@
-//import util from 'util';
-//import chalk from "chalk";
-//import { contracts } from "./deploy";
-//import { promises as fs, existsSync } from "fs";
-//import { exec as asyncExec } from "child_process";
-//import { ethers } from "hardhat";
-// import { getManifestAdmin } from "@openzeppelin/hardhat-upgrades/dist/admin";
-//import { Allocator } from "../typechain-types";
-// import { upgrade, verify, SkaleABIFile, encodeTransaction, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
+import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
+import { ethers } from "hardhat";
+import chalk from "chalk";
+import { Allocator, ContractManager } from "../typechain-types";
+import { Transaction } from "ethers";
+import { TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/upgraders/transparentProxyUpgrader";
+import { V4TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/upgraders/v4TransparentProxyUpgrader";
+import { AbstractTransparentProxyUpgrader, EoaSubmitter, getVersion, SafeSubmitter, verify } from "@skalenetwork/upgrade-tools";
+import { NonceProvider } from "@skalenetwork/upgrade-tools/dist/src/nonceProvider";
+import {getImplementationAddress} from "@openzeppelin/upgrades-core";
+import { fetchEscrowAddresses } from "../scripts/getEscrows";
 
-/*
-type SkaleABIFile = { [key: string]: string | any[] };
-
-
-function getContractKeyInAbiFile(contract: string) {
-    return contract.replace(/([a-zA-Z])(?=[A-Z])/g, '$1_').toLowerCase();
-}
-
-async function getAllocator(abi: SkaleABIFile): Promise<Allocator> {
-    return ((await ethers.getContractFactory("Allocator")).attach(
-        abi[getContractKeyInAbiFile("Allocator") + "_address"] as string
-    )) as unknown as Allocator;
-}
-
-export async function getDeployedVersion(abi: SkaleABIFile) {
-    const allocator = await getAllocator(abi);
-    try {
-        return await allocator.version();
-    } catch {
-        console.log(chalk.red("Can't read deployed version"));
+const getOwner = async (allocatorAddress: string, escrows: string[]): Promise<string> => {
+    const owners = [];
+    const allocatorOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(allocatorAddress)).getOwner();
+    owners.push(allocatorOwner);
+    for (const escrowAddress of escrows) {
+        const escrowOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(escrowAddress)).getOwner();
+        owners.push(escrowOwner);
     }
+    const uniqueOwners = Array.from(new Set(owners));
+    if (uniqueOwners.length !== 1) {
+        throw new Error(`Multiple owners found: ${uniqueOwners.join(", ")}`);
+    }
+    return uniqueOwners[0];
 }
 
-export async function setNewVersion(safeTransactions: string[], abi: SkaleABIFile, newVersion: string) {
-    const allocator = await getAllocator(abi);
+const getUpgrader = async (
+    contractName: string,
+    proxyAddress: string,
+    nonceProvider: NonceProvider
+): Promise<TransparentProxyUpgrader | V4TransparentProxyUpgrader> => {
+    const admin = await AbstractTransparentProxyUpgrader.getProxyAdmin(proxyAddress);
+    const version = await AbstractTransparentProxyUpgrader.getProxyAdminVersion(admin);
+    const version5 = "5.0.0";
+    if (version === version5) {
+        console.log(`${contractName} Proxy admin version: ${version}`);
+        return new TransparentProxyUpgrader({contractName, proxyAddress, proxyAdmin: admin, nonceProvider});
+    }
+    else if (version !== null) throw new Error(`Unsupported proxy admin version: ${version}`);
+    console.log(`${contractName} Proxy admin version: v4 or lower`);
+    return new V4TransparentProxyUpgrader({contractName, proxyAddress, proxyAdmin: admin, nonceProvider});
+}
 
-    safeTransactions.push(encodeTransaction(
-        0,
-        await allocator.getAddress(),
-        0,
-        allocator.interface.encodeFunctionData("setVersion", [newVersion]),
-    ));
+const upgradeAllocator = async (
+    allocatorAddress: string,
+    nonceProvider: NonceProvider
+): Promise<{txs: Transaction[], newImplementation: string}> => {
+    console.log(chalk.blue(`Upgrading Allocator at address: ${allocatorAddress}`));
+    const upgrader = await getUpgrader("Allocator", allocatorAddress, nonceProvider);
+    await upgrader.deployNewImplementation();
+    if (!upgrader.needsUpgrade()) {
+        console.log(chalk.yellow("No upgrade needed for Allocator."));
+        return {txs: [], newImplementation: ""};
+    }
+    const upgradeTx = await upgrader.getUpgradeTransaction();
+    return {
+        txs: [upgradeTx],
+        newImplementation: await ethers.resolveAddress(await upgrader.getNewImplementationAddress())
+    };
+}
+
+const upgradeEscrows = async (
+    contractManager: ContractManager,
+    escrowAddresses: string[],
+    nonceProvider: NonceProvider
+) : Promise<{txs: Transaction[], newImplementation: string}> => {
+    const upgradeTransactions: Transaction[] = [];
+    // Ensure all have the same implementation & proxyAdmin
+    const expectedImplementation = await contractManager.getContract("EscrowImplementation");
+    const expectedProxyAdminAddress = await contractManager.getContract("ProxyAdmin");
+    for (const escrowAddress of escrowAddresses) {
+        const implementation = await getImplementationAddress(ethers.provider, escrowAddress);
+        const admin = await AbstractTransparentProxyUpgrader.getProxyAdmin(escrowAddress);
+        const adminAddress = await admin.getAddress();
+        if (expectedProxyAdminAddress !== adminAddress) {
+            throw new Error(
+                `Escrow at address ${escrowAddress} has a different proxy admin \
+                 (${adminAddress}) than expected (${expectedProxyAdminAddress})`
+            );
+        }
+        if (expectedImplementation !== implementation) {
+            throw new Error(
+                `Escrow at address ${escrowAddress} has a different \
+                implementation (${implementation}) than expected (${expectedImplementation})`
+            );
+        }
+    }
+    console.log(chalk.blue(`Upgrading ${escrowAddresses.length} Escrow contracts.`));
+    const upgrader = await getUpgrader("Escrow", escrowAddresses[0], nonceProvider);
+
+    // Deploy if needed and update manifest - checks upgrade is safe
+    await upgrader.deployNewImplementation();
+    // Check if new contract was deployed
+    if (!upgrader.needsUpgrade()) {
+        console.log(chalk.yellow("No upgrade needed for Escrows."));
+        return {txs: upgradeTransactions, newImplementation: ""};
+    }
+    const implementationAddress = await upgrader.getNewImplementationAddress();
+    const admin = await ethers.getContractAt("ProxyAdmin", expectedProxyAdminAddress);
+    // upgradeAndCall is compatible with v4 and v5 ProxyAdmins!
+    for (const escrowAddress of escrowAddresses) {
+        upgradeTransactions.push(Transaction.from({
+            to: expectedProxyAdminAddress,
+            data: admin.interface.encodeFunctionData(
+                "upgradeAndCall",
+                [escrowAddress, implementationAddress, "0x"]
+            )
+        }))
+    }
+    return {txs: upgradeTransactions, newImplementation: await ethers.resolveAddress(implementationAddress)};
 
 }
-*/
+
+
+const setVersion = async (newVersion: string, allocator: Allocator): Promise<Transaction> => {
+    return Transaction.from({
+        to: await allocator.getAddress(),
+        data: allocator.interface.encodeFunctionData("setVersion", [newVersion])
+    });
+}
 
 async function main() {
-    /*
-    await upgrade(
-        "skale-allocator",
-        "2.2.2",
-        getDeployedVersion,
-        setNewVersion,
-        contracts,
-        contracts,
-        // async (safeTransactions, abi, contractManager) => {
-        async () => {
-            // deploy new contracts
-        },
-        // async (safeTransactions, abi, contractManager) => {
-        async (safeTransactions) => {
-            let production = false;
-            if (process.env.PRODUCTION === "true") {
-                production = true;
-            }
+    const [deployer] = await ethers.getSigners();
+    const nonceProvider = new NonceProvider(await ethers.provider.getTransactionCount(deployer));
+    if (!process.env.SKALE_MANAGER_ADDRESS) {
+        console.log(chalk.red("Specify desired SKALE_MANAGER_ADDRESS in .env"));
+        throw new Error("SKALE_MANAGER_ADDRESS not specified");
+    }
+    if (!process.env.SKALE_ALLOCATOR_ADDRESS) {
+        console.log(chalk.red("Specify desired SKALE_ALLOCATOR_ADDRESS in .env"));
+        throw new Error("SKALE_ALLOCATOR_ADDRESS not specified");
+    }
 
-            let maxFeePerGas = 100*1e9;
-            let maxPriorityFeePerGas = 1e9;
-            if (hre.network.config.gasPrice !== "auto") {
-                maxFeePerGas = hre.network.config.gasPrice;
-                maxPriorityFeePerGas = hre.network.config.gasPrice;
-            }
+    const fromVersion = "2.2.2";
+    const network = await skaleContracts.getNetworkByProvider(ethers.provider);
+    const skaleManagerProject = network.getProject("skale-manager");
+    const skaleManagerInstance = await skaleManagerProject.getInstance(process.env.SKALE_MANAGER_ADDRESS);
+    const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
+    const allocatorAddress = await contractManager.getContract("SkaleAllocator");
+    if (allocatorAddress.toLowerCase() !== process.env.SKALE_ALLOCATOR_ADDRESS.toLowerCase()) {
+        throw new Error(`SKALE_ALLOCATOR_ADDRESS (${process.env.SKALE_ALLOCATOR_ADDRESS}) does not match ContractManager record (${allocatorAddress})`);
+    }
+    console.log(`Current SkaleAllocator address: ${allocatorAddress}`);
+    const allocator = await ethers.getContractAt("Allocator", allocatorAddress) as Allocator;
 
-            const proxyAdmin = await getManifestAdmin(hre) as unknown as ProxyAdmin;
-            const [deployer] = await ethers.getSigners();
+    // Verify version
+    const currentVersion = await allocator.version();
+    console.log(`Current Allocator version: ${currentVersion}`);
+    console.log(`Expected Version: ${fromVersion}`);
 
-            if (production) {
-                console.log("Fetching escrow addresses...");
-                const proxies = await fetchEscrowAddresses();
-                console.log(`Found ${proxies.length} escrow addresses`);
+    if (currentVersion !== fromVersion) {
+        throw new Error(`Allocator version (${currentVersion}) does not match expected version (${fromVersion})`);
+    }
+    const transactions: Transaction[] = [];
 
-                console.log("Deploy implementation");
-                const escrowFactory = (await ethers.getContractFactory("Escrow")).connect(deployer);
-                const escrow = await escrowFactory.deploy({
-                    maxFeePerGas: maxFeePerGas,
-                    maxPriorityFeePerGas: maxPriorityFeePerGas
-                }) as unknown as Escrow;
-                console.log("Deploy transaction:");
-                console.log("https://etherscan.io/tx/" + escrow.deploymentTransaction()?.hash)
-                console.log("New Escrow address:", await escrow.getAddress());
-                await escrow.waitForDeployment();
-                await verify("Escrow", await escrow.getAddress());
+    const allocatorUpgrade = await upgradeAllocator(allocatorAddress, nonceProvider);
+    if (allocatorUpgrade.txs.length > 0) {
+        transactions.push(...allocatorUpgrade.txs);
+    }
 
-                const newImplementationAddress = await escrow.getAddress();
+    const escrowAddresses = await fetchEscrowAddresses();
+    const escrowUpgrade = await upgradeEscrows(contractManager, escrowAddresses, nonceProvider);
+    transactions.push(...escrowUpgrade.txs);
 
-                const implementations = await Promise.all(proxies.map(async (proxy) => {
-                    return await proxyAdmin.getProxyImplementation(proxy);
-                }));
+    // Set New implementation in contractManager
+    if (transactions.length === 0) {
+        console.log("Skipping changing EscrowImplementation in ContractManager - no upgrades needed");
+    }
+    else {
+        const setEscrowImplTx = Transaction.from({
+            to: await contractManager.getAddress(),
+            data: contractManager.interface.encodeFunctionData("setContractsAddress", [
+                "EscrowImplementation",
+                escrowUpgrade.newImplementation
+            ])
+        });
+        transactions.push(setEscrowImplTx);
+    }
 
-                const distinctImplementations = [...new Set(implementations)];
-                if (distinctImplementations.length !== 1) {
-                    console.log("Upgraded Escrows have different implementations. Check if Escrow list is correct.");
-                    console.log("Present implementations:");
-                    distinctImplementations.forEach((implementation) => console.log(implementation));
-                    throw Error("Wrong Escrow list");
-                }
-                });
-                await escrow.deployTransaction.wait();
-                const newImplementationAddress = escrow.address;
-                await verify("Escrow", escrow.address, []);
+    // Set Version
+    const newVersion = await getVersion();
+    console.log(chalk.blue(`Setting Allocator version to ${newVersion}`));
+    const setVersionTx = await setVersion(newVersion, allocator);
+    transactions.push(setVersionTx);
 
-                for (const proxy of proxies) {
-                    // safeTransactions.push(encodeTransaction(
-                    //     0,
-                    //     await proxyAdmin.getAddress(),
-                    //     0,
-                    //     proxyAdmin.interface.encodeFunctionData("upgrade", [proxy, newImplementationAddress])
-                    // ));
-                }
-            }
-        }
-    );
-    */
-    console.log("Upgrade script is disabled due to upgrade-tools version mismatch. Please update it to use Upgrader class.");
+    const owner = await getOwner(allocatorAddress, escrowAddresses);
+    const isMultisig = (await ethers.provider.getCode(owner)).length > 100;
+    if (isMultisig) {
+        console.log(chalk.yellow(`Owner ${owner} is a multisig. Proposing transactions to multisig...`));
+        const submitter = new SafeSubmitter(owner, await ethers.provider.getNetwork().then(n => n.chainId));
+        await submitter.submit(transactions);
+    }
+    else {
+        console.log(chalk.blue(`Owner ${owner} is an EOA. Sending transactions directly...`));
+        const submitter = new EoaSubmitter();
+        await submitter.submit(transactions);
+    }
+
+    // Verify new implementations
+    if (escrowUpgrade.txs.length > 0)
+        await verify("Escrow", escrowUpgrade.newImplementation);
+
+    if (allocatorUpgrade.txs.length > 0) {
+        await verify("Allocator", allocatorUpgrade.newImplementation);
+    }
 }
 
 if (require.main === module) {

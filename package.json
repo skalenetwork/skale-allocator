@@ -49,7 +49,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.9.6",
     "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@skalenetwork/skale-manager-interfaces": "3.2.0",
-    "@skalenetwork/upgrade-tools": "^4.0.0-develop.8",
+    "@skalenetwork/upgrade-tools": "4.0.0-develop.8",
     "@typechain/hardhat": "^9.1.0",
     "ethers": "^6.15.0",
     "hardhat": "^2.28.0"
@@ -60,6 +60,7 @@
     "@ethersproject/providers": "^5.7.2",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-verify": "^2.1.3",
+    "@skalenetwork/skale-contracts-ethers-v6": "^2.0.0-develop.6",
     "@typechain/ethers-v6": "^0.5.1",
     "@types/chai": "^4.3.11",
     "@types/chai-as-promised": "^7.1.8",

@@ -14,6 +14,13 @@ echo "Skale manager cloned"
 HARDHAT_NODE_SESSION="hardhat-node"
 yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
 
+cleanup() {
+    echo "Stopping Hardhat Node"
+    yarn pm2 delete "$HARDHAT_NODE_SESSION"
+}
+
+trap cleanup EXIT
+
 cd skale-manager
 nvm install $DEPLOYED_WITH_NODE_VERSION
 nvm use $DEPLOYED_WITH_NODE_VERSION
@@ -26,5 +33,3 @@ rm -r --interactive=never skale-manager
 nvm use $CURRENT_NODE_VERSION
 
 SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS npx hardhat run migrations/deploy.ts --network localhost
-
-yarn pm2 stop "$HARDHAT_NODE_SESSION"

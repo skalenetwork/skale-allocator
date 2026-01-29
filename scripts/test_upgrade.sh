@@ -25,7 +25,14 @@ CURRENT_NODE_VERSION=$(nvm current)
 git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale-allocator.git $DEPLOYED_ALLOCATOR_DIR
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEPLOYED_MANAGER_DIR
 
-npx ganache-cli --gasLimit 8000000 --quiet &
+yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
+
+cleanup() {
+    echo "Stopping Hardhat Node"
+    yarn pm2 delete "$HARDHAT_NODE_SESSION"
+}
+
+trap cleanup EXIT
 
 nvm install $SKALE_MANAGER_NODE_VERSION
 nvm use $SKALE_MANAGER_NODE_VERSION
@@ -54,5 +61,3 @@ nvm use $CURRENT_NODE_VERSION
 ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
 
 ABI="data/$ABI_FILENAME" npx hardhat run migrations/upgrade.ts --network localhost
-
-npx kill-port 8545

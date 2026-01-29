@@ -79,6 +79,8 @@ async function main() {
         }
     }
     const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(addresses["Escrow"] as string);
+    const implementationAddress = await upgrades.erc1967.getImplementationAddress(addresses["Escrow"] as string);
+    await contractManager.setContractsAddress("EscrowImplementation", implementationAddress);
     await contractManager.setContractsAddress("ProxyAdmin", proxyAdminAddress);
 
     console.log("Store addresses");
