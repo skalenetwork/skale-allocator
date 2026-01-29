@@ -7,7 +7,7 @@ import { TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/u
 import { V4TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/upgraders/v4TransparentProxyUpgrader";
 import { AbstractTransparentProxyUpgrader, EoaSubmitter, getVersion, SafeSubmitter, verify } from "@skalenetwork/upgrade-tools";
 import { NonceProvider } from "@skalenetwork/upgrade-tools/dist/src/nonceProvider";
-import {getImplementationAddress} from "@openzeppelin/upgrades-core";
+import {getImplementationAddress, isDevelopmentNetwork} from "@openzeppelin/upgrades-core";
 import { fetchEscrowAddresses } from "../scripts/getEscrows";
 
 const getOwner = async (allocatorAddress: string, escrows: string[]): Promise<string> => {
@@ -159,7 +159,20 @@ async function main() {
         transactions.push(...allocatorUpgrade.txs);
     }
 
-    const escrowAddresses = await fetchEscrowAddresses();
+    const escrowAddresses: string[] = [];
+    // Always add first mock escrow
+    escrowAddresses.push(...await contractManager.getContract("Escrow"));
+    try {
+        const remoteEscrowAddresses = await fetchEscrowAddresses();
+        escrowAddresses.push(...remoteEscrowAddresses);
+    } catch (error) {
+        if (await isDevelopmentNetwork(ethers.provider)) {
+            console.log(chalk.yellow("Skipping fetching escrow addresses on development network"));
+        } else {
+            throw error;
+        }
+    }
+
     const escrowUpgrade = await upgradeEscrows(contractManager, escrowAddresses, nonceProvider);
     transactions.push(...escrowUpgrade.txs);
 
