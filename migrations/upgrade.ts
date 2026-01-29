@@ -67,7 +67,16 @@ const upgradeEscrows = async (
 ) : Promise<{txs: Transaction[], newImplementation: string}> => {
     const upgradeTransactions: Transaction[] = [];
     // Ensure all have the same implementation & proxyAdmin
-    const expectedImplementation = await contractManager.getContract("EscrowImplementation");
+    let expectedImplementation: string;
+    try {
+        expectedImplementation = await contractManager.getContract("EscrowImplementation");
+    } catch (error) {
+        console.log(error);
+        console.log("ContractManager does not have EscrowImplementation recorded, fetching from first Escrow proxy");
+        const escrowAddress = escrowAddresses[0];
+        expectedImplementation = await getImplementationAddress(ethers.provider, escrowAddress);
+        console.log(`Fetched implementation address: ${expectedImplementation}`);
+    }
     const expectedProxyAdminAddress = await contractManager.getContract("ProxyAdmin");
     for (const escrowAddress of escrowAddresses) {
         const implementation = await getImplementationAddress(ethers.provider, escrowAddress);
@@ -172,6 +181,8 @@ async function main() {
             throw error;
         }
     }
+    console.log(`Total Escrow contracts to consider for upgrade: ${escrowAddresses.length}`);
+    console.log(escrowAddresses);
 
     const escrowUpgrade = await upgradeEscrows(contractManager, escrowAddresses, nonceProvider);
     transactions.push(...escrowUpgrade.txs);
