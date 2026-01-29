@@ -25,7 +25,7 @@ cd skale-manager
 nvm install $DEPLOYED_WITH_NODE_VERSION
 nvm use $DEPLOYED_WITH_NODE_VERSION
 yarn install
-PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
 export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 cd ..
 rm -r --interactive=never skale-manager
