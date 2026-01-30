@@ -29,6 +29,8 @@ yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
 
 cleanup() {
     echo "Stopping Hardhat Node"
+    # ensure correct dir
+    cd $GITHUB_WORKSPACE
     yarn pm2 delete "$HARDHAT_NODE_SESSION"
 }
 
@@ -39,28 +41,39 @@ nvm use $SKALE_MANAGER_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
+
+# This one creates temp files in /tmp/openzeppelin-upgrades/ - new version of hardhat-upgrades
 VERSION="1.12.0" PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
 export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
-cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
+
 
 nvm install $DEPLOYED_ALLOCATOR_NODE_VERSION
 nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
+
+# This one creates file in .openzeppelin/ - older version of hardhat-upgrades
 DEPLOY_OUTPUT=$(VERSION=$DEPLOYED_ALLOCATOR_VERSION npx hardhat run migrations/deploy.ts --network localhost)
 export SKALE_ALLOCATOR_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "Register Allocator" | tail -1 | sed 's/.*Register Allocator => //')
-cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
-cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
+
+cp -r .openzeppelin/. $GITHUB_WORKSPACE/.openzeppelin/
 cd $GITHUB_WORKSPACE
-# Remove OpenZeppelin temp files from deploying skale-manager, might need to remove in the future releases
-rm -r /tmp/openzeppelin-upgrades/
+
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 
 nvm use $CURRENT_NODE_VERSION
 
-SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS SKALE_ALLOCATOR_ADDRESS=$SKALE_ALLOCATOR_ADDRESS
-    npx hardhat run migrations/upgrade.ts --network localhost
+# This one needs the files from deploying allocator. Should eliminate the others which will be deemed duplicates.
+ls -l .openzeppelin/
+ls -l /tmp/openzeppelin-upgrades/
+
+rm -rf /tmp/openzeppelin-upgrades/*
+
+# run upgrade
+SKALE_MANAGER_ADDRESS="$SKALE_MANAGER_ADDRESS" \
+SKALE_ALLOCATOR_ADDRESS="$SKALE_ALLOCATOR_ADDRESS" \
+npx hardhat run migrations/upgrade.ts --network localhost
