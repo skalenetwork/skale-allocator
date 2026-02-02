@@ -25,11 +25,13 @@ CURRENT_NODE_VERSION=$(nvm current)
 git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale-allocator.git $DEPLOYED_ALLOCATOR_DIR
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEPLOYED_MANAGER_DIR
 
+HARDHAT_NODE_SESSION="hardhat-node"
+
 yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
 
 cleanup() {
     echo "Stopping Hardhat Node"
-    # ensure correct dir
+    # ensure root dir
     cd $GITHUB_WORKSPACE
     yarn pm2 delete "$HARDHAT_NODE_SESSION"
 }
@@ -68,9 +70,6 @@ rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 nvm use $CURRENT_NODE_VERSION
 
 # This one needs the files from deploying allocator. Should eliminate the others which will be deemed duplicates.
-ls -l .openzeppelin/
-ls -l /tmp/openzeppelin-upgrades/
-
 rm -rf /tmp/openzeppelin-upgrades/*
 
 # run upgrade

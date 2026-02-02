@@ -106,12 +106,15 @@ const upgradeEscrows = async (
         return {txs: upgradeTransactions, newImplementation: ""};
     }
     const implementationAddress = await upgrader.getNewImplementationAddress();
-    const admin = await ethers.getContractAt("ProxyAdmin", expectedProxyAdminAddress);
-    // upgradeAndCall is compatible with v4 and v5 ProxyAdmins!
+
+    // Compatible with versions v4 and v5 of ProxyAdmins ! All Escrows are v4 or lower here (1 admin for all)
+    const proxyAdminInterface = new ethers.Interface([
+        "function upgradeAndCall(address proxy, address implementation, bytes data)"
+    ]);
     for (const escrowAddress of escrowAddresses) {
         upgradeTransactions.push(Transaction.from({
             to: expectedProxyAdminAddress,
-            data: admin.interface.encodeFunctionData(
+            data: proxyAdminInterface.encodeFunctionData(
                 "upgradeAndCall",
                 [escrowAddress, implementationAddress, "0x"]
             )
