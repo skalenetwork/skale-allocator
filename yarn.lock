@@ -1877,10 +1877,10 @@
   resolved "https://registry.yarnpkg.com/@skalenetwork/skale-manager-interfaces/-/skale-manager-interfaces-3.2.0.tgz#41f654c469c8b2e067f4f89784824c19b1fee7b4"
   integrity sha512-nf74ZAI4T2MZfPNkmFa1hUv9PrFuMBa120lL3C4BS0m1CzimPY+sRjjy8VQFpno0yzXcWncpRjJpY2I83YcEsA==
 
-"@skalenetwork/upgrade-tools@4.0.0-develop.8":
-  version "4.0.0-develop.8"
-  resolved "https://registry.yarnpkg.com/@skalenetwork/upgrade-tools/-/upgrade-tools-4.0.0-develop.8.tgz#b66218da03dd7ec61ca4c703453dac97fb6dd613"
-  integrity sha512-ngqyOHYOsONmSvOqehO4Ft5dwKXeUz4omjbNi2uY+a/X/VqwC7x4v0SgA5mBphnIIRcNGuBHoJVym3TFJf6Btw==
+"@skalenetwork/upgrade-tools@4.0.0-upgrade-same-implementation.0":
+  version "4.0.0-upgrade-same-implementation.0"
+  resolved "https://registry.yarnpkg.com/@skalenetwork/upgrade-tools/-/upgrade-tools-4.0.0-upgrade-same-implementation.0.tgz#b4d79e16bd8bfb8d7962556d603875c773b9c5bf"
+  integrity sha512-2ogABYfwZsVJE5+fExCEVvNU3B+Ukh12WkDt+TejJfURuWfUjPpKe0gBvmeem9fHFnSjuYK52aoCGJ9KAU7S2Q==
   dependencies:
     "@nomicfoundation/hardhat-ethers" "^3.0.0"
     "@nomicfoundation/hardhat-verify" "2.1.1"

@@ -124,36 +124,30 @@ const upgradeEscrows = async (
         }
     }
     console.log(chalk.blue(`Upgrading ${escrowAddresses.length} Escrow contracts.`));
-    const upgrader = await getUpgrader("Escrow", escrowAddresses[0], nonceProvider);
-
-    // Deploy if needed and update manifest - checks upgrade is safe
-    await upgrader.deployNewImplementation();
-    // Check if new contract was deployed
-    if (!upgrader.needsUpgrade()) {
-        console.log(chalk.yellow("No upgrade needed for Escrows."));
-        return {txs: upgradeTransactions, newImplementation: ""};
-    }
-    const implementationAddress = await upgrader.getNewImplementationAddress();
-
-    // Compatible with versions v4 and v5 of ProxyAdmins ! All Escrows are v4 or lower here (1 admin for all)
-    const proxyAdminInterface = new ethers.Interface([
-        "function upgradeAndCall(address proxy, address implementation, bytes data)"
-    ]);
-    const resolvedImpl = await ethers.resolveAddress(implementationAddress);
+    const implementationAddresses = new Set<string>();
     for (const escrowAddress of escrowAddresses) {
-        upgradeTransactions.push({
-            tx: Transaction.from({
-                to: expectedProxyAdminAddress,
-                data: proxyAdminInterface.encodeFunctionData(
-                    "upgradeAndCall",
-                    [escrowAddress, implementationAddress, "0x"]
-                )
-            }),
-            description: `Upgrade Escrow proxy at ${escrowAddress} to implementation ${resolvedImpl}`
-        })
-    }
-    return {txs: upgradeTransactions, newImplementation: resolvedImpl};
+        const upgrader = await getUpgrader("Escrow", escrowAddress, nonceProvider);
 
+        // Deploy if needed and update manifest - checks upgrade is safe
+        await upgrader.deployNewImplementation();
+        // Check if new contract was deployed
+        if (upgrader.needsUpgrade()) {
+            upgradeTransactions.push({
+                tx: await upgrader.getUpgradeTransaction(),
+                description: `Upgrade Escrow proxy at ${escrowAddress} to new implementation`
+            });
+        }
+        const implementationAddress = await upgrader.getNewImplementationAddress();
+        implementationAddresses.add(await ethers.resolveAddress(implementationAddress));
+    }
+    if (implementationAddresses.size > 1) {
+        throw new Error(`Multiple new implementation addresses detected for Escrow: ${Array.from(implementationAddresses).join(", ")}`);
+    }
+
+    return {
+        txs: upgradeTransactions,
+        newImplementation: upgradeTransactions.length > 0 ? Array.from(implementationAddresses)[0] : ""
+    };
 }
 
 
@@ -224,13 +218,10 @@ async function main() {
     console.log(escrowAddresses);
 
     const escrowUpgrade = await upgradeEscrows(contractManager, escrowAddresses, nonceProvider);
-    transactions.push(...escrowUpgrade.txs);
-
-    // Set New implementation in contractManager
-    if (transactions.length === 0) {
-        console.log("Skipping changing EscrowImplementation in ContractManager - no upgrades needed");
-    }
-    else {
+    // Set New implementation in ContractManager
+    if (escrowUpgrade.txs.length > 0) {
+        transactions.push(...escrowUpgrade.txs);
+        console.log("Setting new implementation of Escrow in ContractManager");
         const contractManagerAddress = await contractManager.getAddress();
         transactions.push({
             tx: Transaction.from({
@@ -242,6 +233,11 @@ async function main() {
             }),
             description: `Set EscrowImplementation in ContractManager to ${escrowUpgrade.newImplementation}`
         });
+    }
+
+    if (transactions.length === 0) {
+        console.log(chalk.green("No upgrades needed. Exiting."));
+        return;
     }
 
     // Set Version
