@@ -10,6 +10,11 @@ import { NonceProvider } from "@skalenetwork/upgrade-tools/dist/src/nonceProvide
 import {getImplementationAddress, isDevelopmentNetwork} from "@openzeppelin/upgrades-core";
 import { fetchEscrowAddresses } from "../scripts/getEscrows";
 
+interface DescribedTransaction {
+    tx: Transaction;
+    description: string;
+}
+
 const getOwner = async (allocatorAddress: string, escrows: string[]): Promise<string> => {
     const owners = [];
     const allocatorOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(allocatorAddress)).owner();
@@ -46,7 +51,7 @@ const getUpgrader = async (
 const upgradeAllocator = async (
     allocatorAddress: string,
     nonceProvider: NonceProvider
-): Promise<{txs: Transaction[], newImplementation: string}> => {
+): Promise<{txs: DescribedTransaction[], newImplementation: string}> => {
     console.log(chalk.blue(`Upgrading Allocator at address: ${allocatorAddress}`));
     const upgrader = await getUpgrader("Allocator", allocatorAddress, nonceProvider);
     await upgrader.deployNewImplementation();
@@ -55,9 +60,31 @@ const upgradeAllocator = async (
         return {txs: [], newImplementation: ""};
     }
     const upgradeTx = await upgrader.getUpgradeTransaction();
+
+    // Decode the transaction to show what it's calling
+    const proxyAdminInterface = new ethers.Interface([
+        "function upgrade(address proxy, address implementation)",
+        "function upgradeAndCall(address proxy, address implementation, bytes data)"
+    ]);
+    try {
+        const decoded = proxyAdminInterface.parseTransaction({ data: upgradeTx.data! });
+        console.log(chalk.green(`Decoded Allocator upgrade transaction:`));
+        console.log(chalk.green(`  Method: ${decoded?.name}`));
+        console.log(chalk.green(`  To (ProxyAdmin): ${upgradeTx.to}`));
+        decoded?.args.forEach((arg, i) => {
+            console.log(chalk.green(`  Arg ${i}: ${arg}`));
+        });
+    } catch (e) {
+        console.log(chalk.yellow(`Could not decode upgrade transaction: ${e}`));
+    }
+
+    const newImpl = await ethers.resolveAddress(await upgrader.getNewImplementationAddress());
     return {
-        txs: [upgradeTx],
-        newImplementation: await ethers.resolveAddress(await upgrader.getNewImplementationAddress())
+        txs: [{
+            tx: upgradeTx,
+            description: `Upgrade Allocator proxy at ${allocatorAddress} to implementation ${newImpl}`
+        }],
+        newImplementation: newImpl
     };
 }
 
@@ -65,8 +92,8 @@ const upgradeEscrows = async (
     contractManager: ContractManager,
     escrowAddresses: string[],
     nonceProvider: NonceProvider
-) : Promise<{txs: Transaction[], newImplementation: string}> => {
-    const upgradeTransactions: Transaction[] = [];
+) : Promise<{txs: DescribedTransaction[], newImplementation: string}> => {
+    const upgradeTransactions: DescribedTransaction[] = [];
     // Ensure all have the same implementation & proxyAdmin
     let expectedImplementation: string;
     try {
@@ -112,25 +139,33 @@ const upgradeEscrows = async (
     const proxyAdminInterface = new ethers.Interface([
         "function upgradeAndCall(address proxy, address implementation, bytes data)"
     ]);
+    const resolvedImpl = await ethers.resolveAddress(implementationAddress);
     for (const escrowAddress of escrowAddresses) {
-        upgradeTransactions.push(Transaction.from({
-            to: expectedProxyAdminAddress,
-            data: proxyAdminInterface.encodeFunctionData(
-                "upgradeAndCall",
-                [escrowAddress, implementationAddress, "0x"]
-            )
-        }))
+        upgradeTransactions.push({
+            tx: Transaction.from({
+                to: expectedProxyAdminAddress,
+                data: proxyAdminInterface.encodeFunctionData(
+                    "upgradeAndCall",
+                    [escrowAddress, implementationAddress, "0x"]
+                )
+            }),
+            description: `Upgrade Escrow proxy at ${escrowAddress} to implementation ${resolvedImpl}`
+        })
     }
-    return {txs: upgradeTransactions, newImplementation: await ethers.resolveAddress(implementationAddress)};
+    return {txs: upgradeTransactions, newImplementation: resolvedImpl};
 
 }
 
 
-const setVersion = async (newVersion: string, allocator: Allocator): Promise<Transaction> => {
-    return Transaction.from({
-        to: await allocator.getAddress(),
-        data: allocator.interface.encodeFunctionData("setVersion", [newVersion])
-    });
+const setVersion = async (newVersion: string, allocator: Allocator): Promise<DescribedTransaction> => {
+    const allocatorAddress = await allocator.getAddress();
+    return {
+        tx: Transaction.from({
+            to: allocatorAddress,
+            data: allocator.interface.encodeFunctionData("setVersion", [newVersion])
+        }),
+        description: `Set Allocator version to ${newVersion}`
+    };
 }
 
 async function main() {
@@ -165,7 +200,7 @@ async function main() {
     if (!currentVersion.includes(fromVersion)) {
         throw new Error(`Allocator version (${currentVersion}) does not match expected version (${fromVersion})`);
     }
-    const transactions: Transaction[] = [];
+    const transactions: DescribedTransaction[] = [];
 
     const allocatorUpgrade = await upgradeAllocator(allocatorAddress, nonceProvider);
     if (allocatorUpgrade.txs.length > 0) {
@@ -196,14 +231,17 @@ async function main() {
         console.log("Skipping changing EscrowImplementation in ContractManager - no upgrades needed");
     }
     else {
-        const setEscrowImplTx = Transaction.from({
-            to: await contractManager.getAddress(),
-            data: contractManager.interface.encodeFunctionData("setContractsAddress", [
-                "EscrowImplementation",
-                escrowUpgrade.newImplementation
-            ])
+        const contractManagerAddress = await contractManager.getAddress();
+        transactions.push({
+            tx: Transaction.from({
+                to: contractManagerAddress,
+                data: contractManager.interface.encodeFunctionData("setContractsAddress", [
+                    "EscrowImplementation",
+                    escrowUpgrade.newImplementation
+                ])
+            }),
+            description: `Set EscrowImplementation in ContractManager to ${escrowUpgrade.newImplementation}`
         });
-        transactions.push(setEscrowImplTx);
     }
 
     // Set Version
@@ -212,17 +250,25 @@ async function main() {
     const setVersionTx = await setVersion(newVersion, allocator);
     transactions.push(setVersionTx);
 
+    // Print all transaction descriptions
+    console.log(chalk.cyan("\n=== Transaction Summary ==="));
+    transactions.forEach((describedTx, index) => {
+        console.log(chalk.cyan(`${index + 1}. ${describedTx.description}`));
+    });
+    console.log(chalk.cyan("==========================\n"));
+
     const owner = await getOwner(allocatorAddress, escrowAddresses);
     const isMultisig = (await ethers.provider.getCode(owner)).length > 100;
+    const rawTransactions = transactions.map(t => t.tx);
     if (isMultisig) {
         console.log(chalk.yellow(`Owner ${owner} is a multisig. Proposing transactions to multisig...`));
         const submitter = new SafeSubmitter(owner, await ethers.provider.getNetwork().then(n => n.chainId));
-        await submitter.submit(transactions);
+        await submitter.submit(rawTransactions);
     }
     else {
         console.log(chalk.blue(`Owner ${owner} is an EOA. Sending transactions directly...`));
         const submitter = new EoaSubmitter();
-        await submitter.submit(transactions);
+        await submitter.submit(rawTransactions);
     }
 
     // Verify new implementations
