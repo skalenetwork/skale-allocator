@@ -12,16 +12,17 @@ import { fetchEscrowAddresses } from "../scripts/getEscrows";
 
 const getOwner = async (allocatorAddress: string, escrows: string[]): Promise<string> => {
     const owners = [];
-    const allocatorOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(allocatorAddress)).getOwner();
+    const allocatorOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(allocatorAddress)).owner();
     owners.push(allocatorOwner);
     for (const escrowAddress of escrows) {
-        const escrowOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(escrowAddress)).getOwner();
+        const escrowOwner = await (await AbstractTransparentProxyUpgrader.getProxyAdmin(escrowAddress)).owner();
         owners.push(escrowOwner);
     }
     const uniqueOwners = Array.from(new Set(owners));
     if (uniqueOwners.length !== 1) {
         throw new Error(`Multiple owners found: ${uniqueOwners.join(", ")}`);
     }
+    console.log(`Found unique owner: ${uniqueOwners[0]}`);
     return uniqueOwners[0];
 }
 
