@@ -9,7 +9,9 @@ source $NVM_DIR/nvm.sh;
 DEPLOYED_WITH_NODE_VERSION="lts/krypton"
 CURRENT_NODE_VERSION=$(nvm current)
 
+# Test develop version
 git clone https://github.com/skalenetwork/skale-manager.git
+
 echo "Skale manager cloned"
 HARDHAT_NODE_SESSION="hardhat-node"
 yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"

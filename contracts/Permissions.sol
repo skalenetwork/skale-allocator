@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.33;
 
 import {
     AddressUpgradeable
@@ -63,8 +63,7 @@ contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
      */
     modifier allow(string memory contractName) {
         require(
-            contractManager.getContract(contractName) == msg.sender ||
-                _isOwner(),
+            contractManager.getContract(contractName) == msg.sender || _isOwner(),
             InvalidSender()
         );
         _;
@@ -74,9 +73,7 @@ contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
      * @notice Initializes the contract
      * @param contractManagerAddress Address of the Contract Manager
      */
-    function initialize(
-        address contractManagerAddress
-    ) public virtual override initializer {
+    function initialize(address contractManagerAddress) public virtual override initializer {
         AccessControlUpgradeableLegacy.__AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setContractManager(contractManagerAddress);
@@ -95,10 +92,7 @@ contract Permissions is AccessControlUpgradeableLegacy, IPermissions {
      * @param contractManagerAddress Address of the Contract Manager
      */
     function _setContractManager(address contractManagerAddress) private {
-        require(
-            contractManagerAddress != address(0),
-            ContractManagerAddressNotSet()
-        );
+        require(contractManagerAddress != address(0), ContractManagerAddressNotSet());
         require(contractManagerAddress.isContract(), AddressNotContract());
         contractManager = IContractManager(contractManagerAddress);
     }

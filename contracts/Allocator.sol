@@ -22,7 +22,7 @@
 
 // cspell:words prng
 
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.33;
 
 import {
     TransparentUpgradeableProxy
@@ -111,8 +111,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     function changeBeneficiaryAddress(address newBeneficiaryAddress) external override {
         require(newBeneficiaryAddress != address(0), BeneficiaryAddressNull());
         require(
-            _beneficiaries[newBeneficiaryAddress].status ==
-                BeneficiaryStatus.UNKNOWN,
+            _beneficiaries[newBeneficiaryAddress].status == BeneficiaryStatus.UNKNOWN,
             BeneficiaryAddressNotClean()
         );
         _beneficiaries[msg.sender].requestedAddress = newBeneficiaryAddress;
@@ -183,10 +182,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     {
         require(totalVestingDuration != 0, VestingDurationZero());
         require(vestingInterval != 0, VestingIntervalZero());
-        require(
-            !(totalVestingDuration < vestingCliff),
-            CliffPeriodExceedsDuration()
-        );
+        require(!(totalVestingDuration < vestingCliff), CliffPeriodExceedsDuration());
         // can't check if vesting interval in days is correct because it depends on startMonth
         // This check is in connectBeneficiaryToPlan
         if (vestingIntervalTimeUnit == TimeUnit.MONTH) {
@@ -236,19 +232,23 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         override
         onlyVestingManager
     {
-        require(!(planId == 0 || planId > _plans.length), PlanDoesNotExist());
-        require(!(fullAmount < lockupAmount), IncorrectAmounts());
+        require(planId > 0, PlanDoesNotExist());
+        uint256 planIndex = planId - 1;
+        require(_plans.length > planIndex, PlanDoesNotExist());
+        // Not possible to optimize here - optimized by compiler
+        // solhint-disable-next-line gas-strict-inequalities
+        require(fullAmount >= lockupAmount, IncorrectAmounts());
         require(
             _beneficiaries[beneficiary].status == BeneficiaryStatus.UNKNOWN,
             BeneficiaryAlreadyAdded()
         );
-        if (_plans[planId - 1].vestingIntervalTimeUnit == TimeUnit.DAY) {
+        if (_plans[planIndex].vestingIntervalTimeUnit == TimeUnit.DAY) {
             uint256 vestingDurationInDays = _daysBetweenMonths(
-                startMonth + _plans[planId - 1].vestingCliff,
-                startMonth + _plans[planId - 1].totalVestingDuration
+                startMonth + _plans[planIndex].vestingCliff,
+                startMonth + _plans[planIndex].totalVestingDuration
             );
             require(
-                vestingDurationInDays % _plans[planId - 1].vestingInterval == 0,
+                vestingDurationInDays % _plans[planIndex].vestingInterval == 0,
                 VestingDurationNotDivisible()
             );
         }
@@ -301,11 +301,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     /**
      * @dev Returns vesting start month of the beneficiary's Plan.
      */
-    function getStartMonth(address beneficiary)
-        external
-        view
-        override
-        returns (uint256 startMonth)
+    function getStartMonth(address beneficiary) external view override returns (uint256 startMonth)
     {
         return _beneficiaries[beneficiary].startMonth;
     }
@@ -317,10 +313,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return
-            timeHelpers.monthToTimestamp(
-                beneficiaryPlan.startMonth + planParams.totalVestingDuration
-            );
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.totalVestingDuration);
     }
 
     /**
@@ -349,8 +342,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      * delegated.
      */
     function isDelegationAllowed(address beneficiary) external view override returns (bool isAllowed) {
-        return
-            _plans[_beneficiaries[beneficiary].planId - 1].isDelegationAllowed;
+        return _plans[_beneficiaries[beneficiary].planId - 1].isDelegationAllowed;
     }
 
     /**
@@ -376,10 +368,7 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         ITimeHelpers timeHelpers = ITimeHelpers(contractManager.getContract("TimeHelpers"));
         Beneficiary memory beneficiaryPlan = _beneficiaries[beneficiary];
         Plan memory planParams = _plans[beneficiaryPlan.planId - 1];
-        return
-            timeHelpers.monthToTimestamp(
-                beneficiaryPlan.startMonth + planParams.vestingCliff
-            );
+        return timeHelpers.monthToTimestamp(beneficiaryPlan.startMonth + planParams.vestingCliff);
     }
 
     /**
@@ -432,9 +421,8 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
                             planParams.vestingInterval * _MONTHS_PER_YEAR
                         )
                 );
-        } else {
-            revert IncorrectVestingIntervalTimeUnit();
         }
+        revert IncorrectVestingIntervalTimeUnit();
     }
 
     /**
@@ -446,7 +434,9 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
      */
     function getPlan(uint256 planId) external view override returns (Plan memory plan) {
         require(
-            !(planId == 0 || planId > _plans.length),
+            // Not worthed to optimize here - optimized by compiler
+            // solhint-disable-next-line gas-strict-inequalities
+            planId != 0 && planId <= _plans.length,
             PlanRoundDoesNotExist()
         );
         return _plans[planId - 1];

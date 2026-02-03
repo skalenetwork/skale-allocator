@@ -20,7 +20,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.33;
 
 interface IEscrow {
     function initialize(

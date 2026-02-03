@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.33;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -63,10 +63,7 @@ abstract contract AccessControlUpgradeableLegacy is
     /**
      * @dev Returns `true` if `account` has been granted `role`.
      */
-    function hasRole(
-        bytes32 role,
-        address account
-    ) public view override returns (bool) {
+    function hasRole(bytes32 role, address account) public view override returns (bool) {
         return _roles[role].members.contains(account);
     }
 
@@ -74,9 +71,7 @@ abstract contract AccessControlUpgradeableLegacy is
      * @dev Returns the number of accounts that have `role`. Can be used
      * together with {getRoleMember} to enumerate all bearers of a role.
      */
-    function getRoleMemberCount(
-        bytes32 role
-    ) public view override returns (uint256) {
+    function getRoleMemberCount(bytes32 role) public view override returns (uint256) {
         return _roles[role].members.length();
     }
 
@@ -92,10 +87,7 @@ abstract contract AccessControlUpgradeableLegacy is
      * https://forum.openzeppelin.com/t/iterating-over-elements-on-enumerableset-in-openzeppelin-contracts/2296[forum post]
      * for more information.
      */
-    function getRoleMember(
-        bytes32 role,
-        uint256 index
-    ) public view override returns (address) {
+    function getRoleMember(bytes32 role, uint256 index) public view override returns (address) {
         return _roles[role].members.at(index);
     }
 
@@ -160,10 +152,7 @@ abstract contract AccessControlUpgradeableLegacy is
      *
      * - the caller must be `account`.
      */
-    function renounceRole(
-        bytes32 role,
-        address account
-    ) public virtual override {
+    function renounceRole(bytes32 role, address account) public virtual override {
         require(
             account == _msgSender(),
             "AccessControl: can only renounce roles for self"

@@ -67,7 +67,6 @@ async function main() {
         addresses[contract] = proxyAddress;
         console.log("Register", contract, "=>", proxyAddress);
         await contractManager.setContractsAddress(contract, proxyAddress);
-        await verifyProxy(contract, proxyAddress);
 
         if (contract === "Allocator") {
             try {
@@ -85,6 +84,16 @@ async function main() {
 
     console.log("Store addresses");
     await fs.writeFile(`data/skale-allocator-${version}-${network.name}-contracts.json`, JSON.stringify(addresses, null, 4));
+
+    for (const contract of contracts) {
+        console.log("Verify", contract);
+        try {
+            await verifyProxy(contract, addresses[contract]);
+        } catch (e) {
+            console.log(chalk.red(`Failed to verify ${contract} at ${addresses[contract]}`));
+            console.error(e);
+        }
+    }
 
     console.log("Done");
 }

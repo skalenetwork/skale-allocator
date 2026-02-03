@@ -20,7 +20,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.33;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -80,7 +80,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     error DelegationNotAllowed();
     error BeneficiaryNotActive();
 
-    modifier onlyBeneficiary() virtual {
+    modifier onlyBeneficiary() {
         require(
             _msgSender() == _beneficiary ||
                 hasRole(BENEFICIARY_ROLE, _msgSender()),
@@ -98,7 +98,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         _;
     }
 
-    modifier onlyActiveBeneficiaryOrVestingManager() virtual {
+    modifier onlyActiveBeneficiaryOrVestingManager() {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(
@@ -268,7 +268,9 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId)
+    function requestUndelegation(
+        uint256 delegationId
+    )
         external
         override
         onlyActiveBeneficiaryOrVestingManager

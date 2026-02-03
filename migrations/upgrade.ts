@@ -99,7 +99,10 @@ const upgradeEscrows = async (
     try {
         expectedImplementation = await contractManager.getContract("EscrowImplementation");
     } catch (error) {
+        // Required as mainnet ContractManager does not have EscrowImplementation recorded yet
+        // Remove this once it does, and throw error if EscrowImplementation is not found
         console.log(error);
+        // First escrow proxy is always the getContract("Escrow") contract (mock deployed)
         console.log("ContractManager does not have EscrowImplementation recorded, fetching from first Escrow proxy");
         const escrowAddress = escrowAddresses[0];
         expectedImplementation = await getImplementationAddress(ethers.provider, escrowAddress);
