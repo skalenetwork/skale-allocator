@@ -1,7 +1,8 @@
 import chalk from "chalk";
 import { ethers } from "hardhat";
-import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
+import { Instance, skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
 import axios from "axios";
+import { ContractManager } from "../typechain-types";
 
 interface ChainsResponse {
     [key: string]: {
@@ -25,15 +26,12 @@ async function getSkaleManagerInstance() {
     return await project.getInstance(process.env.SKALE_MANAGER_ADDRESS);
 }
 
-async function getSkaleAllocatorInstance() {
-    if (!process.env.SKALE_ALLOCATOR_ADDRESS) {
-        console.log(chalk.red("Specify desired skale-allocator instance"));
-        console.log(chalk.red("Set instance alias or Allocator address to SKALE_ALLOCATOR_ADDRESS environment variable"));
-        process.exit(1);
-    }
+async function getSkaleAllocatorInstance(skaleManagerInstance: Instance) {
+    const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
+    const skaleAllocatorAddress = await contractManager.getContract("Allocator");
     const network = await skaleContracts.getNetworkByProvider(ethers.provider);
     const project = network.getProject("skale-allocator");
-    return await project.getInstance(process.env.SKALE_ALLOCATOR_ADDRESS);
+    return await project.getInstance(skaleAllocatorAddress);
 }
 
 async function getExplorerUrl(chainId: bigint | number): Promise<string> {
@@ -114,7 +112,7 @@ async function validateEscrows(escrowAddresses: string[]) {
 
 export async function fetchEscrowAddresses() {
     const skaleManagerInstance = await getSkaleManagerInstance();
-    const skaleAllocatorInstance = await getSkaleAllocatorInstance();
+    const skaleAllocatorInstance = await getSkaleAllocatorInstance(skaleManagerInstance);
     const skaleToken = await skaleManagerInstance.getContract("SkaleToken");
     const allocator = await skaleAllocatorInstance.getContract("Allocator");
     const chainId = BigInt(process.env.CHAIN_ID ?? (await ethers.provider.getNetwork()).chainId);

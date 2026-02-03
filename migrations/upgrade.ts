@@ -207,10 +207,6 @@ async function main() {
         console.log(chalk.red("Specify desired SKALE_MANAGER_ADDRESS in .env"));
         throw new Error("SKALE_MANAGER_ADDRESS not specified");
     }
-    if (!process.env.SKALE_ALLOCATOR_ADDRESS) {
-        console.log(chalk.red("Specify desired SKALE_ALLOCATOR_ADDRESS in .env"));
-        throw new Error("SKALE_ALLOCATOR_ADDRESS not specified");
-    }
 
     const fromVersion = "2.2.2";
     const network = await skaleContracts.getNetworkByProvider(ethers.provider);
@@ -218,9 +214,6 @@ async function main() {
     const skaleManagerInstance = await skaleManagerProject.getInstance(process.env.SKALE_MANAGER_ADDRESS);
     const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
     const allocatorAddress = await contractManager.getContract("Allocator");
-    if (allocatorAddress.toLowerCase() !== process.env.SKALE_ALLOCATOR_ADDRESS.toLowerCase()) {
-        throw new Error(`SKALE_ALLOCATOR_ADDRESS (${process.env.SKALE_ALLOCATOR_ADDRESS}) does not match ContractManager record (${allocatorAddress})`);
-    }
     console.log(`Current SkaleAllocator address: ${allocatorAddress}`);
     const allocator = await ethers.getContractAt("Allocator", allocatorAddress) as Allocator;
 
