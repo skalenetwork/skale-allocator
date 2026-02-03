@@ -5,10 +5,11 @@ import { Allocator, ContractManager } from "../typechain-types";
 import { Transaction } from "ethers";
 import { TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/upgraders/transparentProxyUpgrader";
 import { V4TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src/upgraders/v4TransparentProxyUpgrader";
-import { AbstractTransparentProxyUpgrader, EoaSubmitter, getVersion, SafeSubmitter, verify } from "@skalenetwork/upgrade-tools";
+import { AbstractTransparentProxyUpgrader, EoaSubmitter, getVersion, SafeSubmitter, Submitter, verify } from "@skalenetwork/upgrade-tools";
 import { NonceProvider } from "@skalenetwork/upgrade-tools/dist/src/nonceProvider";
 import {getImplementationAddress, isDevelopmentNetwork} from "@openzeppelin/upgrades-core";
 import { fetchEscrowAddresses } from "../scripts/getEscrows";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 interface DescribedTransaction {
     tx: Transaction;
@@ -109,6 +110,10 @@ const upgradeEscrows = async (
         console.log(`Fetched implementation address: ${expectedImplementation}`);
     }
     const expectedProxyAdminAddress = await contractManager.getContract("ProxyAdmin");
+    const expectedByteCode = await ethers.provider.getCode(expectedImplementation);
+    let counter = 0;
+    const differentImplementations = new Set<string>();
+    differentImplementations.add(expectedImplementation);
     for (const escrowAddress of escrowAddresses) {
         const implementation = await getImplementationAddress(ethers.provider, escrowAddress);
         const admin = await AbstractTransparentProxyUpgrader.getProxyAdmin(escrowAddress);
@@ -120,12 +125,19 @@ const upgradeEscrows = async (
             );
         }
         if (expectedImplementation !== implementation) {
+            if ((await ethers.provider.getCode(implementation)) === expectedByteCode) {
+                counter += 1;
+                differentImplementations.add(implementation);
+                continue; // Same bytecode, different deployment - allow it for now because mainnet faces this symptom
+            }
             throw new Error(
                 `Escrow at address ${escrowAddress} has a different \
                 implementation (${implementation}) than expected (${expectedImplementation})`
             );
         }
     }
+    console.log(`Number of Escrow contracts with same implementation but different deployment: ${counter}`);
+    console.log(`Different implementations detected: ${Array.from(differentImplementations).join(", ")}`);
     console.log(chalk.blue(`Upgrading ${escrowAddresses.length} Escrow contracts.`));
     const implementationAddresses = new Set<string>();
     for (const escrowAddress of escrowAddresses) {
@@ -143,6 +155,7 @@ const upgradeEscrows = async (
         const implementationAddress = await upgrader.getNewImplementationAddress();
         implementationAddresses.add(await ethers.resolveAddress(implementationAddress));
     }
+    // Expect a single new implementation address
     if (implementationAddresses.size > 1) {
         throw new Error(`Multiple new implementation addresses detected for Escrow: ${Array.from(implementationAddresses).join(", ")}`);
     }
@@ -163,6 +176,28 @@ const setVersion = async (newVersion: string, allocator: Allocator): Promise<Des
         }),
         description: `Set Allocator version to ${newVersion}`
     };
+}
+
+class MockSubmitter extends Submitter {
+    private signer: HardhatEthersSigner;
+    name = "Mock Submitter";
+    constructor(signer: HardhatEthersSigner) {
+        super();
+        this.atomicSubmitter = true; // Lets pretend it is atomic - testing only
+        this.signer = signer;
+    }
+
+    async submit(
+        transactions: Transaction[]
+    ): Promise<void> {
+        console.log(chalk.yellow(`MockSubmitter: Submitting transactions mocking ${await this.signer.getAddress()}`));
+        for (const tx of transactions) {
+            const sentTx = await this.signer.sendTransaction(tx);
+            await sentTx.wait();
+            console.log(chalk.white(`MockSubmitter: Transaction with hash ${sentTx.hash} confirmed.`));
+        }
+        console.log(chalk.green("MockSubmitter: All transactions submitted."))
+    }
 }
 
 async function main() {
@@ -256,11 +291,18 @@ async function main() {
     });
     console.log(chalk.cyan("==========================\n"));
 
+    // === Execute transactions ===
     const owner = await getOwner(allocatorAddress, escrowAddresses);
     const isMultisig = (await ethers.provider.getCode(owner)).length > 100;
     const rawTransactions = transactions.map(t => t.tx);
-    if (isMultisig) {
-        console.log(chalk.yellow(`Owner ${owner} is a multisig. Proposing transactions to multisig...`));
+    if (process.env.DRY_RUN === "true") {
+        console.log(chalk.yellow(`Dry run mode enabled. Simulating transactions from ${owner}.`));
+        const signer = await ethers.getImpersonatedSigner(owner);
+        const submitter = new MockSubmitter(signer);
+        await submitter.submit(rawTransactions);
+    }
+    else if (isMultisig) {
+        console.log(chalk.yellow(`Owner ${owner} is a contract. Proposing transactions to multisig...`));
         const submitter = new SafeSubmitter(owner, await ethers.provider.getNetwork().then(n => n.chainId));
         await submitter.submit(rawTransactions);
     }
@@ -270,13 +312,15 @@ async function main() {
         await submitter.submit(rawTransactions);
     }
 
-    // Verify new implementations
+    // === Verify new implementations ===
     if (escrowUpgrade.txs.length > 0)
         await verify("Escrow", escrowUpgrade.newImplementation);
 
     if (allocatorUpgrade.txs.length > 0) {
         await verify("Allocator", allocatorUpgrade.newImplementation);
     }
+
+    console.log(chalk.green("SUCCESS: Upgrade process completed."));
 }
 
 if (require.main === module) {

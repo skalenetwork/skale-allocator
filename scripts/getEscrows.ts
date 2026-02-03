@@ -85,18 +85,30 @@ async function getEscrowAddresses(apiUrl: string, tokenAddress: string, allocato
     return escrowAddresses;
 }
 
+// If using very strict endpoint, adjust chunk size and delay accordingly
+const VALIDATION_CHUNK_SIZE = 50;
+const VALIDATION_DELAY_MS = 1000; // In milliseconds
+
 async function validateEscrows(escrowAddresses: string[]) {
     console.log("Validating escrows...")
-    await Promise.all(escrowAddresses.map(async (address) => {
-        try {
-            const escrow = await ethers.getContractAt("Escrow", address);
-            await escrow.BENEFICIARY_ROLE();
-        } catch (error) {
-            console.error(`Error: ${address} is not a valid Escrow contract`);
-            console.error(error);
-            throw Error(`Wrong Escrow list: ${address} is not a valid Escrow contract`);
+    console.log(`Validating ${escrowAddresses.length} escrows...`);
+    for (let i = 0; i < escrowAddresses.length; i += VALIDATION_CHUNK_SIZE) {
+        const chunk = escrowAddresses.slice(i, i + VALIDATION_CHUNK_SIZE);
+        await Promise.all(chunk.map(async (address) => {
+            try {
+                const escrow = await ethers.getContractAt("Escrow", address);
+                await escrow.BENEFICIARY_ROLE();
+            } catch (error) {
+                console.error(`Error: ${address} is not a valid Escrow contract`);
+                console.error(error);
+                throw Error(`Wrong Escrow list: ${address} is not a valid Escrow contract`);
+            }
+        }));
+        console.log(`Validated ${Math.min(i + VALIDATION_CHUNK_SIZE, escrowAddresses.length)}/${escrowAddresses.length} escrows`);
+        if (i + VALIDATION_CHUNK_SIZE < escrowAddresses.length) {
+            await new Promise(resolve => setTimeout(resolve, VALIDATION_DELAY_MS));
         }
-    }));
+    }
     console.log("Escrows validated successfully");
 }
 
@@ -105,7 +117,7 @@ export async function fetchEscrowAddresses() {
     const skaleAllocatorInstance = await getSkaleAllocatorInstance();
     const skaleToken = await skaleManagerInstance.getContract("SkaleToken");
     const allocator = await skaleAllocatorInstance.getContract("Allocator");
-    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const chainId = BigInt(process.env.CHAIN_ID ?? (await ethers.provider.getNetwork()).chainId);
 
     const apiUrl = await getExplorerUrl(chainId);
     const escrowAddresses = await getEscrowAddresses(apiUrl, await skaleToken.getAddress(), await allocator.getAddress());
