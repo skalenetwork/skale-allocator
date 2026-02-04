@@ -190,6 +190,11 @@ class MockSubmitter extends Submitter {
     async submit(
         transactions: Transaction[]
     ): Promise<void> {
+        console.log(chalk.blue("Sending 1ETH to the mock submitter to cover gas costs."));
+        await ethers.provider.send("hardhat_setBalance", [
+            await this.signer.getAddress(),
+            ethers.toQuantity(ethers.parseEther("1.0")) // 1 ETH in hex
+        ]);
         console.log(chalk.yellow(`MockSubmitter: Submitting transactions mocking ${await this.signer.getAddress()}`));
         for (const tx of transactions) {
             const sentTx = await this.signer.sendTransaction(tx);
