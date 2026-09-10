@@ -24,7 +24,6 @@ pragma solidity ^0.8.33;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
-import "./utils/StringUtils.sol";
 
 interface IContractManagerTester {
     function initialize() external;
@@ -43,7 +42,6 @@ interface IContractManagerTester {
  * human-readable strings) to addresses.
  */
 contract ContractManager is OwnableUpgradeable, IContractManagerTester {
-    using StringUtils for string;
     using AddressUpgradeable for address;
 
     // mapping of actual smart contracts addresses
@@ -94,6 +92,6 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
      */
     function getContract(string calldata name) external view override returns (address contractAddress) {
         contractAddress = contracts[keccak256(abi.encodePacked(name))];
-        require(contractAddress != address(0), name.strConcat(" contract has not been found"));
+        require(contractAddress != address(0), string.concat(name, " contract has not been found"));
     }
 }
