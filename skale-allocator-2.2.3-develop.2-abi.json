@@ -1,0 +1,1432 @@
+{
+    "Allocator": [
+        {
+            "type": "error",
+            "name": "AddressNotContract",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryAddressNotClean",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryAddressNull",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryAlreadyAdded",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryChangeNotAllowed",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryNotActive",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryNotRegistered",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryStatusInappropriate",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CalendarInternalError",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotOwner",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotVestingManager",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CliffPeriodExceedsDuration",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "ContractManagerAddressNotSet",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "IncorrectAmounts",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "IncorrectVestingIntervalTimeUnit",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "InvalidMonthRange",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "InvalidSender",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "PlanDoesNotExist",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "PlanNotTerminable",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "PlanRoundDoesNotExist",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "TokenTransferFailed",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "UnknownTimeUnit",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingDurationNotDivisible",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingDurationZero",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingIntervalZero",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingIsOver",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingStopped",
+            "inputs": []
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "Initialized",
+            "inputs": [
+                {
+                    "type": "uint8",
+                    "name": "version",
+                    "indexed": false
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "PlanCreated",
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "id",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "RoleGranted",
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "account",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "sender",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "RoleRevoked",
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "account",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "sender",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "VersionUpdated",
+            "inputs": [
+                {
+                    "type": "string",
+                    "name": "oldVersion",
+                    "indexed": false
+                },
+                {
+                    "type": "string",
+                    "name": "newVersion",
+                    "indexed": false
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "DEFAULT_ADMIN_ROLE",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "VESTING_MANAGER_ROLE",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "addPlan",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "vestingCliff"
+                },
+                {
+                    "type": "uint256",
+                    "name": "totalVestingDuration"
+                },
+                {
+                    "type": "uint8",
+                    "name": "vestingIntervalTimeUnit"
+                },
+                {
+                    "type": "uint256",
+                    "name": "vestingInterval"
+                },
+                {
+                    "type": "bool",
+                    "name": "canDelegate"
+                },
+                {
+                    "type": "bool",
+                    "name": "isTerminable"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "calculateVestedAmount",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "wallet"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "vestedAmount"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "changeBeneficiaryAddress",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "newBeneficiaryAddress"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "confirmBeneficiaryAddress",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "oldBeneficiaryAddress"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "connectBeneficiaryToPlan",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                },
+                {
+                    "type": "uint256",
+                    "name": "planId"
+                },
+                {
+                    "type": "uint256",
+                    "name": "startMonth"
+                },
+                {
+                    "type": "uint256",
+                    "name": "fullAmount"
+                },
+                {
+                    "type": "uint256",
+                    "name": "lockupAmount"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "contractManager",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "address",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getBeneficiaryPlanParams",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "tuple",
+                    "name": "beneficiaryPlan",
+                    "components": [
+                        {
+                            "type": "uint8",
+                            "name": "status"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "planId"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "startMonth"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "fullAmount"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "amountAfterLockup"
+                        },
+                        {
+                            "type": "address",
+                            "name": "requestedAddress"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getEscrowAddress",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "address",
+                    "name": "escrowAddress"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getFinishVestingTime",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "finishTime"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getFullAmount",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "amount"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getLockupPeriodEndTimestamp",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "timestamp"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getPlan",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "planId"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "tuple",
+                    "name": "plan",
+                    "components": [
+                        {
+                            "type": "uint256",
+                            "name": "totalVestingDuration"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "vestingCliff"
+                        },
+                        {
+                            "type": "uint8",
+                            "name": "vestingIntervalTimeUnit"
+                        },
+                        {
+                            "type": "uint256",
+                            "name": "vestingInterval"
+                        },
+                        {
+                            "type": "bool",
+                            "name": "isDelegationAllowed"
+                        },
+                        {
+                            "type": "bool",
+                            "name": "isTerminable"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getRoleAdmin",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getRoleMember",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "uint256",
+                    "name": "index"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "address",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getRoleMemberCount",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getStartMonth",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "startMonth"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getTimeOfNextVest",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "timestamp"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getVestingCliffInMonth",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": "cliff"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "grantRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "hasRole",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "initialize",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "contractManagerAddress"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "isBeneficiaryRegistered",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool",
+                    "name": "isRegistered"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "isDelegationAllowed",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool",
+                    "name": "isAllowed"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "isVestingActive",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool",
+                    "name": "isActive"
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "renounceRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "revokeRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "setVersion",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "string",
+                    "name": "newVersion"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "startVesting",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "stopVesting",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "tokensReceived",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "operator"
+                },
+                {
+                    "type": "address",
+                    "name": "from"
+                },
+                {
+                    "type": "address",
+                    "name": "to"
+                },
+                {
+                    "type": "uint256",
+                    "name": "amount"
+                },
+                {
+                    "type": "bytes",
+                    "name": "userData"
+                },
+                {
+                    "type": "bytes",
+                    "name": "operatorData"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "version",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "string",
+                    "name": ""
+                }
+            ]
+        }
+    ],
+    "Escrow": [
+        {
+            "type": "error",
+            "name": "AddressNotContract",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryAddressNotSet",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryAddressZero",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "BeneficiaryNotActive",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotAuthorized",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotBeneficiary",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotOwner",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "CallerNotVestingManager",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "ContractManagerAddressNotSet",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "DelegationNotAllowed",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "DestinationAddressNotSet",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "InvalidSender",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "TokenTransferFailed",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "VestingIsActive",
+            "inputs": []
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "BeneficiaryUpdated",
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "oldValue",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "newValue",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "Initialized",
+            "inputs": [
+                {
+                    "type": "uint8",
+                    "name": "version",
+                    "indexed": false
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "RoleGranted",
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "account",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "sender",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "RoleRevoked",
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "account",
+                    "indexed": true
+                },
+                {
+                    "type": "address",
+                    "name": "sender",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "event",
+            "anonymous": false,
+            "name": "VestingCanceled",
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "vestedAmount",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "BENEFICIARY_ROLE",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "DEFAULT_ADMIN_ROLE",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "cancelPendingDelegation",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "delegationId"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "cancelVesting",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "vestedAmount"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "changeBeneficiaryAddress",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "contractManager",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "address",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "delegate",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "validatorId"
+                },
+                {
+                    "type": "uint256",
+                    "name": "amount"
+                },
+                {
+                    "type": "uint256",
+                    "name": "delegationPeriod"
+                },
+                {
+                    "type": "string",
+                    "name": "info"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "getRoleAdmin",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bytes32",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getRoleMember",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "uint256",
+                    "name": "index"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "address",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getRoleMemberCount",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "uint256",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "grantRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "hasRole",
+            "constant": true,
+            "stateMutability": "view",
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool",
+                    "name": ""
+                }
+            ]
+        },
+        {
+            "type": "function",
+            "name": "initialize",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "contractManagerAddress"
+                },
+                {
+                    "type": "address",
+                    "name": "beneficiary"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "initialize",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "contractManagerAddress"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "renounceRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "requestUndelegation",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "delegationId"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "retrieve",
+            "constant": false,
+            "payable": false,
+            "inputs": [],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "retrieveAfterTermination",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "destination"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "revokeRole",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "bytes32",
+                    "name": "role"
+                },
+                {
+                    "type": "address",
+                    "name": "account"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "tokensReceived",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "operator"
+                },
+                {
+                    "type": "address",
+                    "name": "from"
+                },
+                {
+                    "type": "address",
+                    "name": "to"
+                },
+                {
+                    "type": "uint256",
+                    "name": "amount"
+                },
+                {
+                    "type": "bytes",
+                    "name": "userData"
+                },
+                {
+                    "type": "bytes",
+                    "name": "operatorData"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "tokensToSend",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "address",
+                    "name": "operator"
+                },
+                {
+                    "type": "address",
+                    "name": "from"
+                },
+                {
+                    "type": "address",
+                    "name": "to"
+                },
+                {
+                    "type": "uint256",
+                    "name": "amount"
+                },
+                {
+                    "type": "bytes",
+                    "name": "userData"
+                },
+                {
+                    "type": "bytes",
+                    "name": "operatorData"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "withdrawBounty",
+            "constant": false,
+            "payable": false,
+            "inputs": [
+                {
+                    "type": "uint256",
+                    "name": "validatorId"
+                },
+                {
+                    "type": "address",
+                    "name": "to"
+                }
+            ],
+            "outputs": []
+        }
+    ]
+}
