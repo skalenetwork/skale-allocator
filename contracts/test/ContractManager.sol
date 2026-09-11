@@ -19,12 +19,11 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.33;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
-import "./utils/StringUtils.sol";
 
 interface IContractManagerTester {
     function initialize() external;
@@ -43,11 +42,10 @@ interface IContractManagerTester {
  * human-readable strings) to addresses.
  */
 contract ContractManager is OwnableUpgradeable, IContractManagerTester {
-    using StringUtils for string;
     using AddressUpgradeable for address;
 
     // mapping of actual smart contracts addresses
-    mapping (bytes32 => address) public contracts;
+    mapping(bytes32 => address) public contracts;
 
     event ContractUpgraded(string contractsName, address contractsAddress);
 
@@ -57,11 +55,11 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
 
     /**
      * @dev Allows Owner to add contract to mapping of actual contract addresses
-     * 
+     *
      * Emits a {ContractUpgraded} event.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Contract address is non-zero.
      * - Contract address is not already added.
      * - Contract contains code.
@@ -87,13 +85,13 @@ contract ContractManager is OwnableUpgradeable, IContractManagerTester {
 
     /**
      * @dev Returns the contract address of a given contract name.
-     * 
+     *
      * Requirements:
-     * 
+     *
      * - Contract mapping must exist.
      */
     function getContract(string calldata name) external view override returns (address contractAddress) {
         contractAddress = contracts[keccak256(abi.encodePacked(name))];
-        require(contractAddress != address(0), name.strConcat(" contract has not been found"));
+        require(contractAddress != address(0), string.concat(name, " contract has not been found"));
     }
 }

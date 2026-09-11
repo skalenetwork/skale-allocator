@@ -20,29 +20,40 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.33;
 
-import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    IERC777Recipient
+} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import {
+    IERC777Sender
+} from "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+import {
+    IERC1820Registry
+} from "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
-import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
-import "./interfaces/IEscrow.sol";
+import {
+    IDelegationController
+} from "@skalenetwork/skale-manager-interfaces/delegation/IDelegationController.sol";
+import {
+    IDistributor
+} from "@skalenetwork/skale-manager-interfaces/delegation/IDistributor.sol";
+import {
+    ILocker
+} from "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
-import "./Allocator.sol";
-import "./Permissions.sol";
-
+import {Allocator} from "./Allocator.sol";
+import {IEscrow} from "./interfaces/IEscrow.sol";
+import {Permissions} from "./Permissions.sol";
 
 /**
  * @title Escrow
  * @dev This contract manages funds locked by the Allocator contract.
  */
 contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
+    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
 
     address internal _beneficiary;
 
@@ -50,20 +61,30 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
 
     IERC1820Registry private _erc1820;
 
-    bytes32 public constant BENEFICIARY_ROLE = keccak256("BENEFICIARY_ROLE");
 
     event BeneficiaryUpdated(
-        address oldValue,
-        address newValue
+        address indexed oldValue,
+        address indexed newValue
     );
 
-    event VestingCanceled(uint vestedAmount);
+    event VestingCanceled(uint256 indexed vestedAmount);
 
-    modifier onlyBeneficiary() virtual {
+    error CallerNotBeneficiary();
+    error CallerNotVestingManager();
+    error CallerNotAuthorized();
+    error BeneficiaryAddressNotSet();
+    error BeneficiaryAddressZero();
+    error TokenTransferFailed();
+    error DestinationAddressNotSet();
+    error VestingIsActive();
+    error DelegationNotAllowed();
+    error BeneficiaryNotActive();
+
+    modifier onlyBeneficiary() {
         require(
             _msgSender() == _beneficiary ||
-            hasRole(BENEFICIARY_ROLE, _msgSender()),
-            "Message sender is not a plan beneficiary"
+                hasRole(BENEFICIARY_ROLE, _msgSender()),
+            CallerNotBeneficiary()
         );
         _;
     }
@@ -72,30 +93,29 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         require(
             allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
-            "Message sender is not a vesting manager"
+            CallerNotVestingManager()
         );
         _;
     }
 
-    modifier onlyActiveBeneficiaryOrVestingManager() virtual {
+    modifier onlyActiveBeneficiaryOrVestingManager() {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         if (allocator.isVestingActive(_beneficiary)) {
             require(
-                _msgSender() == _beneficiary ||
-                hasRole(BENEFICIARY_ROLE, _msgSender()),
-                "Message sender is not a plan beneficiary"
+                _msgSender() == _beneficiary || hasRole(BENEFICIARY_ROLE, _msgSender()),
+                CallerNotBeneficiary()
             );
         } else {
             require(
                 allocator.hasRole(allocator.VESTING_MANAGER_ROLE(), _msgSender()),
-                "Message sender is not authorized"
+                CallerNotAuthorized()
             );
         }
         _;
     }
 
     function initialize(address contractManagerAddress, address beneficiary) external override initializer {
-        require(beneficiary != address(0), "Beneficiary address is not set");
+        require(beneficiary != address(0), BeneficiaryAddressZero());
         Permissions.initialize(contractManagerAddress);
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
@@ -105,7 +125,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     }
 
     function changeBeneficiaryAddress(address beneficiary) external override allow("Allocator") {
-        require(beneficiary != address(0), "Beneficiary address must not be zero");
+        require(beneficiary != address(0), BeneficiaryAddressZero());
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
     }
@@ -121,26 +141,23 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         external
         override
         allow("SkaleToken")
-        // solhint-disable-next-line no-empty-blocks
-    {
+    // solhint-disable-next-line no-empty-blocks
+    {}
 
-    }
 
     function tokensToSend(
-        address,
-        address,
+        address operator,
+        address from,
         address to,
-        uint256,
-        bytes calldata,
-        bytes calldata
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
     )
         external
         override
         allow("SkaleToken")
-        // solhint-disable-next-line no-empty-blocks
-    {
-
-    }
+    // solhint-disable-next-line no-empty-blocks
+    {}
 
     /**
      * @dev Allows Beneficiary to retrieve vested tokens from the Escrow contract.
@@ -167,7 +184,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
                     _beneficiary,
                     escrowBalance - locked
                 ),
-                "Error of token send"
+                TokenTransferFailed()
             );
         }
     }
@@ -186,8 +203,8 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
         ILocker tokenState = ILocker(contractManager.getContract("TokenState"));
 
-        require(destination != address(0), "Destination address is not set");
-        require(!allocator.isVestingActive(_beneficiary), "Vesting is active");
+        require(destination != address(0), DestinationAddressNotSet());
+        require(!allocator.isVestingActive(_beneficiary), VestingIsActive());
         uint256 escrowBalance = IERC20(contractManager.getContract("SkaleToken")).balanceOf(address(this));
         uint256 forbiddenToSend = tokenState.getAndUpdateLockedAmount(address(this));
         if (escrowBalance > forbiddenToSend) {
@@ -196,7 +213,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
                     destination,
                     escrowBalance - forbiddenToSend
                 ),
-                "Error of token send"
+                TokenTransferFailed()
             );
         }
     }
@@ -207,7 +224,7 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      * Requirements:
      *
      * - Beneficiary must be active.
-     * - Beneficiary must have sufficient delegatable tokens.
+     * - Beneficiary must have sufficient delegable tokens.
      * - If trusted list is enabled, validator must be a member of the trusted
      * list.
      */
@@ -222,13 +239,24 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         onlyBeneficiary
     {
         Allocator allocator = Allocator(contractManager.getContract("Allocator"));
-        require(allocator.isDelegationAllowed(_beneficiary), "Delegation is not allowed");
-        require(allocator.isVestingActive(_beneficiary), "Beneficiary is not Active");
+        require(
+            allocator.isDelegationAllowed(_beneficiary),
+            DelegationNotAllowed()
+        );
+        require(
+            allocator.isVestingActive(_beneficiary),
+            BeneficiaryNotActive()
+        );
 
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
-        delegationController.delegate(validatorId, amount, delegationPeriod, info);
+        delegationController.delegate(
+            validatorId,
+            amount,
+            delegationPeriod,
+            info
+        );
     }
 
     /**
@@ -240,7 +268,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function requestUndelegation(uint256 delegationId) external override onlyActiveBeneficiaryOrVestingManager {
+    function requestUndelegation(
+        uint256 delegationId
+    )
+        external
+        override
+        onlyActiveBeneficiaryOrVestingManager
+    {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );
@@ -256,7 +290,13 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
      *
      * - Beneficiary and Vesting manager must be `msg.sender`.
      */
-    function cancelPendingDelegation(uint delegationId) external override onlyActiveBeneficiaryOrVestingManager {
+    function cancelPendingDelegation(
+        uint256 delegationId
+    )
+        external
+        override
+        onlyActiveBeneficiaryOrVestingManager
+    {
         IDelegationController delegationController = IDelegationController(
             contractManager.getContract("DelegationController")
         );

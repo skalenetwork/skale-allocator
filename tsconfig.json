@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "lib": ["ES2018", "DOM"],
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "commonjs",
     "strict": true,
-    "target": "ES2018",
+    "target": "es2020",
     "sourceMap": true,
     "typeRoots": ["./node_modules/@types", "./typechain"],
     "types": ["node"],
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "exclude": ["node_modules"]
 }

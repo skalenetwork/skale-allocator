@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.33;
 
 import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
@@ -31,7 +31,7 @@ interface IDistributorMock {
     function withdrawBounty(uint256 validatorId, address to) external;
 }
 
-contract DistributorMock is IERC777Recipient, IDistributorMock {    
+contract DistributorMock is IERC777Recipient, IDistributorMock {
 
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     IERC20 public skaleToken;
@@ -39,13 +39,13 @@ contract DistributorMock is IERC777Recipient, IDistributorMock {
     //        wallet =>   validatorId => tokens
     mapping (address => mapping (uint256 => uint)) public approved;
 
-    constructor (address skaleTokenAddress) {        
+    constructor (address skaleTokenAddress) {
         skaleToken = IERC20(skaleTokenAddress);
         _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
     }
 
     function withdrawBounty(uint256 validatorId, address to) external override {
-        uint256 bounty = approved[msg.sender][validatorId];        
+        uint256 bounty = approved[msg.sender][validatorId];
         delete approved[msg.sender][validatorId];
         require(skaleToken.transfer(to, bounty), "Failed to transfer tokens");
     }

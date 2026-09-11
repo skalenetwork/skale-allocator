@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.33;
 
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -37,16 +37,17 @@ import "./InitializableWithGap.sol";
  * roles. More complex role relationships can be created by using
  * {_setRoleAdmin}.
  */
-abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, ContextUpgradeable, IAccessControlUpgradeableLegacy {
+abstract contract AccessControlUpgradeableLegacy is
+    InitializableWithGap,
+    ContextUpgradeable,
+    IAccessControlUpgradeableLegacy
+{
     function __AccessControl_init() internal initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
     }
 
-    function __AccessControl_init_unchained() internal initializer {
-
-
-    }
+    function __AccessControl_init_unchained() internal initializer {}
 
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
@@ -55,7 +56,7 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
         bytes32 adminRole;
     }
 
-    mapping (bytes32 => RoleData) private _roles;
+    mapping(bytes32 => RoleData) private _roles;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
@@ -111,7 +112,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * - the caller must have ``role``'s admin role.
      */
     function grantRole(bytes32 role, address account) public virtual override {
-        require(hasRole(_roles[role].adminRole, _msgSender()), "AccessControl: sender must be an admin to grant");
+        require(
+            hasRole(_roles[role].adminRole, _msgSender()),
+            "AccessControl: sender must be an admin to grant"
+        );
 
         _grantRole(role, account);
     }
@@ -126,7 +130,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * - the caller must have ``role``'s admin role.
      */
     function revokeRole(bytes32 role, address account) public virtual override {
-        require(hasRole(_roles[role].adminRole, _msgSender()), "AccessControl: sender must be an admin to revoke");
+        require(
+            hasRole(_roles[role].adminRole, _msgSender()),
+            "AccessControl: sender must be an admin to revoke"
+        );
 
         _revokeRole(role, account);
     }
@@ -146,7 +153,10 @@ abstract contract AccessControlUpgradeableLegacy is InitializableWithGap, Contex
      * - the caller must be `account`.
      */
     function renounceRole(bytes32 role, address account) public virtual override {
-        require(account == _msgSender(), "AccessControl: can only renounce roles for self");
+        require(
+            account == _msgSender(),
+            "AccessControl: can only renounce roles for self"
+        );
 
         _revokeRole(role, account);
     }

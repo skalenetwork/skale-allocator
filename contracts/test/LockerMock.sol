@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.33;
 
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
 
@@ -27,7 +27,7 @@ contract LockerMock is ILocker {
     function getAndUpdateLockedAmount(address) external pure override returns (uint) {
         return 13;
     }
-    
+
     function getAndUpdateForbiddenForDelegationAmount(address) external pure override returns (uint) {
         return 13;
     }

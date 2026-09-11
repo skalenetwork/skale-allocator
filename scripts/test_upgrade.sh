@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# cspell:words toplevel
+
 set -e
 
 if [ -z $GITHUB_WORKSPACE ]
@@ -15,7 +17,7 @@ DEPLOYED_ALLOCATOR_VERSION=$(echo $DEPLOYED_ALLOCATOR_TAG | cut -d '-' -f 1)
 DEPLOYED_ALLOCATOR_DIR=$GITHUB_WORKSPACE/deployed-skale-allocator/
 DEPLOYED_MANAGER_DIR=$GITHUB_WORKSPACE/deployed-skale-manager/
 
-SKALE_MANAGER_NODE_VERSION="lts/hydrogen"
+SKALE_MANAGER_NODE_VERSION="lts/krypton"
 DEPLOYED_ALLOCATOR_NODE_VERSION="lts/gallium"
 CURRENT_NODE_VERSION=$(nvm current)
 
@@ -23,34 +25,53 @@ CURRENT_NODE_VERSION=$(nvm current)
 git clone --branch $DEPLOYED_ALLOCATOR_TAG https://github.com/skalenetwork/skale-allocator.git $DEPLOYED_ALLOCATOR_DIR
 git clone --branch stable https://github.com/skalenetwork/skale-manager.git $DEPLOYED_MANAGER_DIR
 
-npx ganache-cli --gasLimit 8000000 --quiet &
+HARDHAT_NODE_SESSION="hardhat-node"
+
+yarn pm2 start "yarn hardhat node" --name "$HARDHAT_NODE_SESSION"
+
+cleanup() {
+    echo "Stopping Hardhat Node"
+    yarn pm2 delete "$HARDHAT_NODE_SESSION"
+}
+
+trap cleanup EXIT
 
 nvm install $SKALE_MANAGER_NODE_VERSION
 nvm use $SKALE_MANAGER_NODE_VERSION
 
 cd $DEPLOYED_MANAGER_DIR
 yarn install
-PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+
+# Creates manifest files in /tmp/openzeppelin-upgrades/ - new version of hardhat-upgrades
+PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
+export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
+# required by previous version of skale-allocator deployment scripts
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
-cp data/skale-manager-*-abi.json $GITHUB_WORKSPACE/scripts/manager.json
+
 
 nvm install $DEPLOYED_ALLOCATOR_NODE_VERSION
 nvm use $DEPLOYED_ALLOCATOR_NODE_VERSION
 
 cd $DEPLOYED_ALLOCATOR_DIR
 yarn install
-VERSION=$DEPLOYED_ALLOCATOR_VERSION npx hardhat run migrations/deploy.ts --network localhost
-cp .openzeppelin/unknown-*.json $GITHUB_WORKSPACE/.openzeppelin
-cp data/skale-allocator-*-abi.json $GITHUB_WORKSPACE/data
+
+# Creates manifest file in .openzeppelin/ - older version of hardhat-upgrades
+DEPLOY_OUTPUT=$(VERSION=$DEPLOYED_ALLOCATOR_VERSION npx hardhat run migrations/deploy.ts --network localhost)
+export SKALE_ALLOCATOR_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep "Register Allocator" | tail -1 | sed 's/.*Register Allocator => //')
+
+cp -r .openzeppelin/. $GITHUB_WORKSPACE/.openzeppelin/
 cd $GITHUB_WORKSPACE
+
 
 rm -r --interactive=never $DEPLOYED_MANAGER_DIR
 rm -r --interactive=never $DEPLOYED_ALLOCATOR_DIR
 
 nvm use $CURRENT_NODE_VERSION
 
-ABI_FILENAME="skale-allocator-$DEPLOYED_ALLOCATOR_VERSION-localhost-abi.json"
+# Needs only the files from deploying allocator in .openzeppelin/
+# Should eliminate tmp files to fix duplication errors.
+rm -rf /tmp/openzeppelin-upgrades/*
 
-ABI="data/$ABI_FILENAME" npx hardhat run migrations/upgrade.ts --network localhost
-
-npx kill-port 8545
+SKALE_MANAGER_ADDRESS="$SKALE_MANAGER_ADDRESS" \
+SKALE_ALLOCATOR_ADDRESS="$SKALE_ALLOCATOR_ADDRESS" \
+npx hardhat run migrations/upgrade.ts --network localhost
