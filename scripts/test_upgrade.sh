@@ -17,7 +17,7 @@ DEPLOYED_ALLOCATOR_VERSION=$(echo $DEPLOYED_ALLOCATOR_TAG | cut -d '-' -f 1)
 DEPLOYED_ALLOCATOR_DIR=$GITHUB_WORKSPACE/deployed-skale-allocator/
 DEPLOYED_MANAGER_DIR=$GITHUB_WORKSPACE/deployed-skale-manager/
 
-SKALE_MANAGER_NODE_VERSION="lts/jod"
+SKALE_MANAGER_NODE_VERSION="lts/krypton"
 DEPLOYED_ALLOCATOR_NODE_VERSION="lts/gallium"
 CURRENT_NODE_VERSION=$(nvm current)
 
@@ -43,7 +43,7 @@ cd $DEPLOYED_MANAGER_DIR
 yarn install
 
 # Creates manifest files in /tmp/openzeppelin-upgrades/ - new version of hardhat-upgrades
-VERSION="1.12.0" PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
 export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 # required by previous version of skale-allocator deployment scripts
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
