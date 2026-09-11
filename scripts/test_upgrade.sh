@@ -43,7 +43,7 @@ cd $DEPLOYED_MANAGER_DIR
 yarn install
 
 # Creates manifest files in /tmp/openzeppelin-upgrades/ - new version of hardhat-upgrades
-VERSION="1.12.0" PRODUCTION=true npx hardhat run migrations/deploy.ts --network localhost
+VERSION="1.12.0" PRODUCTION=true yarn hardhat run migrations/deploy.ts --network localhost
 export SKALE_MANAGER_ADDRESS=$(cat data/skale-manager-*-contracts.json | jq -r .SkaleManager)
 # required by previous version of skale-allocator deployment scripts
 cp data/skale-manager-*-abi.json $DEPLOYED_ALLOCATOR_DIR/scripts/manager.json
