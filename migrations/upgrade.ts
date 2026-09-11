@@ -197,7 +197,7 @@ class MockSubmitter extends Submitter {
         ]);
         console.log(chalk.yellow(`MockSubmitter: Submitting transactions mocking ${await this.signer.getAddress()}`));
         for (const tx of transactions) {
-            const sentTx = await this.signer.sendTransaction(tx);
+            const sentTx = await this.signer.sendTransaction({to: tx.to, data: tx.data, value: tx.value});
             await sentTx.wait();
             console.log(chalk.white(`MockSubmitter: Transaction with hash ${sentTx.hash} confirmed.`));
         }
