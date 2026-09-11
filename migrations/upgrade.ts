@@ -205,6 +205,37 @@ class MockSubmitter extends Submitter {
     }
 }
 
+// DRY_RUN: a mined batch is not enough, the upgraded state must be on the node
+const checkUpgradedState = async (
+    allocator: Allocator,
+    contractManager: ContractManager,
+    escrowAddresses: string[],
+    allocatorUpgrade: {txs: DescribedTransaction[], newImplementation: string},
+    escrowUpgrade: {txs: DescribedTransaction[], newImplementation: string},
+    newVersion: string
+): Promise<void> => {
+    const upgraded = [
+        {name: "Allocator", proxies: [await allocator.getAddress()], ...allocatorUpgrade},
+        {name: "Escrow", proxies: escrowAddresses, ...escrowUpgrade}
+    ].filter(({txs}) => txs.length > 0);
+    for (const {name, proxies, newImplementation} of upgraded) {
+        for (const proxy of proxies) {
+            const implementation = await getImplementationAddress(ethers.provider, proxy);
+            if (ethers.getAddress(implementation) !== ethers.getAddress(newImplementation)) {
+                throw new Error(`Dry run: ${name} ${proxy} is on ${implementation}, expected ${newImplementation}`);
+            }
+        }
+    }
+    if (escrowUpgrade.txs.length > 0 &&
+        await contractManager.getContract("EscrowImplementation") !== ethers.getAddress(escrowUpgrade.newImplementation)) {
+        throw new Error("Dry run: EscrowImplementation was not updated in ContractManager");
+    }
+    if (await allocator.version() !== newVersion) {
+        throw new Error(`Dry run: Allocator version is not ${newVersion}`);
+    }
+    console.log(chalk.green("Dry run: proxies, EscrowImplementation and version checked."));
+}
+
 async function main() {
     const [deployer] = await ethers.getSigners();
     const nonceProvider = new NonceProvider(await ethers.provider.getTransactionCount(deployer));
@@ -298,6 +329,7 @@ async function main() {
         const signer = await ethers.getImpersonatedSigner(owner);
         const submitter = new MockSubmitter(signer);
         await submitter.submit(rawTransactions);
+        await checkUpgradedState(allocator, contractManager, escrowAddresses, allocatorUpgrade, escrowUpgrade, newVersion);
     }
     else if (isMultisig) {
         console.log(chalk.yellow(`Owner ${owner} is a contract. Proposing transactions to multisig...`));
