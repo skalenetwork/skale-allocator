@@ -122,6 +122,10 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             msg.sender == _beneficiaries[oldBeneficiaryAddress].requestedAddress,
             BeneficiaryChangeNotAllowed()
         );
+        require(
+            _beneficiaries[msg.sender].status == BeneficiaryStatus.UNKNOWN,
+            BeneficiaryAddressNotClean()
+        );
         _beneficiaries[msg.sender] = Beneficiary({
             status: _beneficiaries[oldBeneficiaryAddress].status,
             planId: _beneficiaries[oldBeneficiaryAddress].planId,

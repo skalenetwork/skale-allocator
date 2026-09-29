@@ -321,6 +321,28 @@ describe("Allocator", () => {
                 .to.equal(ethers.ZeroAddress);
         });
 
+        it("should not allow to confirm an address that is already a beneficiary", async () => {
+            await allocator.connect(vestingManager).connectBeneficiaryToPlan(beneficiary2.address, 1, 6, fullAmount, 1e5);
+            await allocator.connect(vestingManager).startVesting(beneficiary2.address);
+
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await allocator.connect(beneficiary2).changeBeneficiaryAddress(beneficiary1.address);
+
+            await allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address);
+            const beneficiary1Params = await allocator.getBeneficiaryPlanParams(beneficiary1.address);
+            const beneficiary1Escrow = await allocator.getEscrowAddress(beneficiary1.address);
+            const beneficiary2Params = await allocator.getBeneficiaryPlanParams(beneficiary2.address);
+            const beneficiary2Escrow = await allocator.getEscrowAddress(beneficiary2.address);
+
+            await expect(allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary2.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryAddressNotClean");
+
+            (await allocator.getBeneficiaryPlanParams(beneficiary1.address)).should.deep.equal(beneficiary1Params);
+            (await allocator.getEscrowAddress(beneficiary1.address)).should.be.equal(beneficiary1Escrow);
+            (await allocator.getBeneficiaryPlanParams(beneficiary2.address)).should.deep.equal(beneficiary2Params);
+            (await allocator.getEscrowAddress(beneficiary2.address)).should.be.equal(beneficiary2Escrow);
+        });
+
         it("should be able to cancel pending delegation request", async () => {
             await (escrow.connect(beneficiary) as unknown as Escrow).cancelPendingDelegation(delegationId);
             (await skaleToken.getAndUpdateLockedAmount.staticCall(escrow.target)).should.be.equal(0n);
