@@ -128,6 +128,30 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
         require(beneficiary != address(0), BeneficiaryAddressZero());
         emit BeneficiaryUpdated(_beneficiary, beneficiary);
         _beneficiary = beneficiary;
+        _revokeBeneficiaryRole();
+    }
+
+    /**
+     * @dev Allows Beneficiary to let another address act on its behalf.
+     * `holder` becomes the only holder of BENEFICIARY_ROLE.
+     * Zero address revokes the role and leaves it without a holder.
+     *
+     * The Beneficiary address always has access and does not need the role.
+     *
+     * IMPORTANT: The holder can delegate and withdraw bounty to any address.
+     * Vested tokens are always sent to the Beneficiary. The role is revoked
+     * when the Beneficiary address changes.
+     *
+     * Requirements:
+     *
+     * - Beneficiary address must be `msg.sender`. Holding the role is not enough.
+     */
+    function setBeneficiaryRoleHolder(address holder) external override {
+        require(_msgSender() == _beneficiary, CallerNotBeneficiary());
+        _revokeBeneficiaryRole();
+        if (holder != address(0)) {
+            _setupRole(BENEFICIARY_ROLE, holder);
+        }
     }
 
     function tokensReceived(
@@ -334,5 +358,11 @@ contract Escrow is IERC777Recipient, IERC777Sender, IEscrow, Permissions {
     function cancelVesting(uint256 vestedAmount) external override allow("Allocator") {
         emit VestingCanceled(vestedAmount);
         _availableAmountAfterTermination = vestedAmount;
+    }
+
+    function _revokeBeneficiaryRole() private {
+        while (getRoleMemberCount(BENEFICIARY_ROLE) > 0) {
+            _revokeRole(BENEFICIARY_ROLE, getRoleMember(BENEFICIARY_ROLE, 0));
+        }
     }
 }

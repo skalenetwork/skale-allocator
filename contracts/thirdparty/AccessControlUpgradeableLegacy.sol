@@ -194,7 +194,7 @@ abstract contract AccessControlUpgradeableLegacy is
         }
     }
 
-    function _revokeRole(bytes32 role, address account) private {
+    function _revokeRole(bytes32 role, address account) internal {
         if (_roles[role].members.remove(account)) {
             emit RoleRevoked(role, account, _msgSender());
         }

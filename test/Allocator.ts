@@ -12,6 +12,7 @@ import { currentTime, getTimeAtDate, skipTimeToDate, skipTime } from "./tools/ti
 import * as chai from "chai";
 import { deployContractManager } from "./tools/deploy/contractManager";
 import { deployAllocator } from "./tools/deploy/allocator";
+import { deployEscrow } from "./tools/deploy/escrow";
 import { deploySkaleTokenTester } from "./tools/deploy/test/skaleTokenTester";
 import { BeneficiaryStatus, TimeUnit } from "./tools/types";
 import { deployTimeHelpersTester } from "./tools/deploy/test/timeHelpersTester";
@@ -266,6 +267,24 @@ describe("Allocator", () => {
         (await skaleToken.getAndUpdateLockedAmount.staticCall(escrowAddress)).should.be.equal(amount);
     });
 
+    it("should revoke BENEFICIARY_ROLE from every holder", async () => {
+        // owner is the admin of this escrow, so it can grant the role to several holders
+        const escrow = await deployEscrow(contractManager);
+        const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+        const holders = [beneficiary, beneficiary1, beneficiary2, beneficiary3];
+        for (const holder of holders) {
+            await escrow.grantRole(beneficiaryRole, holder.address);
+        }
+        (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(4n);
+
+        await escrow.changeBeneficiaryAddress(hacker.address);
+
+        (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+        for (const holder of holders) {
+            (await escrow.hasRole(beneficiaryRole, holder.address)).should.be.equal(false);
+        }
+    });
+
     describe("when beneficiary delegate escrow tokens", () => {
         let delegationId: number;
         let escrow: Escrow;
@@ -341,6 +360,76 @@ describe("Allocator", () => {
             (await allocator.getEscrowAddress(beneficiary1.address)).should.be.equal(beneficiary1Escrow);
             (await allocator.getBeneficiaryPlanParams(beneficiary2.address)).should.deep.equal(beneficiary2Params);
             (await allocator.getEscrowAddress(beneficiary2.address)).should.be.equal(beneficiary2Escrow);
+        });
+
+        it("should allow only beneficiary to set BENEFICIARY_ROLE holder", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+
+            await expect(escrow.connect(hacker).setBeneficiaryRoleHolder(hacker.address))
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+            await expect(escrow.connect(beneficiary1).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+
+            await expect(escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary1.address))
+                .to.emit(escrow, "RoleGranted")
+                .withArgs(beneficiaryRole, beneficiary1.address, beneficiary.address);
+            await escrow.connect(beneficiary1).requestUndelegation(delegationId);
+            const vested = await allocator.calculateVestedAmount(beneficiary.address);
+            await escrow.connect(beneficiary1).retrieve();
+            (await skaleToken.balanceOf(beneficiary.address)).should.be.equal(vested);
+            (await skaleToken.balanceOf(beneficiary1.address)).should.be.equal(0n);
+
+            await expect(escrow.connect(beneficiary1).setBeneficiaryRoleHolder(beneficiary2.address))
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+
+            await expect(escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary2.address))
+                .to.emit(escrow, "RoleRevoked")
+                .withArgs(beneficiaryRole, beneficiary1.address, beneficiary.address);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(1n);
+            (await escrow.hasRole(beneficiaryRole, beneficiary2.address)).should.be.equal(true);
+            await expect(escrow.connect(beneficiary1).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+        });
+
+        it("should allow beneficiary to revoke and holder to renounce BENEFICIARY_ROLE", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+
+            await escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary1.address);
+            await expect(escrow.connect(beneficiary1).setBeneficiaryRoleHolder(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+            await expect(escrow.connect(beneficiary).setBeneficiaryRoleHolder(ethers.ZeroAddress))
+                .to.emit(escrow, "RoleRevoked")
+                .withArgs(beneficiaryRole, beneficiary1.address, beneficiary.address);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+            await expect(escrow.connect(beneficiary1).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+            // the beneficiary address keeps access without the role
+            await escrow.connect(beneficiary).requestUndelegation(delegationId);
+
+            await escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary1.address);
+            await escrow.connect(beneficiary1).renounceRole(beneficiaryRole, beneficiary1.address);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+            await expect(escrow.connect(beneficiary1).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+        });
+
+        it("should revoke BENEFICIARY_ROLE when beneficiary address changes", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+
+            // the old beneficiary keeps the role for itself, like escrows reinitialized in 2022
+            await escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary.address);
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await expect(allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address))
+                .to.emit(escrow, "RoleRevoked")
+                .withArgs(beneficiaryRole, beneficiary.address, allocator.target);
+
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+            await expect(escrow.connect(beneficiary).withdrawBounty(0, beneficiary.address))
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+            await expect(escrow.connect(beneficiary).setBeneficiaryRoleHolder(beneficiary.address))
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+            await escrow.connect(beneficiary1).setBeneficiaryRoleHolder(beneficiary2.address);
+            (await escrow.hasRole(beneficiaryRole, beneficiary2.address)).should.be.equal(true);
         });
 
         it("should be able to cancel pending delegation request", async () => {

@@ -9,10 +9,11 @@ else
     export MAINNET_ENDPOINT="https://ethereum-rpc.publicnode.com/"
 fi
 
-if [ -n "$SKALE_MANAGER_ADDRESS" ]; then
-    export SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS
+if [ -n "$SKALE_ALLOCATOR_ADDRESS" ]; then
+    ALLOCATOR_ADDRESSES="$SKALE_ALLOCATOR_ADDRESS"
 else
-    export SKALE_MANAGER_ADDRESS="0x8b32F750966273cb6D804C02360F3E2743E2B511" # Eth Mainnet SkaleManager
+    # Eth Mainnet Allocators: grants and main
+    ALLOCATOR_ADDRESSES="0x07121D22e865fC7513240127742Cb87b24C847a9 0xB575c158399227b6ef4Dcfb05AA3bCa30E12a7ba"
 fi
 
 if [ -n "$CHAIN_ID" ]; then
@@ -46,8 +47,12 @@ cleanup() {
 
 trap cleanup EXIT
 
-echo "Running upgrade check"
+# Allocators are upgraded one after another on the same fork,
+# so the next one reuses implementations deployed for the previous one
+for ALLOCATOR_ADDRESS in $ALLOCATOR_ADDRESSES; do
+    echo "Running upgrade check for Allocator $ALLOCATOR_ADDRESS"
 
-DRY_RUN=true SKALE_MANAGER_ADDRESS=$SKALE_MANAGER_ADDRESS \
-CHAIN_ID="$CHAIN_ID" \
-npx hardhat run migrations/upgrade.ts --network localhost
+    DRY_RUN=true SKALE_ALLOCATOR_ADDRESS=$ALLOCATOR_ADDRESS \
+    CHAIN_ID="$CHAIN_ID" \
+    npx hardhat run migrations/upgrade.ts --network localhost
+done
