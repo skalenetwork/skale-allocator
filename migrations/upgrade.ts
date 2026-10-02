@@ -1,4 +1,3 @@
-import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
 import { ethers } from "hardhat";
 import chalk from "chalk";
 import { Allocator, ContractManager } from "../typechain-types";
@@ -8,7 +7,7 @@ import { V4TransparentProxyUpgrader } from "@skalenetwork/upgrade-tools/dist/src
 import { AbstractTransparentProxyUpgrader, EoaSubmitter, getVersion, SafeSubmitter, Submitter, verify } from "@skalenetwork/upgrade-tools";
 import { NonceProvider } from "@skalenetwork/upgrade-tools/dist/src/nonceProvider";
 import {getImplementationAddress, isDevelopmentNetwork} from "@openzeppelin/upgrades-core";
-import { fetchEscrowAddresses } from "../scripts/getEscrows";
+import { fetchEscrowAddresses, getAllocator, getContractManager } from "../scripts/getEscrows";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 interface DescribedTransaction {
@@ -208,19 +207,11 @@ class MockSubmitter extends Submitter {
 async function main() {
     const [deployer] = await ethers.getSigners();
     const nonceProvider = new NonceProvider(await ethers.provider.getTransactionCount(deployer));
-    if (!process.env.SKALE_MANAGER_ADDRESS) {
-        console.log(chalk.red("Specify desired SKALE_MANAGER_ADDRESS in .env"));
-        throw new Error("SKALE_MANAGER_ADDRESS not specified");
-    }
-
     const fromVersion = "2.2.2";
-    const network = await skaleContracts.getNetworkByProvider(ethers.provider);
-    const skaleManagerProject = network.getProject("skale-manager");
-    const skaleManagerInstance = await skaleManagerProject.getInstance(process.env.SKALE_MANAGER_ADDRESS);
-    const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
-    const allocatorAddress = await contractManager.getContract("Allocator");
+    const allocator = await getAllocator();
+    const allocatorAddress = await allocator.getAddress();
     console.log(`Current SkaleAllocator address: ${allocatorAddress}`);
-    const allocator = await ethers.getContractAt("Allocator", allocatorAddress) as Allocator;
+    const contractManager = await getContractManager(allocator);
 
     // Verify version
     const currentVersion = await allocator.version();
@@ -241,7 +232,7 @@ async function main() {
     // Always add first mock escrow
     escrowAddresses.push(await contractManager.getContract("Escrow"));
     try {
-        const remoteEscrowAddresses = await fetchEscrowAddresses();
+        const remoteEscrowAddresses = await fetchEscrowAddresses(allocator);
         escrowAddresses.push(...remoteEscrowAddresses);
     } catch (error) {
         if (await isDevelopmentNetwork(ethers.provider)) {
