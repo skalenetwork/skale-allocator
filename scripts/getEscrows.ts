@@ -1,8 +1,7 @@
 import chalk from "chalk";
 import { ethers } from "hardhat";
-import { Instance, skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
 import axios from "axios";
-import { ContractManager } from "../typechain-types";
+import { Allocator, ContractManager } from "../typechain-types";
 
 interface ChainsResponse {
     [key: string]: {
@@ -15,23 +14,21 @@ interface EscrowResponse {
     next_page_params: Record<string, unknown> | null;
 }
 
-async function getSkaleManagerInstance() {
-    if (!process.env.SKALE_MANAGER_ADDRESS) {
-        console.log(chalk.red("Specify desired skale-manager instance"));
-        console.log(chalk.red("Set instance alias or SkaleManager address to SKALE_MANAGER_ADDRESS environment variable"));
-        process.exit(1);
+export async function getAllocator() {
+    const allocatorAddress = process.env.SKALE_ALLOCATOR_ADDRESS;
+    if (!allocatorAddress || !ethers.isAddress(allocatorAddress)) {
+        console.log(chalk.red("Specify desired skale-allocator instance"));
+        console.log(chalk.red("Set Allocator address to SKALE_ALLOCATOR_ADDRESS environment variable"));
+        throw new Error("SKALE_ALLOCATOR_ADDRESS not specified");
     }
-    const network = await skaleContracts.getNetworkByProvider(ethers.provider);
-    const project = network.getProject("skale-manager");
-    return await project.getInstance(process.env.SKALE_MANAGER_ADDRESS);
+    return await ethers.getContractAt("Allocator", allocatorAddress) as unknown as Allocator;
 }
 
-async function getSkaleAllocatorInstance(skaleManagerInstance: Instance) {
-    const contractManager = await skaleManagerInstance.getContract("ContractManager") as ContractManager;
-    const skaleAllocatorAddress = await contractManager.getContract("Allocator");
-    const network = await skaleContracts.getNetworkByProvider(ethers.provider);
-    const project = network.getProject("skale-allocator");
-    return await project.getInstance(skaleAllocatorAddress);
+export async function getContractManager(allocator: Allocator) {
+    return await ethers.getContractAt(
+        "ContractManager",
+        await allocator.contractManager()
+    ) as unknown as ContractManager;
 }
 
 async function getExplorerUrl(chainId: bigint | number): Promise<string> {
@@ -110,22 +107,20 @@ async function validateEscrows(escrowAddresses: string[]) {
     console.log("Escrows validated successfully");
 }
 
-export async function fetchEscrowAddresses() {
-    const skaleManagerInstance = await getSkaleManagerInstance();
-    const skaleAllocatorInstance = await getSkaleAllocatorInstance(skaleManagerInstance);
-    const skaleToken = await skaleManagerInstance.getContract("SkaleToken");
-    const allocator = await skaleAllocatorInstance.getContract("Allocator");
+export async function fetchEscrowAddresses(allocator: Allocator) {
+    const contractManager = await getContractManager(allocator);
+    const skaleToken = await contractManager.getContract("SkaleToken");
     const chainId = BigInt(process.env.CHAIN_ID ?? (await ethers.provider.getNetwork()).chainId);
 
     const apiUrl = await getExplorerUrl(chainId);
-    const escrowAddresses = await getEscrowAddresses(apiUrl, await skaleToken.getAddress(), await allocator.getAddress());
+    const escrowAddresses = await getEscrowAddresses(apiUrl, skaleToken, await allocator.getAddress());
 
     await validateEscrows(escrowAddresses);
     return escrowAddresses;
 }
 
 async function main() {
-    const escrowAddresses = await fetchEscrowAddresses();
+    const escrowAddresses = await fetchEscrowAddresses(await getAllocator());
 
     console.log(chalk.green(`\nFound ${escrowAddresses.length} escrows:`));
     escrowAddresses.forEach((address, index) => {
