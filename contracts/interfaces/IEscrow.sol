@@ -28,6 +28,7 @@ interface IEscrow {
         address beneficiary
     ) external;
     function changeBeneficiaryAddress(address beneficiary) external;
+    function setBeneficiaryRoleHolder(address holder) external;
     function retrieve() external;
     function retrieveAfterTermination(address destination) external;
     function delegate(
