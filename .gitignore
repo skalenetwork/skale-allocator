@@ -1,6 +1,7 @@
 ### General ###
 .idea
 .cache
+.DS_Store
 
 ### Solidity ###
 build/

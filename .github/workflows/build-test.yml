@@ -1,5 +1,9 @@
 name: Build and test
-on: [push, pull_request]
+on: [push]
+
+env:
+  NODE_VERSION: '24.x'
+  PYTHON_VERSION: 3.11
 
 jobs:
   test:
@@ -10,36 +14,21 @@ jobs:
       PRODUCTION: false
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
-
-    - uses: actions/cache@v2
-      id: yarn-cache
+    - uses: actions/checkout@v6
       with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        submodules: true
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
-        python-version: 3.8
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
 
     - name: Set up NODE JS
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v6
       with:
-        node-version: 16
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'yarn'
 
     - name: Install project
       run: yarn install
@@ -51,14 +40,49 @@ jobs:
       run: slither --version
 
     - name: Lint
-      run: yarn fullcheck
+      run: yarn fullCheck
 
     - name: Test deployment
       run: ./scripts/test_deploy.sh
 
-    - name: Run tests
-      run: ./scripts/coverage.sh
-
     - name: Test upgrade
       run: ./scripts/test_upgrade.sh
-    
+
+    - name: Test ABI generation
+      run: npx hardhat run scripts/generateAbi.ts
+
+    - name: Run tests
+      run: yarn coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+
+  mainnet-upgrade:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: true
+
+    - name: Set up NODE JS
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'yarn'
+
+    - name: Setup foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+
+    - name: Install project
+      run: yarn install && yarn compile
+
+    - name: Test mainnet upgrade
+      run: ./scripts/test_mainnet_upgrade.sh
+
+

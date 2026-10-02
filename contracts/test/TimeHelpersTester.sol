@@ -19,7 +19,9 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+// cspell:words Bokky Poo Bahs
+
+pragma solidity ^0.8.33;
 
 import "./thirdparty/BokkyPooBahsDateTimeLibrary.sol";
 
@@ -61,5 +63,4 @@ contract TimeHelpersTester is ITimeHelpers {
         require(month > 0, "Timestamp is too far in the past");
         return month;
     }
-
 }

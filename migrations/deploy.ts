@@ -1,9 +1,11 @@
 import chalk from "chalk";
-import { Interface } from "ethers/lib/utils";
-import { ContractTransaction } from 'ethers';
-import { promises as fs, existsSync } from 'fs';
+import { Contract } from "ethers";
+import { promises as fs } from 'fs';
 import { ethers, upgrades, network } from "hardhat";
-import { SkaleABIFile, verifyProxy, getAbi, getVersion, getContractKeyInAbiFile } from "@skalenetwork/upgrade-tools";
+import { verifyProxy, getVersion } from "@skalenetwork/upgrade-tools";
+import { ContractManager } from "../typechain-types";
+import { skaleContracts } from "@skalenetwork/skale-contracts-ethers-v6";
+
 
 async function getInitializerParameters(contract: string, contractManagerAddress: string) {
     if (["Escrow"].includes(contract)) {
@@ -22,67 +24,77 @@ function getInitializer(contract: string) {
     }
 }
 
+async function getContractManager() {
+    const [signer] = await ethers.getSigners();
+    const skaleManager = await getSkaleManagerInstance();
+    const contractManager = (await skaleManager.getContract("ContractManager")) as ContractManager;
+    return contractManager.connect(signer);
+}
+
+async function getSkaleManagerInstance() {
+    if (!process.env.SKALE_MANAGER_ADDRESS) {
+        console.log(chalk.red("Specify desired skale-manager instance"));
+        console.log(chalk.red("Set instance alias or SkaleManager address to SKALE_MANAGER_ADDRESS environment variable"));
+        process.exit(1);
+    }
+    const network = await skaleContracts.getNetworkByProvider(ethers.provider);
+    const project = network.getProject("skale-manager");
+    return await project.getInstance(process.env.SKALE_MANAGER_ADDRESS);
+}
+
 export const contracts = [
     "Allocator",
     "Escrow"
 ]
 
 async function main() {
-    if (!existsSync(__dirname + "/../scripts/manager.json")) {
-        console.log("PLEASE Provide a manager.json file to scripts folder which contains abis & addresses of skale manager contracts ");
-        process.exit(1);
-    }
-
     const version = await getVersion();
-    const contractArtifacts: { address: string, interface: Interface, contract: string }[] = [];
-
-    const managerConfig = JSON.parse(await fs.readFile(__dirname + "/../scripts/manager.json", "utf-8")) as SkaleABIFile;
-    const contractManagerName = "ContractManager";
-    const contractManagerFactory = await ethers.getContractFactory(contractManagerName);
-    const contractManager = contractManagerFactory.attach(managerConfig[getContractKeyInAbiFile(contractManagerName) + "_address"] as string) ;
+    const contractManager = await getContractManager();
+    const addresses: { [name: string]: string } = {};
 
     for (const contract of contracts) {
         const contractFactory = await ethers.getContractFactory(contract);
         console.log("Deploy", contract);
         const proxy = await upgrades.deployProxy(
             contractFactory,
-            await getInitializerParameters(contract, contractManager.address),
+            await getInitializerParameters(contract, await contractManager.getAddress()),
             {
                 initializer: getInitializer(contract)
             }
-        );
-        await proxy.deployTransaction.wait();
-        console.log("Register", contract, "=>", proxy.address);
-        await contractManager.setContractsAddress(contract, proxy.address);
-        contractArtifacts.push({ address: proxy.address, interface: proxy.interface, contract });
-        await verifyProxy(contract, proxy.address, []);
+        ) as Contract;
+        await proxy.waitForDeployment();
+        const proxyAddress = await proxy.getAddress();
+        addresses[contract] = proxyAddress;
+        console.log("Register", contract, "=>", proxyAddress);
+        await contractManager.setContractsAddress(contract, proxyAddress);
 
         if (contract === "Allocator") {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-                await (await proxy.setVersion(version) as ContractTransaction).wait();
+                await (await proxy.setVersion(version)).wait();
                 console.log(`Set version ${version}`)
             } catch {
                 console.log(chalk.red("Failed to set skale-allocator version"));
             }
         }
     }
-
-    console.log("Store ABIs");
-
-    const outputObject: { [k: string]: unknown } = {};
-    for (const artifact of contractArtifacts) {
-        const contractKey = getContractKeyInAbiFile(artifact.contract);
-        outputObject[contractKey + "_address"] = artifact.address;
-        outputObject[contractKey + "_abi"] = getAbi(artifact.interface);
-    }
-
-    outputObject["contract_manager_address"] = contractManager.address;
-
-    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(outputObject.escrow_address as string);
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(addresses["Escrow"] as string);
+    const implementationAddress = await upgrades.erc1967.getImplementationAddress(addresses["Escrow"] as string);
+    await contractManager.setContractsAddress("EscrowImplementation", implementationAddress);
     await contractManager.setContractsAddress("ProxyAdmin", proxyAdminAddress);
 
-    await fs.writeFile(`data/skale-allocator-${version}-${network.name}-abi.json`, JSON.stringify(outputObject, null, 4));
+    console.log("Store addresses");
+    await fs.writeFile(`data/skale-allocator-${version}-${network.name}-contracts.json`, JSON.stringify(addresses, null, 4));
+
+    for (const contract of contracts) {
+        console.log("Verify", contract);
+        try {
+            await verifyProxy(contract, addresses[contract]);
+        } catch (e) {
+            console.log(chalk.red(`Failed to verify ${contract} at ${addresses[contract]}`));
+            console.error(e);
+        }
+    }
+
     console.log("Done");
 }
 

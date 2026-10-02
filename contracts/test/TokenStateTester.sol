@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.33;
 
 import "../Permissions.sol";
 import "@skalenetwork/skale-manager-interfaces/delegation/ILocker.sol";
@@ -31,7 +31,6 @@ interface ITokenStateTester {
 }
 
 contract TokenStateTester is Permissions, ITokenStateTester {
-
     string[] private _lockers;
 
     function getAndUpdateForbiddenForDelegationAmount(address holder) external override returns (uint) {

@@ -9,13 +9,12 @@ export const deployDelegationControllerTester = deployFunctionFactory(
         await deploySkaleTokenTester(contractManager);
         await deployTokenStateTester(contractManager);
     },
-    async(contractManager: ContractManager) => {
+    async (contractManager: ContractManager) => {
         const tokenState = await defaultDeploy("DelegationControllerTester", contractManager);
-        await contractManager.setContractsAddress("DelegationController", tokenState.address);
+        await contractManager.setContractsAddress("DelegationController", await tokenState.getAddress());
         return tokenState;
     }
-) as  (contractManager: ContractManager) => Promise<DelegationControllerTester>;
+) as (contractManager: ContractManager) => Promise<DelegationControllerTester>;
 
 
 
-                            

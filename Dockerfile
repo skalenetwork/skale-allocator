@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:18
 
 RUN mkdir /usr/src/allocator
 WORKDIR /usr/src/allocator

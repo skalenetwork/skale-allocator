@@ -4,10 +4,10 @@ import { defaultDeploy, deployFunctionFactory } from "./../factory";
 export const deployTokenLaunchManagerTester = deployFunctionFactory(
     "TokenLaunchManagerTester",
     undefined,
-    async(contractManager: ContractManager) => {
+    async (contractManager: ContractManager) => {
         const tokenState = await defaultDeploy("TokenLaunchManagerTester", contractManager);
-        await contractManager.setContractsAddress("TokenLaunchManager", tokenState.address);
+        await contractManager.setContractsAddress("TokenLaunchManager", await tokenState.getAddress());
         return tokenState;
     }
-) as  (contractManager: ContractManager) => Promise<TokenLaunchManagerTester>;
+) as (contractManager: ContractManager) => Promise<TokenLaunchManagerTester>;
 

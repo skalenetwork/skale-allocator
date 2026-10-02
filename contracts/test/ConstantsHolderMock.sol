@@ -19,7 +19,7 @@
     along with SKALE Allocator.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.33;
 
 import "../Permissions.sol";
 
@@ -28,10 +28,9 @@ interface IConstantsHolderMock {
 }
 
 /**
- * @dev Interface of Delegatable Token operations.
+ * @dev Interface of Delegable Token operations.
  */
 contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
-
     uint256 public launchTimestamp;
 
     function setLaunchTimestamp(uint256 timestamp) external override onlyOwner {
@@ -45,5 +44,4 @@ contract ConstantsHolderMock is Permissions, IConstantsHolderMock {
     function initialize(address contractManagerAddress) public override initializer {
         Permissions.initialize(contractManagerAddress);
     }
-
 }

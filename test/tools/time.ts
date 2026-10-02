@@ -23,7 +23,11 @@ export async function skipTimeToDate(day: number, monthIndex: number) {
 }
 
 export async function currentTime() {
-    return (await ethers.provider.getBlock("latest")).timestamp;
+    const block = await ethers.provider.getBlock("latest");
+    if (!block) {
+        throw new Error("Could not get latest block");
+    }
+    return block.timestamp;
 }
 
 export function getTimeAtDate(day: number, monthIndex: number, year: number) {

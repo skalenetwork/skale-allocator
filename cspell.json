@@ -1,0 +1,36 @@
+{
+    "language": "en",
+    "ignorePaths": [
+        ".gitignore",
+        "cspell.json",
+        ".solhint.json",
+        "./contracts/thirdparty/**/*",
+        "./contracts/test/thirdparty/**/*",
+        "dictionary/**/*",
+        "cache/**/*",
+        "artifacts/**/*",
+        "**/typechain-types/**",
+        "coverage/**/*",
+        "**/venv/**/*",
+        "**/requirements.txt",
+        "**/__pycache__/**",
+        "**/*.egg-info/**",
+        "**/*.hbs",
+        ".openzeppelin/**",
+        ".github/**",
+        "**/*.orig",
+        "node_modules/**",
+        "data/**/*",
+        "./slither.config.json",
+        "package.json"
+    ],
+    "dictionaries": ["domain-terms", "libraries", "names", "skale-terms", "solidity"],
+    "dictionaryDefinitions": [
+        { "name": "skale-terms", "path": "./dictionary/skale-terms.txt"},
+        { "name": "libraries", "path": "./dictionary/libraries.txt"},
+        { "name": "domain-terms", "path": "./dictionary/domain-terms.txt"},
+        { "name": "names", "path": "./dictionary/names.txt"},
+        { "name": "solidity", "path": "./dictionary/solidity.txt"}
+    ],
+    "words":["IERC", "thirdparty"]
+}
