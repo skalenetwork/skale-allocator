@@ -196,8 +196,17 @@ class MockSubmitter extends Submitter {
         ]);
         console.log(chalk.yellow(`MockSubmitter: Submitting transactions mocking ${await this.signer.getAddress()}`));
         for (const tx of transactions) {
-            const sentTx = await this.signer.sendTransaction(tx);
-            await sentTx.wait();
+            // ethers.Transaction keeps its fields in private slots,
+            // so passing it directly would send an empty contract creation
+            const sentTx = await this.signer.sendTransaction({
+                to: tx.to,
+                data: tx.data,
+                value: tx.value
+            });
+            const receipt = await sentTx.wait();
+            if (receipt?.status !== 1) {
+                throw new Error(`MockSubmitter: Transaction with hash ${sentTx.hash} failed.`);
+            }
             console.log(chalk.white(`MockSubmitter: Transaction with hash ${sentTx.hash} confirmed.`));
         }
         console.log(chalk.green("MockSubmitter: All transactions submitted."))
