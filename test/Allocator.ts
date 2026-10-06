@@ -271,6 +271,26 @@ describe("Allocator", () => {
         let escrow: Escrow;
         const delegatedAmount = 15000n;
         const fullAmount = 1000000n;
+        const validatorId = 1;
+        const bounty = 5n;
+
+        const payBounty = async () => {
+            const distributor = await ethers.deployContract("DistributorMock", [skaleToken.target]);
+            await contractManager.setContractsAddress("Distributor", distributor.target);
+            await skaleToken.mint(owner.address, bounty, "0x", "0x");
+            await skaleToken.send(
+                distributor.target,
+                bounty,
+                ethers.AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [validatorId, escrow.target])
+            );
+        };
+
+        // the Allocator is DEFAULT_ADMIN_ROLE of the escrows it deploys
+        const escrowAdmin = async () => {
+            const signer = await ethers.getImpersonatedSigner(await allocator.getAddress());
+            await ethers.provider.send("hardhat_setBalance", [signer.address, ethers.toQuantity(ethers.parseEther("1"))]);
+            return signer;
+        };
 
         beforeEach(async () => {
             await allocator.connect(vestingManager).addPlan(6, 36, TimeUnit.MONTH, 6, true, true);
@@ -286,7 +306,7 @@ describe("Allocator", () => {
             escrow = (escrowFactory.attach(escrowAddress) as unknown as Escrow);
             const delegationPeriod = 3;
             await (escrow.connect(beneficiary) as unknown as Escrow).delegate(
-                1, delegatedAmount, delegationPeriod, "D2 is even");
+                validatorId, delegatedAmount, delegationPeriod, "D2 is even");
             delegationId = 0;
         });
 
@@ -343,6 +363,131 @@ describe("Allocator", () => {
             (await allocator.getEscrowAddress(beneficiary2.address)).should.be.equal(beneficiary2Escrow);
         });
 
+        it("should not let anyone but a beneficiary manage BENEFICIARY_ROLE", async () => {
+            await expect(allocator.connect(hacker).grantBeneficiaryRole(hacker.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+            await expect(allocator.connect(hacker).revokeBeneficiaryRole(beneficiary.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+        });
+
+        it("should not grant BENEFICIARY_ROLE to the zero address", async () => {
+            await expect(allocator.connect(beneficiary).grantBeneficiaryRole(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(allocator, "HolderAddressNull");
+        });
+
+        it("should not let a BENEFICIARY_ROLE holder manage the role", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            await allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary1.address);
+
+            await expect(allocator.connect(beneficiary1).grantBeneficiaryRole(beneficiary2.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+            await expect(allocator.connect(beneficiary1).revokeBeneficiaryRole(beneficiary1.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+            await expect(escrow.connect(beneficiary1).grantRole(beneficiaryRole, beneficiary2.address))
+                .to.be.revertedWith("AccessControl: sender must be an admin to grant");
+        });
+
+        it("should let beneficiary grant and revoke BENEFICIARY_ROLE in its escrow", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            await payBounty();
+
+            await expect(allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary1.address))
+                .to.emit(escrow, "RoleGranted")
+                .withArgs(beneficiaryRole, beneficiary1.address, allocator.target);
+
+            // the holder operates the escrow; bounty goes where the holder says, vested tokens only to the beneficiary
+            await escrow.connect(beneficiary1).requestUndelegation(delegationId);
+            await escrow.connect(beneficiary1).withdrawBounty(validatorId, beneficiary1.address);
+            const vested = await allocator.calculateVestedAmount(beneficiary.address);
+            await escrow.connect(beneficiary1).retrieve();
+            (await skaleToken.balanceOf(beneficiary1.address)).should.be.equal(bounty);
+            (await skaleToken.balanceOf(beneficiary.address)).should.be.equal(vested);
+
+            await expect(allocator.connect(beneficiary).revokeBeneficiaryRole(beneficiary1.address))
+                .to.emit(escrow, "RoleRevoked")
+                .withArgs(beneficiaryRole, beneficiary1.address, allocator.target);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+            await expect(escrow.connect(beneficiary1).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+        });
+
+        it("should revoke BENEFICIARY_ROLE from the old beneficiary when beneficiary address changes", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            await allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary.address);
+            await allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary2.address);
+
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await expect(allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address))
+                .to.emit(escrow, "RoleRevoked")
+                .withArgs(beneficiaryRole, beneficiary.address, allocator.target);
+
+            await expect(escrow.connect(beneficiary).retrieve())
+                .to.be.revertedWithCustomError(escrow, "CallerNotBeneficiary");
+
+            // other holders stay until the new beneficiary revokes them
+            (await escrow.hasRole(beneficiaryRole, beneficiary2.address)).should.be.equal(true);
+            await allocator.connect(beneficiary1).revokeBeneficiaryRole(beneficiary2.address);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+        });
+
+        it("should not let the old beneficiary manage BENEFICIARY_ROLE after address change", async () => {
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address);
+
+            await expect(allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+            await expect(allocator.connect(beneficiary).revokeBeneficiaryRole(beneficiary1.address))
+                .to.be.revertedWithCustomError(allocator, "BeneficiaryNotRegistered");
+        });
+
+        it("should not lock out a beneficiary that revokes its own BENEFICIARY_ROLE", async () => {
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            await allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary.address);
+            await allocator.connect(beneficiary).revokeBeneficiaryRole(beneficiary.address);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+
+            await escrow.connect(beneficiary).requestUndelegation(delegationId);
+            const vested = await allocator.calculateVestedAmount(beneficiary.address);
+            await escrow.connect(beneficiary).retrieve();
+            (await skaleToken.balanceOf(beneficiary.address)).should.be.equal(vested);
+        });
+
+        it("should let the new beneficiary clear the zero address holder", async () => {
+            // escrows reinitialized in 2022 got the zero address as holder
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            await escrow.connect(await escrowAdmin()).grantRole(beneficiaryRole, ethers.ZeroAddress);
+
+            // the old beneficiary never held the role, so there is nothing to revoke on change
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address);
+            (await escrow.getRoleMember(beneficiaryRole, 0)).should.be.equal(ethers.ZeroAddress);
+
+            await allocator.connect(beneficiary1).revokeBeneficiaryRole(ethers.ZeroAddress);
+            (await escrow.getRoleMemberCount(beneficiaryRole)).should.be.equal(0n);
+        });
+
+        it("should allow to change the beneficiary address even if Allocator is not the escrow admin", async () => {
+            // escrows deployed through the old ProxyFactory: zero address holder and Allocator is not the DEFAULT_ADMIN
+            const beneficiaryRole = await escrow.BENEFICIARY_ROLE();
+            const adminRole = await escrow.DEFAULT_ADMIN_ROLE();
+            const admin = await escrowAdmin();
+            await escrow.connect(admin).grantRole(beneficiaryRole, ethers.ZeroAddress);
+            await escrow.connect(admin).grantRole(adminRole, ethers.Wallet.createRandom().address);
+            await escrow.connect(admin).renounceRole(adminRole, admin.address);
+
+            await expect(allocator.connect(beneficiary).grantBeneficiaryRole(beneficiary2.address))
+                .to.be.revertedWithCustomError(allocator, "EscrowAdminNotAllocator");
+            await expect(allocator.connect(beneficiary).revokeBeneficiaryRole(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(allocator, "EscrowAdminNotAllocator");
+
+            await allocator.connect(beneficiary).changeBeneficiaryAddress(beneficiary1.address);
+            await allocator.connect(beneficiary1).confirmBeneficiaryAddress(beneficiary.address);
+            (await escrow.getRoleMember(beneficiaryRole, 0)).should.be.equal(ethers.ZeroAddress);
+            const vested = await allocator.calculateVestedAmount(beneficiary1.address);
+            await escrow.connect(beneficiary1).retrieve();
+            (await skaleToken.balanceOf(beneficiary1.address)).should.be.equal(vested);
+        });
+
         it("should be able to cancel pending delegation request", async () => {
             await (escrow.connect(beneficiary) as unknown as Escrow).cancelPendingDelegation(delegationId);
             (await skaleToken.getAndUpdateLockedAmount.staticCall(escrow.target)).should.be.equal(0n);
@@ -354,21 +499,7 @@ describe("Allocator", () => {
         });
 
         it("should allow to withdraw bounties", async () => {
-            const distributerMockFactory = await ethers.getContractFactory("DistributorMock");
-            const distributor = await distributerMockFactory.deploy(skaleToken.target);
-            await contractManager.setContractsAddress("Distributor", distributor.target);
-
-            const bounty = 5n;
-            const validatorId = 0;
-            await skaleToken.mint(owner.address, bounty, "0x", "0x");
-            await skaleToken.send(
-                distributor.target,
-                bounty,
-                ethers.AbiCoder.defaultAbiCoder().encode(
-                    ["uint256", "address"],
-                    [validatorId, escrow.target]
-                )
-            );
+            await payBounty();
             await (escrow.connect(beneficiary) as unknown as Escrow).withdrawBounty(validatorId, beneficiary.address);
             (await skaleToken.balanceOf(beneficiary.address)).should.be.equal(bounty);
         });
