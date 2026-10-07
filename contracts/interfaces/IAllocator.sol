@@ -80,6 +80,8 @@ interface IAllocator {
     function setVersion(string calldata newVersion) external;
     function changeBeneficiaryAddress(address newBeneficiaryAddress) external;
     function confirmBeneficiaryAddress(address oldBeneficiaryAddress) external;
+    function grantBeneficiaryRole(address holder) external;
+    function revokeBeneficiaryRole(address holder) external;
     function getStartMonth(address beneficiary) external view returns (uint256 startMonth);
     function getFinishVestingTime(address beneficiary) external view returns (uint256 finishTime);
     function getVestingCliffInMonth(address beneficiary) external view returns (uint256 cliff);

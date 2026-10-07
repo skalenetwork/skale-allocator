@@ -72,6 +72,5 @@ nvm use $CURRENT_NODE_VERSION
 # Should eliminate tmp files to fix duplication errors.
 rm -rf /tmp/openzeppelin-upgrades/*
 
-SKALE_MANAGER_ADDRESS="$SKALE_MANAGER_ADDRESS" \
 SKALE_ALLOCATOR_ADDRESS="$SKALE_ALLOCATOR_ADDRESS" \
 npx hardhat run migrations/upgrade.ts --network localhost
