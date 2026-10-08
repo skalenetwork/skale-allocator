@@ -85,6 +85,8 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
     error UnknownTimeUnit();
     error CalendarInternalError();
     error InvalidMonthRange();
+    error HolderAddressNull();
+    error EscrowAdminNotAllocator();
 
     modifier onlyVestingManager() {
         require(
@@ -138,6 +140,41 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
         delete _beneficiaries[oldBeneficiaryAddress];
         delete _beneficiaryToEscrow[oldBeneficiaryAddress];
         _beneficiaryToEscrow[msg.sender].changeBeneficiaryAddress(msg.sender);
+        _revokeBeneficiaryRole(_beneficiaryToEscrow[msg.sender], oldBeneficiaryAddress);
+    }
+
+    /**
+     * @dev Allows Beneficiary to let `holder` act on its behalf in its Escrow
+     * by granting BENEFICIARY_ROLE.
+     *
+     * IMPORTANT: The holder can delegate and withdraw bounty to any address.
+     * Vested tokens are always sent to the Beneficiary. Holders keep the role
+     * when the Beneficiary address changes; only the old Beneficiary loses it.
+     *
+     * Requirements:
+     *
+     * - `msg.sender` must be the Beneficiary of an Escrow.
+     * - Allocator must be the admin of the Escrow. Escrows deployed
+     * through the ProxyFactory are not supported.
+     * - `holder` must not be the zero address.
+     */
+    function grantBeneficiaryRole(address holder) external override {
+        require(holder != address(0), HolderAddressNull());
+        Escrow escrow = _getManagedEscrow(msg.sender);
+        escrow.grantRole(escrow.BENEFICIARY_ROLE(), holder);
+    }
+
+    /**
+     * @dev Allows Beneficiary to revoke BENEFICIARY_ROLE from `holder` in its Escrow.
+     *
+     * Requirements:
+     *
+     * - `msg.sender` must be the Beneficiary of an Escrow.
+     * - Allocator must be the admin of the Escrow.
+     */
+    function revokeBeneficiaryRole(address holder) external override {
+        Escrow escrow = _getManagedEscrow(msg.sender);
+        escrow.revokeRole(escrow.BENEFICIARY_ROLE(), holder);
     }
 
     /**
@@ -584,6 +621,25 @@ contract Allocator is Permissions, IERC777Recipient, IAllocator {
             )
         );
         return Escrow(beneficiaryEscrow);
+    }
+
+    /**
+     * @dev Revokes BENEFICIARY_ROLE from `holder` in an Escrow.
+     * Skipped when Allocator is not the admin of the Escrow.
+     */
+    function _revokeBeneficiaryRole(Escrow escrow, address holder) private {
+        if (escrow.hasRole(DEFAULT_ADMIN_ROLE, address(this))) {
+            escrow.revokeRole(escrow.BENEFICIARY_ROLE(), holder);
+        }
+    }
+
+    /**
+     * @dev Returns the Escrow of `beneficiary` if Allocator is its admin.
+     */
+    function _getManagedEscrow(address beneficiary) private view returns (Escrow escrow) {
+        escrow = _beneficiaryToEscrow[beneficiary];
+        require(address(escrow) != address(0), BeneficiaryNotRegistered());
+        require(escrow.hasRole(DEFAULT_ADMIN_ROLE, address(this)), EscrowAdminNotAllocator());
     }
 
     /**
