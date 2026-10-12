@@ -60,6 +60,21 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Build container (dry run)
+      env:
+        DRY_RUN: true
+      run: |
+        export BRANCH=${GITHUB_REF##*/}
+        echo "Branch $BRANCH"
+        export VERSION=$(bash ./scripts/calculate_version.sh)
+        echo "Version $VERSION"
+        bash ./scripts/build_and_publish.sh
+
   mainnet-upgrade:
     runs-on: ubuntu-latest
     needs: test
