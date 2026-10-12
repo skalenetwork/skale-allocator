@@ -60,6 +60,14 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Build container (no publish)
+      run: docker build -t skalenetwork/skale-allocator:test .
+
   mainnet-upgrade:
     runs-on: ubuntu-latest
     needs: test
