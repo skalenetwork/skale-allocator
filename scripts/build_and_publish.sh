@@ -19,6 +19,11 @@ docker tag $IMAGE_NAME $LATEST_IMAGE_NAME
 echo "========================================================================================="
 echo "Built $IMAGE_NAME"
 
+if [ -n "$DRY_RUN" ]; then
+    echo "DRY_RUN is set, skipping publish"
+    exit 0
+fi
+
 # Publish image
 
 : "${DOCKER_USERNAME?Need to set DOCKER_USERNAME}"
