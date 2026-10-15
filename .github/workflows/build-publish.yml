@@ -6,6 +6,7 @@ on:
       - master
       - develop
       - beta
+      - release-candidate
       - stable
   push:
     tags:
@@ -59,6 +60,7 @@ jobs:
         tag: ${{ env.VERSION }}
         prerelease: ${{ env.PRERELEASE }}
         artifacts: "data/*-abi.json"
+        commit: ${{ github.sha }}
 
   docker:
     runs-on: ubuntu-latest
